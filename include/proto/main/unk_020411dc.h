@@ -98,10 +98,10 @@ extern ScreenTransition gScreenTransition;
 extern HBlankTask sIrisWipeHBlankTask;
 #endif
 #ifndef PROTO_LOCAL_sIrisWipeTableA
-extern u16 sIrisWipeTableA[0x60];
+extern u16 sIrisWipeTableA[];
 #endif
 #ifndef PROTO_LOCAL_sIrisWipeTableB
-extern u16 sIrisWipeTableB[0x60];
+extern u16 sIrisWipeTableB[];
 #endif
 #endif
 

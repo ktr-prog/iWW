@@ -32,8 +32,13 @@ u8 data_021c3cb8;
 u16 *sIrisWipeActiveTable;
 ScreenTransition gScreenTransition;
 HBlankTask sIrisWipeHBlankTask;
-u16 sIrisWipeTableA[0x60];
-u16 sIrisWipeTableB[0x60];
+#ifdef HOST
+enum { IRIS_ROWS = 0xc0, IRIS_REACH = 231 };
+#else
+enum { IRIS_ROWS = 0x60, IRIS_REACH = 160 };
+#endif
+u16 sIrisWipeTableA[IRIS_ROWS];
+u16 sIrisWipeTableB[IRIS_ROWS];
 
 extern BgmManager *data_021c1b3c;
 
@@ -78,18 +83,33 @@ extern "C" void IrisWipe_HBlank() {
     volatile u16 *r = (volatile u16 *)0x4000000;
     u32 line = IO_R(&r[3]);
     if ((s32)line < 0xc0) {
+#ifdef HOST
+        u16 top = sIrisWipeActiveTable[line], bottom = sIrisWipeActiveTable[0xbf - line];
+        int aTop = IO_R((volatile u16 *)0x4000304) & 0x8000;
+        if (IO_R((volatile u16 *)0x4000004) & 2) {
+            IO_W((volatile u16 *)((u8 *)r + 0x40), aTop ? top : bottom);
+            IO_W((volatile u16 *)((u8 *)r + 0x1040), aTop ? bottom : top);
+        }
+#else
         if ((s32)line >= 0x60) line = 0xbf - line;
         u16 v = sIrisWipeActiveTable[line];
         if (IO_R((volatile u16 *)0x4000004) & 2) {
             IO_W((volatile u16 *)((u8 *)r + 0x40), v);
             IO_W((volatile u16 *)((u8 *)r + 0x1040), v);
         }
+#endif
     }
 }
 
 extern "C" void IrisWipe_VBlankRegs() {
+#ifdef HOST
+    int aTop = IO_R((volatile u16 *)0x4000304) & 0x8000;
+    IO_W((volatile u16 *)0x4000040, sIrisWipeActiveTable[aTop ? 0 : 0xbf]);
+    IO_W((volatile u16 *)0x4001040, sIrisWipeActiveTable[aTop ? 0xbf : 0]);
+#else
     IO_W((volatile u16 *)0x4000040, *sIrisWipeActiveTable);
     IO_W((volatile u16 *)0x4001040, *sIrisWipeActiveTable);
+#endif
     IO_W((volatile u16 *)0x4000044, 0xc0);
     IO_W((volatile u16 *)0x4001044, 0xc0);
 }
@@ -158,16 +178,16 @@ extern "C" void IrisWipe_Update() {
     s32 v = s->progress;
     if (v == 0) {
         volatile u16 c = 0xff;
-        MIi_CpuClear16(c, p, 0xc0);
+        MIi_CpuClear16(c, p, sizeof sIrisWipeTableA);
     } else if (v == 0x1000) {
         volatile u16 c = 0x8080;
     MIi_CpuClear16(c, sIrisWipeTableA, sizeof sIrisWipeTableA);
     MIi_CpuClear16(c, sIrisWipeTableB, sizeof sIrisWipeTableB);
     } else {
-        s32 h = ((0x1000 - v) * 160) >> 12;
+        s32 h = ((0x1000 - v) * IRIS_REACH) >> 12;
         s32 h2 = (h * h) << 12;
-        for (s32 i = 0; i < 0x60; p++, i++) {
-            s32 d = 0x60 - i;
+        for (s32 i = 0; i < IRIS_ROWS; p++, i++) {
+            s32 d = IRIS_ROWS - i;
             if (d > h) {
                 *p = 0x8080;
             } else {
