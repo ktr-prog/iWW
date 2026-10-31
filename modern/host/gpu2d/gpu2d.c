@@ -1,4 +1,5 @@
 
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -327,12 +328,13 @@ static void compose_line(Engine *e, int line, const u32 *line3d, u32 *dst) {
     window_line(e, obj, mask);
     if (sSingle && e->num == 0) {
         sIrisL[line] = -1, sIrisR[line] = -1;
-        if (dispcnt & 0x6000) {
+        if (dispcnt & 0x2000) {
             sIrisNow = 1;
             for (int x = 0; x < SCREEN_W; x++)
                 if (mask[x] & 1) { if (sIrisL[line] < 0) sIrisL[line] = (s16)x; sIrisR[line] = (s16)x; }
         }
     }
+    if (sSingle && sIrisPrev && (dispcnt & 0x2000)) memset(mask, reg16(e, REG_WININ) & 0x3f, SCREEN_W);
     obj_mosaic_x(e, &e->obj);
     int top3d = e->num == 1 && sSingle && line3d;
     int has3d = e->num == 0 && (dispcnt & 8) && (dispcnt & 0x100) && line3d;
@@ -585,13 +587,15 @@ static void gpu_versions(const Gpu2dFrameInput *in) {
 const Gpu2dGpuFrame *gpu2d_gpu_frame(void) { return &sGpuFrame; }
 
 static void single_compose(const Gpu2dFrameInput *in) {
-    sIrisPrev = sIrisNow;
-    if (!sIrisNow) {
+    (void)in;
+    {
         const u32 *ref = sEngine[1].out + (SCREEN_H - 1) * SCREEN_W;
         for (int i = 0; i < SCREEN_W * SCREEN_H; i++)
             if (sSkyA[i]) sEngine[0].out[i] = ref[i % SCREEN_W];
     }
-    if (!sIrisNow) return;
+    int was = sIrisPrev;
+    sIrisPrev = sIrisNow;
+    if (!sIrisNow || !was) return;
     double n = 0, sy = 0, sz = 0, syy = 0, syz = 0, cx = 0;
     int any = 0, full = 1;
     for (int y = 0; y < SCREEN_H; y++) {
@@ -602,23 +606,31 @@ static void single_compose(const Gpu2dFrameInput *in) {
         double hw = (sIrisR[y] - sIrisL[y] + 1) / 2.0, yy = y + SCREEN_H, z = hw * hw + yy * yy;
         n++, sy += yy, sz += z, syy += yy * yy, syz += yy * z, cx += (sIrisL[y] + sIrisR[y] + 1) / 2.0;
     }
-    u32 *top = sEngine[1].out;
-    if (!any) { memset(top, 0, sizeof sEngine[1].out); return; }
-    for (int i = 0; i < SCREEN_W * SCREEN_H; i++) {
-        u32 c = in->lines3dTop ? in->lines3dTop[i] : 0, al = c >> 24 & 31;
-        top[i] = !al ? 0 : al == 31 ? c & 0x3f3f3f : blend3d(c & 0x3f3f3f, 0, al);
-    }
-    if (full || n < 2) return;
-    double det = n * syy - sy * sy;
-    if (det == 0) return;
-    double k = (n * syz - sy * sz) / det, c0 = (sz - k * sy) / n;
-    double cy = k / 2, r2 = c0 + cy * cy;
-    cx /= n;
-    for (int y = 0; y < SCREEN_H; y++)
-        for (int x = 0; x < SCREEN_W; x++) {
-            double dx = x + 0.5 - cx, dy = y - cy;
-            if (dx * dx + dy * dy > r2) top[y * SCREEN_W + x] = 0;
+    double frac;
+    if (!any) frac = 0;
+    else if (full || n < 2) frac = 1;
+    else {
+        double det = n * syy - sy * sy;
+        if (det == 0) return;
+        double k = (n * syz - sy * sz) / det, c0 = (sz - k * sy) / n;
+        double cy = k / 2, r = sqrt(c0 + cy * cy), cover = 0;
+        cx /= n;
+        const double px[4] = {0, SCREEN_W, 0, SCREEN_W}, py[4] = {SCREEN_H, SCREEN_H, 2 * SCREEN_H, 2 * SCREEN_H};
+        for (int i = 0; i < 4; i++) {
+            double d = sqrt((px[i] - cx) * (px[i] - cx) + (py[i] - cy) * (py[i] - cy));
+            if (d > cover) cover = d;
         }
+        frac = cover > 0 ? r / cover : 1;
+    }
+    if (frac >= 1) return;
+    double ccx = SCREEN_W / 2.0, ccy = SCREEN_H, rr = frac * sqrt(ccx * ccx + ccy * ccy);
+    for (int y = 0; y < 2 * SCREEN_H; y++) {
+        u32 *row = y < SCREEN_H ? sEngine[1].out + y * SCREEN_W : sEngine[0].out + (y - SCREEN_H) * SCREEN_W;
+        for (int x = 0; x < SCREEN_W; x++) {
+            double dx = x + 0.5 - ccx, dy = y + 0.5 - ccy;
+            if (dx * dx + dy * dy > rr * rr) row[x] = 0;
+        }
+    }
 }
 
 void gpu2d_render_frame(const Gpu2dFrameInput *in) {
