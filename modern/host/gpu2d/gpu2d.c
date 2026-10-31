@@ -505,6 +505,13 @@ static void render_line(Engine *e, const Gpu2dFrameInput *in, int line) {
         memset(dst, 0, SCREEN_W * sizeof *dst);
     }
     u16 mb = reg16(e, REG_MASTER_BRIGHT);
+    if (sSingle && e->num == 1) {
+        const Engine *a = &sEngine[0];
+        u32 da = reg32(a, REG_DISPCNT);
+        mb = reg16(a, REG_MASTER_BRIGHT);
+        if ((da & 0x80) || !(da >> 16 & 3))
+            for (int x = 0; x < SCREEN_W; x++) dst[x] = 0x3f3f3f;
+    }
     u32 f = mb & 0x1f;
     if (f > 16) f = 16;
     if (sDefer3d) {
@@ -592,7 +599,14 @@ void gpu2d_render_frame(const Gpu2dFrameInput *in) {
     sDefer3d = in->defer3d || sGpu;
     static int off = -1;
     if (off < 0) off = getenv("ACWW_SINGLE") && atoi(getenv("ACWW_SINGLE")) == 0;
-    sSingle = !off && !sGpu && !sDefer3d && in->lines3d && gpu2d_tall_3d_ok();
+    {
+        static int hold;
+        int now = !off && !sGpu && !sDefer3d && in->lines3d && gpu2d_tall_3d_ok();
+        if (now) hold = 120;
+        else if (hold && (sPowCnt & 0x8000)) hold = 0;
+        else if (hold) hold--;
+        sSingle = now || (hold && !off && !sGpu && !sDefer3d);
+    }
     gHostSingleScreen = sSingle;
     map_vram(in);
     if (sGpu) {
