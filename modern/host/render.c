@@ -511,6 +511,7 @@ void render_frame(void) {
         in.palette = gHostPltt;
         in.oam = gHostOam;
         in.lines3d = lines3d;
+        in.lines3dTop = sOwn3d && !sGpuDisplay && lines3d ? gpu3d_lines_top() : NULL;
         in.hblank = sOwn ? render_hblank : 0;
         in.hblankContext = 0;
         in.defer3d = sGpuDisplay;
@@ -524,6 +525,7 @@ void render_frame(void) {
             if (sGpu2dMode == 2 && !sSelftest) render_check_gpu2d();
         }
     }
+    if (sGpu2d && sOwn3d) gpu3d_set_tall(gpu2d_tall_3d_ok());
     if (sGpu3d) gpu3d_run_frame();
     if (sCompare && !sSelftest) {
         render_compare("frame", host_frame());

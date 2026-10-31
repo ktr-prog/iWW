@@ -41,6 +41,10 @@ void ViewFrustum::calcPlanes() {
     v[9] = x;
     v[10] = -y;
     v[11] = -nearClip;
+#ifdef HOST
+    v[4] = y * 3;
+    v[7] = y * 3;
+#endif
     VEC_CrossProduct(&v[3], &v[0], &leftPlane[0]);
     VEC_CrossProduct(&v[6], &v[3], &topPlane[0]);
     VEC_CrossProduct(&v[9], &v[6], &rightPlane[0]);

@@ -420,26 +420,33 @@ static void screen_position(G3Vertex *v) {
     if (ws == 0) ws = 1;
     s64 nx = ((s64)v->pos[0] + w) >> s, ny = (-(s64)v->pos[1] + w) >> s;
     v->x = (s32)(floor_div(nx * sViewport[4], ws * 2) + sViewport[0]) & 0x1ff;
-    v->y = (s32)(floor_div(ny * sViewport[5], ws * 2) + sViewport[3]) & 0x1ff;
+    v->y = (s32)(floor_div(ny * sViewport[5], ws * 2) + sViewport[3] + G3_YOFS) & 0x1ff;
     v->hx = (s32)(floor_div(nx * sViewport[4] * 16, ws * 2) + sViewport[0] * 16) & 0x1fff;
-    v->hy = (s32)(floor_div(ny * sViewport[5] * 16, ws * 2) + sViewport[3] * 16) & 0x1fff;
+    v->hy = (s32)(floor_div(ny * sViewport[5] * 16, ws * 2) + (sViewport[3] + G3_YOFS) * 16) & 0x1fff;
     v->screenDone = 1;
 }
 
+static int sClipK = 1;
+static int sTall;
+void gpu3d_set_tall(int on) { sTall = on && g3_tall_supported(); }
 static G3Vertex sClipBuf[2][10];
+static s64 plane_d(const s32 *pos, int comp, int sign) {
+    s64 k = comp == 1 && sign > 0 ? sClipK : 1;
+    return k * pos[3] - sign * (s64)pos[comp];
+}
 static void clip_interp(G3Vertex *o, const G3Vertex *in, const G3Vertex *out, int comp, int sign) {
-    s64 din = (s64)in->pos[3] - sign * (s64)in->pos[comp];
-    s64 dout = (s64)out->pos[3] - sign * (s64)out->pos[comp];
+    s64 din = plane_d(in->pos, comp, sign);
+    s64 dout = plane_d(out->pos, comp, sign);
     s64 den = din - dout;
 #define LERP(a, b) ((s32)((b) + (((s64)(a) - (b)) * -dout) / den))
     for (int i = 0; i < 4; i++) o->pos[i] = LERP(in->pos[i], out->pos[i]);
-    o->pos[comp] = sign * o->pos[3];
+    o->pos[comp] = (s32)(sign * (comp == 1 && sign > 0 ? sClipK : 1) * (s64)o->pos[3]);
     {
         const s32 *ic = in->color;
         s64 cdin = din, cden = den;
         if (in->farAxis == comp + 1) {
             ic = in->farColor;
-            cdin = (s64)in->farPos[3] - sign * (s64)in->farPos[comp];
+            cdin = plane_d(in->farPos, comp, sign);
             cden = cdin - dout;
         }
         for (int i = 0; i < 3; i++) {
@@ -465,7 +472,7 @@ static void clip_interp(G3Vertex *o, const G3Vertex *in, const G3Vertex *out, in
     o->screenDone = 0;
 }
 static int inside(const G3Vertex *v, int comp, int sign) {
-    return sign > 0 ? v->pos[comp] <= v->pos[3] : v->pos[comp] >= -v->pos[3];
+    return sign > 0 ? (s64)v->pos[comp] <= (comp == 1 ? sClipK : 1) * (s64)v->pos[3] : v->pos[comp] >= -v->pos[3];
 }
 static int clip_plane(G3Vertex *dst, const G3Vertex *src, int n, int comp, int sign) {
     int m = 0;
@@ -549,7 +556,9 @@ static void submit_polygon(void) {
     G3Vertex *cv;
     int clipped;
     sFarHidden = 0;
+    sClipK = sTall && sViewport[0] == 0 && sViewport[3] == 0 && sViewport[4] == 256 && sViewport[5] == 192 ? 3 : 1;
     int n = clip_polygon(v, nv, &cv, attr >> 12 & 1, &clipped);
+    sClipK = 1;
     sPolyOutcome = n == 0 ? (sFarHidden ? 3 : 2) : 0;
     debug_tex_poly(n ? "kept" : "clipped away", v, nv, n);
     sPolyNOut = n;
@@ -634,7 +643,7 @@ static void submit_polygon(void) {
     }
 
     poly->wbuffer = (u8)(sFlushParam >> 1 & 1);
-    s32 ytop = 192, ybot = 0, xtop = 0, xbot = 0;
+    s32 ytop = 0x7fff, ybot = 0, xtop = 0, xbot = 0;
     int vtop = 0, vbot = 0;
     int wsize = 0;
     for (int i = 0; i < n; i++) {
@@ -668,7 +677,7 @@ static void submit_polygon(void) {
     poly->ybottom = ybot;
     poly->xtop = xtop;
     poly->xbottom = xbot;
-    poly->sortKey = (u32)(ybot << 8 | ytop) | (poly->translucent ? 0x10000u : 0);
+    poly->sortKey = (u32)(ybot << 9 | ytop) | (poly->translucent ? 1u << 20 : 0);
     if (!(attr & (1u << 13))) {
         int dot1 = 1;
         for (int i = 1; i < n; i++)
@@ -1001,7 +1010,7 @@ static void do_swap(void) {
     if (r->manualSort) g3_feature(F_MANUAL_SORT);
     for (int i = 0; i < sNumPolys; i++) {
         G3Polygon *p = &sPolyRam[sBank][i];
-        if (r->manualSort && p->translucent) p->sortKey = 0x10000u;
+        if (r->manualSort && p->translucent) p->sortKey = 1u << 20;
         r->poly[i] = p;
     }
     qsort(r->poly, (size_t)sNumPolys, sizeof r->poly[0], cmp_poly);
@@ -1133,7 +1142,8 @@ void gpu3d_frame(const uint8_t *const bank[9]) {
     g3_render();
 }
 
-const uint32_t *gpu3d_lines(void) { return g3_frame_lines(); }
+const uint32_t *gpu3d_lines(void) { return g3_frame_lines() + 256 * G3_YOFS; }
+const uint32_t *gpu3d_lines_top(void) { return g3_tall_supported() && g3_frame_tall() ? g3_frame_lines() : 0; }
 
 void gpu3d_state(Gpu3dState *s) {
     s->pipe = (u32)sPipeN;

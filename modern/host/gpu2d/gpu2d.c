@@ -309,6 +309,11 @@ static u32 deferred_3d(const ObjLine *obj, int x, int at, u32 col0, u8 lay0, int
     return KIND_TOP;
 }
 
+int gpu2d_tall_3d_ok(void) {
+    u32 d = reg32(&sEngine[0], REG_DISPCNT);
+    return !(sPowCnt & 0x8000) && (sPowCnt & 0x200) && (d & 8) && (d & 0x100) && !(d & 0x80);
+}
+
 static void compose_line(Engine *e, int line, const u32 *line3d, u32 *dst) {
     u32 dispcnt = reg32(e, REG_DISPCNT);
     const ObjLine *obj = &e->obj;
@@ -316,18 +321,32 @@ static void compose_line(Engine *e, int line, const u32 *line3d, u32 *dst) {
     window_line(e, obj, mask);
     obj_mosaic_x(e, &e->obj);
     int has3d = e->num == 0 && (dispcnt & 8) && (dispcnt & 0x100) && line3d;
+    int top3d = e->num == 1 && line3d && gpu2d_tall_3d_ok();
     int defer3d = e->num == 0 && (dispcnt & 8) && (dispcnt & 0x100) && sDefer3d;
     if (has3d || defer3d) gpu2d_feature(e, F_3D);
     u32 *defer = e->defer + line * SCREEN_W;
     s32 hofs3d = reg16(e, REG_BGHOFS) & 0x1ff;
     if (hofs3d & 0x100) hofs3d -= 0x200;
-    enum { OBJ_ORDER = 4 + 4 };
+    enum { OBJ_ORDER = 4 + 4, TOP3D = 7 };
     u8 order[4 * 5];
     int layers = 0;
     for (u32 p = 0; p < 4; p++) {
         if (dispcnt & 0x1000) order[layers++] = (u8)(OBJ_ORDER + p);
         for (int n = 0; n < 4; n++)
             if ((reg16(e, REG_BGCNT + 2 * n) & 3) == p && (dispcnt & 0x100u << n)) order[layers++] = (u8)n;
+    }
+    if (top3d) {
+        int at = layers;
+        u32 back = 0;
+        for (int k = 0; k < layers; k++)
+            if (order[k] < 4 && (reg16(e, REG_BGCNT + 2 * order[k]) & 3) >= back) back = reg16(e, REG_BGCNT + 2 * order[k]) & 3;
+        for (int k = 0; k < layers; k++) {
+            u32 pr = order[k] >= OBJ_ORDER ? (u32)(order[k] - OBJ_ORDER) : reg16(e, REG_BGCNT + 2 * order[k]) & 3;
+            if (pr >= back) { at = k; break; }
+        }
+        memmove(order + at + 1, order + at, (size_t)(layers - at));
+        order[at] = TOP3D;
+        layers++;
     }
     u16 bldcnt = reg16(e, REG_BLDCNT), bldalpha = reg16(e, REG_BLDALPHA);
     u32 effect = bldcnt >> 6 & 3, first = bldcnt & 0x3f, second = bldcnt >> 8 & 0x3f;
@@ -350,6 +369,13 @@ static void compose_line(Engine *e, int line, const u32 *line3d, u32 *dst) {
                     col[found] = rgb6(obj_color(e, dispcnt, obj, x));
                     lay[found++] = LAYER_OBJ;
                 }
+            } else if (n == TOP3D) {
+                u32 c = line3d[x];
+                if (!(c >> 24 & 0x1f)) continue;
+                if (!found) alpha3d = c >> 24 & 0x1f;
+                is3d[found] = 1;
+                col[found] = c & 0x3f3f3f;
+                lay[found++] = LAYER_BG0;
             } else if (!(m & 1 << n)) {
                 continue;
             } else if (n == 0 && defer3d) {
@@ -440,7 +466,8 @@ static void render_line(Engine *e, const Gpu2dFrameInput *in, int line) {
         for (int x = 0; x < SCREEN_W; x++) composed[x] = 0x3f3f3f;
     } else {
         for (int n = 0; n < 4; n++) gpu2d_render_bg_line(e, n, line);
-        compose_line(e, line, in->lines3d ? in->lines3d + line * SCREEN_W : NULL, composed);
+        const u32 *l3 = e->num == 0 ? in->lines3d : in->lines3dTop;
+        compose_line(e, line, l3 ? l3 + line * SCREEN_W : NULL, composed);
     }
     obj_mosaic_y(e, line);
     u32 mode = dispcnt >> 16 & (e->num ? 1 : 3);

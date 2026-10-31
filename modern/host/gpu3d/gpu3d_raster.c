@@ -7,7 +7,7 @@
 #include "gpu3d_internal.h"
 #include "gpu3d_tex.h"
 
-enum { W = 256, H = 192 };
+enum { W = 256, H = 384 };
 static u32 sFrameBuf[2][W * H];
 static int sShown;
 static int sDiag;
@@ -437,14 +437,14 @@ static void clear_buffers(void) {
               (u32)(r->clearAttrHi & 31) << 24;
     u32 depth = (u32)(r->clearDepth & 0x7fff) * 0x200 + ((r->clearDepth & 0x7fff) == 0x7fff ? 0x1ff : 0);
     for (int i = 0; i < W * H; i++) {
-        sColor[i] = col;
+        sColor[i] = i < W * 192 ? col & 0xffffff : col;
         sDepth[i] = depth;
         sOpaqueId[i] = (u8)(r->clearAttrHi >> 8 & 63);
         sTransId[i] = 0xff;
         sFlags[i] = c & 0x8000 ? 1 : 0;
         sPoly[i] = -1;
         sCov[i] = 31;
-        sColor2[i] = col;
+        sColor2[i] = i < W * 192 ? col & 0xffffff : col;
         sDepth2[i] = depth;
     }
 }
@@ -499,6 +499,7 @@ static void timing_report(void) {
                 sRenderNs / sRenderFrames / 1e6, sRenderMax / 1e6, sRenderFrames);
 }
 static int sWgpu, sWgpuReadback;
+static int sTallShown[2];
 int gpu3d_use_wgpu(void *device, void *queue, int scale, int readback) {
     if (!g3w_init(device, queue, readback ? 1 : scale)) return 0;
     sWgpu = 1;
@@ -526,6 +527,11 @@ void g3_render(void) {
         aa_pass();
     }
     sShown ^= 1;
+    {
+        int any = 0;
+        for (int i = 0; i < sR->npoly && !any; i++) any = sR->poly[i]->ytop < 192;
+        sTallShown[sShown] = any;
+    }
     if (!sWgpu || sWgpuReadback) memcpy(sFrameBuf[sShown], sColor, sizeof sColor);
     if (timing) {
         clock_gettime(CLOCK_MONOTONIC, &t1);
@@ -538,11 +544,13 @@ void g3_render(void) {
 }
 
 const u32 *g3_frame_lines(void) { return sFrameBuf[sShown]; }
-int g3_raster_pixel_polygon(int x, int y) { return sPoly[y * W + x]; }
-u32 g3_raster_depth(int x, int y) { return sDepth[y * W + x]; }
+int g3_tall_supported(void) { return !sWgpu; }
+int g3_frame_tall(void) { return sTallShown[sShown]; }
+int g3_raster_pixel_polygon(int x, int y) { return sPoly[(y + G3_YOFS) * W + x]; }
+u32 g3_raster_depth(int x, int y) { return sDepth[(y + G3_YOFS) * W + x]; }
 void g3_raster_diagnostics(int on) { sDiag = on; }
 int gpu3d_pixel_polygon(int x, int y, Gpu3dPolyInfo *info) {
-    int i = sPoly[y * W + x];
+    int i = sPoly[(y + G3_YOFS) * W + x];
     if (i < 0 || i >= gG3Render.npoly) return 0;
     const G3Polygon *p = gG3Render.poly[i];
     info->index = i;

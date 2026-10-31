@@ -65,6 +65,9 @@ extern u8 gG3VramCnt[9];
 
 void g3_render(void);
 const u32 *g3_frame_lines(void);
+int g3_tall_supported(void);
+int g3_frame_tall(void);
+#define G3_YOFS (g3_tall_supported() ? 192 : 0)
 int g3_raster_pixel_polygon(int x, int y);
 void g3_raster_diagnostics(int on);
 
