@@ -209,7 +209,7 @@ static void window_line(Engine *e, const ObjLine *obj, u8 *mask) {
         int x1 = h >> 8, x2 = h & 0xff;
         u8 in = (u8)(winin >> (8 * w) & 0x3f);
         for (int x = 0; x < SCREEN_W; x++) {
-            if (x == x2) e->winActive[w] &= ~2;
+            if (x == x2 && !(sSingle && x1 == 0 && x2 == 0xff)) e->winActive[w] &= ~2;
             else if (x == x1) e->winActive[w] |= 2;
             if (e->winActive[w] == 3) mask[x] = in;
         }
