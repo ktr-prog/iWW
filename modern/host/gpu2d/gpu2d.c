@@ -7,6 +7,7 @@
 static Engine sEngine[2];
 static int sSingle;
 static int sIrisNow, sIrisPrev;
+static u8 sSkyA[SCREEN_W * SCREEN_H];
 static s16 sIrisL[SCREEN_H], sIrisR[SCREEN_H];
 int gHostSingleScreen;
 static u16 sPowCnt;
@@ -411,6 +412,7 @@ static void compose_line(Engine *e, int line, const u32 *line3d, u32 *dst) {
                 lay[found++] = (u8)n;
             }
         }
+        if (sSingle && e->num == 0) sSkyA[line * SCREEN_W + x] = (u8)(is3d[0] && (line3d[x + hofs3d] >> 31));
         if (!found) lay[1] = LAYER_NONE;
         u32 out = col[0], eff = EFF_NONE;
         int effOk = m & 0x20, below2nd = (second >> lay[1]) & 1;
@@ -584,6 +586,11 @@ const Gpu2dGpuFrame *gpu2d_gpu_frame(void) { return &sGpuFrame; }
 
 static void single_compose(const Gpu2dFrameInput *in) {
     sIrisPrev = sIrisNow;
+    if (!sIrisNow) {
+        const u32 *ref = sEngine[1].out + (SCREEN_H - 1) * SCREEN_W;
+        for (int i = 0; i < SCREEN_W * SCREEN_H; i++)
+            if (sSkyA[i]) sEngine[0].out[i] = ref[i % SCREEN_W];
+    }
     if (!sIrisNow) return;
     double n = 0, sy = 0, sz = 0, syy = 0, syz = 0, cx = 0;
     int any = 0, full = 1;

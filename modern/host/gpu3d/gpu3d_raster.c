@@ -437,7 +437,7 @@ static void clear_buffers(void) {
               (u32)(r->clearAttrHi & 31) << 24;
     u32 depth = (u32)(r->clearDepth & 0x7fff) * 0x200 + ((r->clearDepth & 0x7fff) == 0x7fff ? 0x1ff : 0);
     for (int i = 0; i < W * H; i++) {
-        sColor[i] = i < W * 192 ? col & 0xffffff : col;
+        sColor[i] = (i < W * 192 ? col & 0xffffff : col) | 0x80000000u;
         sDepth[i] = depth;
         sOpaqueId[i] = (u8)(r->clearAttrHi >> 8 & 63);
         sTransId[i] = 0xff;
