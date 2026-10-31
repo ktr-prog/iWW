@@ -6,6 +6,8 @@
 
 static Engine sEngine[2];
 static int sSingle;
+static int sIrisNow, sIrisPrev;
+static s16 sIrisL[SCREEN_H], sIrisR[SCREEN_H];
 int gHostSingleScreen;
 static u16 sPowCnt;
 static u8 sVramCnt[9];
@@ -314,7 +316,7 @@ static u32 deferred_3d(const ObjLine *obj, int x, int at, u32 col0, u8 lay0, int
 
 int gpu2d_tall_3d_ok(void) {
     u32 d = reg32(&sEngine[0], REG_DISPCNT);
-    return !(sPowCnt & 0x8000) && (sPowCnt & 0x200) && (d & 8) && (d & 0x100) && !(d & 0x80);
+    return !(sPowCnt & 0x8000) && (d & 8) && (d & 0x100) && !(d & 0x80);
 }
 
 static void compose_line(Engine *e, int line, const u32 *line3d, u32 *dst) {
@@ -322,20 +324,45 @@ static void compose_line(Engine *e, int line, const u32 *line3d, u32 *dst) {
     const ObjLine *obj = &e->obj;
     u8 mask[SCREEN_W];
     window_line(e, obj, mask);
+    if (sSingle && e->num == 0) {
+        sIrisL[line] = -1, sIrisR[line] = -1;
+        if (dispcnt & 0x6000) {
+            sIrisNow = 1;
+            for (int x = 0; x < SCREEN_W; x++)
+                if (mask[x] & 1) { if (sIrisL[line] < 0) sIrisL[line] = (s16)x; sIrisR[line] = (s16)x; }
+        }
+    }
     obj_mosaic_x(e, &e->obj);
+    int top3d = e->num == 1 && sSingle && line3d;
     int has3d = e->num == 0 && (dispcnt & 8) && (dispcnt & 0x100) && line3d;
     int defer3d = e->num == 0 && (dispcnt & 8) && (dispcnt & 0x100) && sDefer3d;
     if (has3d || defer3d) gpu2d_feature(e, F_3D);
     u32 *defer = e->defer + line * SCREEN_W;
     s32 hofs3d = reg16(e, REG_BGHOFS) & 0x1ff;
     if (hofs3d & 0x100) hofs3d -= 0x200;
-    enum { OBJ_ORDER = 4 + 4 };
-    u8 order[4 * 5];
+    enum { OBJ_ORDER = 4 + 4, TOP3D = 7 };
+    u8 order[4 * 5 + 1];
     int layers = 0;
     for (u32 p = 0; p < 4; p++) {
         if (dispcnt & 0x1000) order[layers++] = (u8)(OBJ_ORDER + p);
         for (int n = 0; n < 4; n++)
             if ((reg16(e, REG_BGCNT + 2 * n) & 3) == p && (dispcnt & 0x100u << n)) order[layers++] = (u8)n;
+    }
+    if (top3d) {
+        u32 back = 0;
+        for (int k = 0; k < layers; k++)
+            if (order[k] < 4 && (reg16(e, REG_BGCNT + 2 * order[k]) & 3) > back) back = reg16(e, REG_BGCNT + 2 * order[k]) & 3;
+        u8 o2[4 * 5 + 1];
+        int m2 = 0;
+        for (int k = 0; k < layers; k++)
+            if (order[k] < 4 && (reg16(e, REG_BGCNT + 2 * order[k]) & 3) < back) o2[m2++] = order[k];
+        o2[m2++] = TOP3D;
+        for (int k = 0; k < layers; k++)
+            if (order[k] >= OBJ_ORDER) o2[m2++] = order[k];
+        for (int k = 0; k < layers; k++)
+            if (order[k] < 4 && (reg16(e, REG_BGCNT + 2 * order[k]) & 3) >= back) o2[m2++] = order[k];
+        memcpy(order, o2, (size_t)m2);
+        layers = m2;
     }
     u16 bldcnt = reg16(e, REG_BLDCNT), bldalpha = reg16(e, REG_BLDALPHA);
     u32 effect = bldcnt >> 6 & 3, first = bldcnt & 0x3f, second = bldcnt >> 8 & 0x3f;
@@ -358,6 +385,13 @@ static void compose_line(Engine *e, int line, const u32 *line3d, u32 *dst) {
                     col[found] = rgb6(obj_color(e, dispcnt, obj, x));
                     lay[found++] = LAYER_OBJ;
                 }
+            } else if (n == TOP3D) {
+                u32 c = line3d[x];
+                if (!(c >> 24 & 0x1f)) continue;
+                if (!found) alpha3d = c >> 24 & 0x1f;
+                is3d[found] = 1;
+                col[found] = c & 0x3f3f3f;
+                lay[found++] = LAYER_BG0;
             } else if (!(m & 1 << n)) {
                 continue;
             } else if (n == 0 && defer3d) {
@@ -436,6 +470,14 @@ static void render_line(Engine *e, const Gpu2dFrameInput *in, int line) {
     }
     if (e->num == 1 && !(sPowCnt & 0x200)) {
         gpu2d_feature(e, F_ENGINE_B_OFF);
+        if (sSingle) {
+            const u32 *l3 = in->lines3dTop ? in->lines3dTop + line * SCREEN_W : NULL;
+            for (int x = 0; x < SCREEN_W; x++) {
+                u32 c = l3 ? l3[x] : 0, al = c >> 24 & 31;
+                dst[x] = !al ? 0 : al == 31 ? c & 0x3f3f3f : blend3d(c & 0x3f3f3f, 0, al);
+            }
+            return;
+        }
         for (int x = 0; x < SCREEN_W; x++) dst[x] = 0x3f3f3f;
         return;
     }
@@ -448,7 +490,8 @@ static void render_line(Engine *e, const Gpu2dFrameInput *in, int line) {
         for (int x = 0; x < SCREEN_W; x++) composed[x] = 0x3f3f3f;
     } else {
         for (int n = 0; n < 4; n++) gpu2d_render_bg_line(e, n, line);
-        const u32 *l3 = e->num == 0 && in->lines3d ? in->lines3d + line * SCREEN_W : NULL;
+        const u32 *l3 = e->num == 0 && in->lines3d ? in->lines3d + line * SCREEN_W
+                      : e->num == 1 && sSingle && in->lines3dTop ? in->lines3dTop + line * SCREEN_W : NULL;
         compose_line(e, line, l3, composed);
     }
     obj_mosaic_y(e, line);
@@ -540,19 +583,35 @@ static void gpu_versions(const Gpu2dFrameInput *in) {
 const Gpu2dGpuFrame *gpu2d_gpu_frame(void) { return &sGpuFrame; }
 
 static void single_compose(const Gpu2dFrameInput *in) {
-    Engine *b = &sEngine[1];
-    if (!in->lines3dTop) return;
-    u16 mb = reg16(&sEngine[0], REG_MASTER_BRIGHT);
-    u32 f = mb & 0x1f;
-    if (f > 16) f = 16;
-    for (int i = 0; i < SCREEN_W * SCREEN_H; i++) {
-        u32 c = in->lines3dTop[i], al = c >> 24 & 31;
-        if (!al) continue;
-        u32 o = al == 31 ? c & 0x3f3f3f : blend3d(c & 0x3f3f3f, b->out[i], al);
-        if ((mb >> 14) == 1 && f) o = brighten(o, f, 0);
-        else if ((mb >> 14) == 2 && f) o = darken(o, f, 15);
-        b->out[i] = o;
+    sIrisPrev = sIrisNow;
+    if (!sIrisNow) return;
+    double n = 0, sy = 0, sz = 0, syy = 0, syz = 0, cx = 0;
+    int any = 0, full = 1;
+    for (int y = 0; y < SCREEN_H; y++) {
+        if (sIrisL[y] < 0) continue;
+        any = 1;
+        if (sIrisL[y] == 0 || sIrisR[y] == SCREEN_W - 1) continue;
+        full = 0;
+        double hw = (sIrisR[y] - sIrisL[y] + 1) / 2.0, yy = y + SCREEN_H, z = hw * hw + yy * yy;
+        n++, sy += yy, sz += z, syy += yy * yy, syz += yy * z, cx += (sIrisL[y] + sIrisR[y] + 1) / 2.0;
     }
+    u32 *top = sEngine[1].out;
+    if (!any) { memset(top, 0, sizeof sEngine[1].out); return; }
+    for (int i = 0; i < SCREEN_W * SCREEN_H; i++) {
+        u32 c = in->lines3dTop ? in->lines3dTop[i] : 0, al = c >> 24 & 31;
+        top[i] = !al ? 0 : al == 31 ? c & 0x3f3f3f : blend3d(c & 0x3f3f3f, 0, al);
+    }
+    if (full || n < 2) return;
+    double det = n * syy - sy * sy;
+    if (det == 0) return;
+    double k = (n * syz - sy * sz) / det, c0 = (sz - k * sy) / n;
+    double cy = k / 2, r2 = c0 + cy * cy;
+    cx /= n;
+    for (int y = 0; y < SCREEN_H; y++)
+        for (int x = 0; x < SCREEN_W; x++) {
+            double dx = x + 0.5 - cx, dy = y - cy;
+            if (dx * dx + dy * dy > r2) top[y * SCREEN_W + x] = 0;
+        }
 }
 
 void gpu2d_render_frame(const Gpu2dFrameInput *in) {
@@ -562,6 +621,7 @@ void gpu2d_render_frame(const Gpu2dFrameInput *in) {
     if (off < 0) off = getenv("ACWW_SINGLE") && atoi(getenv("ACWW_SINGLE")) == 0;
     sSingle = !off && !sGpu && !sDefer3d && in->lines3d && gpu2d_tall_3d_ok();
     gHostSingleScreen = sSingle;
+    sIrisNow = 0;
     map_vram(in);
     if (sGpu) {
         gpu_tables(in);
@@ -623,6 +683,7 @@ void gpu2d_render_frame(const Gpu2dFrameInput *in) {
     }
     if (sGpu) sGpuFrame.tables[0][G2T_SCREEN_A] = (sPowCnt & 0x8000) ? 0 : 1;
     if (sSingle) single_compose(in);
+    else sIrisPrev = 0;
     for (int n = 0; n < 2; n++) {
         int screen = (sPowCnt & 0x8000) ? n : 1 - n;
         if (sGpu == 1) {
