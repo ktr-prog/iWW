@@ -1,0 +1,170 @@
+#ifndef TALK_ACTORTALKREQUEST_H
+#define TALK_ACTORTALKREQUEST_H
+
+#include "types.h"
+#include "gfx/VecFx32.h"
+#include "talk/TalkMsgRequest.h"
+#include "talk/TalkStartMsg.h"
+
+class ChoiceList;
+class MsgString;
+class PlayerId;
+class VillagerId;
+class NpcActor;
+class Character;
+
+class ActorTalkRequest : public TalkMsgRequest {
+public:
+    ActorTalkRequest();
+    virtual ~ActorTalkRequest();
+    virtual void resetMsg();
+    virtual void onConditionTag(u32 condition, u32 branchCount);
+    virtual void onEventTag(u32 id);
+    virtual void onTag09_0();
+    virtual void onTag09_1();
+    virtual void onTag09_2();
+    virtual void onTag09_3();
+    virtual void onTag09_4();
+    virtual void onTag09_5();
+    virtual void onTag09_6();
+    virtual void onTag09_7();
+    virtual void onTag09_8();
+    virtual void onTag09_9();
+    virtual s32 getVoiceType();
+    virtual void start(TalkStartMsg *out) = 0;
+    virtual void runDeferred();
+    virtual void update();
+    virtual void onTaskDone(u32 id);
+
+    u8 getSpeakerIndex();
+    NpcActor *getSpeakerActor();
+    NpcActor *getActorB(u32 idx);
+    NpcActor *getActionActor();
+    NpcActor *getActor(u32 idx);
+    void setSlotFromString(u32 slot, u8 *key, const char *bank);
+    void setItemNameSlot(u16 *item, u32 slot, u32 color);
+    void setVillagerNameSlot(VillagerId *id, u32 slot);
+    void setPlayerNameSlot(PlayerId *id, u32 slot);
+    void setTownNameSlot(void *townId, u32 slot);
+    void setDaySlot(u32 a, u32 b);
+    void setMonthSlot(u32 a, u32 b);
+    void setFixedPointSlot(s32 a, u32 b, s32 c);
+    void setNumberNamedSlot(s32 a, u32 b, s32 c, u8 d, s32 e, s32 f);
+    void setNumberSlot(s32 a, u32 b, s32 c, s32 d, s32 e);
+    BOOL isItemActionBusy();
+    void clearItemActionBusy();
+    void setItemActionBusy();
+    void playEmotion(u32 a, u32 b);
+    ChoiceList *getChoiceList();
+    void setOwnerActor(NpcActor *p);
+    NpcActor *getPartnerActor();
+    void setPartnerActor(NpcActor *p);
+    Character *getTalkPlayer();
+    void setTalkPlayer(Character *player);
+    void tick();
+    BOOL taskSwitchSpeaker();
+    BOOL switchSpeakerSwap();
+    BOOL switchSpeakerFocus();
+    BOOL switchSpeakerClose();
+    BOOL requestSwitchSpeaker(u8 v);
+    BOOL taskMelody();
+    BOOL melodyStart();
+    BOOL melodyWait();
+    BOOL melodyEnd();
+    BOOL taskEatItem();
+    BOOL eatItemStart();
+    BOOL eatItemWait();
+    BOOL taskItemAct12();
+    BOOL itemAct12Start();
+    BOOL itemAct12Wait();
+    BOOL taskReturnItem();
+    BOOL returnItemStart();
+    BOOL returnItemWait();
+    BOOL taskKeepItem();
+    BOOL keepItemStart();
+    BOOL keepItemWait();
+    BOOL taskItemAct0F();
+    BOOL itemAct0FStart();
+    BOOL itemAct0FWait();
+    BOOL taskTakeItem();
+    BOOL takeItemStart();
+    BOOL takeItemWait();
+    BOOL taskGiveItem();
+    BOOL requestPlayRandomMelody();
+    BOOL requestPlayMelody(Vec2 *p);
+    BOOL requestEatItem();
+    BOOL requestItemAct12();
+    BOOL requestReturnItem();
+    BOOL requestKeepItem();
+    BOOL requestItemAct0F();
+    BOOL requestTakeItem(u16 *a, u32 b, u32 c, u32 d);
+
+    BOOL giveItemWait();
+    BOOL giveItemStart();
+    BOOL requestGiveItem(u16 *item, u32 kind, u32 mode, u32 variant);
+    BOOL taskCloseWindow();
+    BOOL closeWindowWait();
+    BOOL closeWindowStart();
+    BOOL requestCloseWindow(u32 mode);
+    BOOL taskReopenWindow();
+    BOOL requestReopenWindow();
+    BOOL taskSubScene();
+    BOOL subSceneWait();
+    BOOL subSceneOpen();
+    BOOL subSceneCloseWindow();
+    void setSubSceneKind2(u32 menu, u8 *text, u32 textSize, u8 keepClosed);
+    void setMenu12Arg(void *arg, u32 keepClosed);
+    void setSelectionList(void *arg0, void *arg1, u32 keepClosed);
+    void setSubSceneKindArg(u32 a, u32 b, u32 c);
+    void setSubSceneKind(u32 a, u32 b);
+    void setPocketFilter(BOOL (*filter)(u16 *item, s32 flags), u32 mode, u32 keepClosed);
+    void setPocketItem(u32 a, u32 b, u32 c);
+    BOOL openSubScene(s32 type);
+    void runTask();
+    BOOL isTaskRunning();
+    BOOL startTask(s32 id);
+    void initSubSceneParams();
+    void resetTasks();
+    void makePlayerTurnTo(NpcActor *actor);
+    void makePlayerLookAt(NpcActor *actor);
+
+    /* 0x44 */ Character *talkPlayer;
+    /* 0x48 */ NpcActor *ownerActor;
+    /* 0x4c */ NpcActor *partnerActor;
+    /* 0x50 */ u8 actionActorIndex;
+    /* 0x51 */ u8 speakerIndex;
+    /* 0x52 */ u8 pad_52[6];
+    /* 0x58 */ u32 lastEmotion;
+    /* 0x5c */ u8 itemActionBusy;
+    /* 0x60 */ u32 taskId;
+    /* 0x64 */ s32 subSceneType;
+    /* 0x68 */ void *menuPtrArg0;
+    /* 0x6c */ void *menuPtrArg1;
+    /* 0x70 */ void *menu12Arg;
+    /* 0x74 */ BOOL (*pocketFilter)(u16 *item, s32 flags);
+    /* 0x78 */ u16 pocketMask;
+    /* 0x7a */ u16 subSceneItem;
+    /* 0x7c */ u32 handOverKind;
+    /* 0x80 */ u8 pocketSelectMode;
+    /* 0x81 */ u8 pad_81;
+    /* 0x82 */ u8 launcherMenu;
+    /* 0x83 */ u8 launcherIndex;
+    /* 0x84 */ u8 keepWindowClosed;
+    /* 0x85 */ u8 pad_85[3];
+    /* 0x88 */ u32 melodyPattern[2];
+    /* 0x90 */ u8 handOverMode;
+    /* 0x91 */ u8 pad_91[3];
+    /* 0x94 */ u32 handOverVariant;
+    /* 0x98 */ u8 *launcherText;
+    /* 0x9c */ u32 launcherTextSize;
+    /* 0xa0 */ u8 focusNewSpeaker;
+    /* 0xa1 */ u8 randomMelody;
+    /* 0xa2 */ u8 pad_a2[2];
+    /* 0xa4 */ u32 closeMode;
+    /* 0xa8 */ u8 taskStep;
+    /* 0xa9 */ u8 taskRunning;
+    /* 0xaa */ u8 afterSaveMsg;
+    /* 0xab */ u8 pad_ab;
+};
+
+#endif

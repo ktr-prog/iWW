@@ -1,0 +1,306 @@
+
+#include <math.h>
+#include <string.h>
+
+#include "snd7.h"
+
+#define SAMPLE_CYCLES 1024u
+#define TIMER_STEP 512u
+
+SpuChannelRegs spu_ch[16];
+u16 spu_soundcnt;
+u8 spu_capcnt[2];
+uintptr_t spu_capdad[2];
+u16 spu_caplen[2];
+
+typedef struct {
+    u32 timer;
+    s32 pos;
+    s32 cur;
+    s32 adpcm, adpcm_idx, loop_adpcm, loop_adpcm_idx;
+    u16 lfsr;
+    u32 hn;
+    s16 hist[128];
+} ChState;
+static ChState sCh[16];
+
+static struct {
+    u32 timer;
+    u32 pos;
+} sCap[2];
+
+static u64 sMixed;
+
+static const s8 kAdpcmIndex[8] = {-1, -1, -1, -1, 2, 4, 6, 8};
+static const u16 kAdpcmStep[89] = {
+    7,     8,     9,     10,    11,    12,    13,    14,    16,    17,    19,    21,    23,    25,    28,
+    31,    34,    37,    41,    45,    50,    55,    60,    66,    73,    80,    88,    97,    107,   118,
+    130,   143,   157,   173,   190,   209,   230,   253,   279,   307,   337,   371,   408,   449,   494,
+    544,   598,   658,   724,   796,   876,   963,   1060,  1166,  1282,  1411,  1552,  1707,  1878,  2066,
+    2272,  2499,  2749,  3024,  3327,  3660,  4026,  4428,  4871,  5358,  5894,  6484,  7132,  7845,  8630,
+    9493,  10442, 11487, 12635, 13899, 15289, 16818, 18500, 20350, 22385, 24623, 27086, 29794, 32767};
+static const u8 kVolShift[4] = {4, 3, 2, 0};
+
+#define FIR_ZC 8
+#define FIR_RES 256
+#define FIR_HIST 128
+#define FIR_CUT 0.9f
+static float sKernel[FIR_ZC * FIR_RES + 2];
+static int sKernelInit;
+static double bessel_i0(double x) {
+    double sum = 1, t = 1;
+    for (int k = 1; k < 40; k++) {
+        t *= (x / (2 * k)) * (x / (2 * k));
+        sum += t;
+    }
+    return sum;
+}
+static void kernel_init(void) {
+    sKernelInit = 1;
+    const double beta = 8.0, pi = 3.14159265358979323846;
+    for (int i = 0; i < FIR_ZC * FIR_RES + 2; i++) {
+        double u = (double)i / FIR_RES, w = u / FIR_ZC;
+        double sinc = u == 0 ? 1 : sin(pi * u) / (pi * u);
+        double win = w >= 1 ? 0 : bessel_i0(beta * sqrt(1 - w * w)) / bessel_i0(beta);
+        sKernel[i] = (float)(sinc * win);
+    }
+}
+static inline float kernel(float u) {
+    u = fabsf(u) * FIR_RES;
+    if (u >= FIR_ZC * FIR_RES) return 0;
+    int i = (int)u;
+    float f = u - (float)i;
+    return sKernel[i] + (sKernel[i + 1] - sKernel[i]) * f;
+}
+
+static s32 filtered(const ChState *s, u32 tmr, u32 per) {
+    if (!sKernelInit) kernel_init();
+    float ratio = (float)TIMER_STEP / (float)per;
+    float k = FIR_CUT / ratio;
+    float half = FIR_ZC / k;
+    float frac = (float)((s32)s->timer - (s32)tmr) / (float)per;
+    int taps = (int)(2 * half) + 2;
+    if (taps > FIR_HIST) taps = FIR_HIST;
+    if ((u32)taps > s->hn) taps = (int)s->hn;
+    float acc = 0, norm = 0;
+    for (int j = 0; j < taps; j++) {
+        float h = kernel((half - frac - (float)j) * k);
+        acc += h * s->hist[(s->hn - 1 - (u32)j) & (FIR_HIST - 1)];
+        norm += h;
+    }
+    if (norm <= 0) return 0;
+    float v = acc / norm;
+    return (s32)lrintf(v < -32768.0f ? -32768.0f : v > 32767.0f ? 32767.0f : v);
+}
+
+static inline int readable(const SpuChannelRegs *r, u32 off, u32 n) {
+    u32 extent = (u32)r->pnt * 4 + r->len * 4;
+    return r->sad && off + n <= (extent < 4 ? 4 : extent);
+}
+static inline s8 rd8(const SpuChannelRegs *r, u32 off) { return readable(r, off, 1) ? *(const s8 *)(r->sad + off) : 0; }
+static inline s16 rd16(const SpuChannelRegs *r, u32 off) { return readable(r, off, 2) ? *(const s16 *)(r->sad + off) : 0; }
+
+static inline u32 format_of(int ch) { return spu_ch[ch].cnt >> 29 & 3; }
+static inline u32 repeat_of(int ch) { return spu_ch[ch].cnt >> 27 & 3; }
+static inline void stop(int ch) { spu_ch[ch].cnt &= ~0x80000000u; }
+
+void spu_cnt_written(int ch, u32 old) {
+    if (!(old & 0x80000000u) && (spu_ch[ch].cnt & 0x80000000u)) {
+        ChState *s = &sCh[ch];
+        s->timer = spu_ch[ch].tmr;
+        s->pos = format_of(ch) == 3 ? -1 : -3;
+        s->cur = 0;
+        s->lfsr = 0x7fff;
+        s->hn = 0;
+        memset(s->hist, 0, sizeof s->hist);
+    }
+}
+
+void spu_capcnt_written(int idx, u8 old) {
+    if (!(old & 0x80) && (spu_capcnt[idx] & 0x80)) {
+        sCap[idx].timer = spu_ch[idx * 2 + 1].tmr;
+        sCap[idx].pos = 0;
+    }
+}
+
+static int at_end(int ch) {
+    if (repeat_of(ch) & 1) return 1;
+    stop(ch);
+    return 0;
+}
+
+static void next_sample(int ch) {
+    SpuChannelRegs *r = &spu_ch[ch];
+    ChState *s = &sCh[ch];
+    u32 loop_bytes = (u32)r->pnt * 4, total_bytes = loop_bytes + r->len * 4;
+    s->pos++;
+    if (s->pos < 0) return;
+    switch (format_of(ch)) {
+    case 0:
+        if ((u32)s->pos >= total_bytes) {
+            if (!at_end(ch)) return;
+            s->pos = (s32)loop_bytes;
+        }
+        s->cur = rd8(r, (u32)s->pos) << 8;
+        break;
+    case 1:
+        if ((u32)s->pos * 2 >= total_bytes) {
+            if (!at_end(ch)) return;
+            s->pos = (s32)(loop_bytes / 2);
+        }
+        s->cur = rd16(r, (u32)s->pos * 2);
+        break;
+    case 2: {
+        if (s->pos < 8) {
+            if (s->pos == 0) {
+                s->adpcm = rd16(r, 0);
+                s->adpcm_idx = (u8)rd8(r, 2) & 0x7f;
+                if (s->adpcm_idx > 88) s->adpcm_idx = 88;
+                s->loop_adpcm = s->adpcm;
+                s->loop_adpcm_idx = s->adpcm_idx;
+            }
+            return;
+        }
+        if ((u32)s->pos >= total_bytes * 2) {
+            if (!at_end(ch)) return;
+            s->pos = (s32)(loop_bytes * 2);
+            s->adpcm = s->loop_adpcm;
+            s->adpcm_idx = s->loop_adpcm_idx;
+        } else if ((u32)s->pos == loop_bytes * 2) {
+            s->loop_adpcm = s->adpcm;
+            s->loop_adpcm_idx = s->adpcm_idx;
+        }
+        u32 code = (u8)rd8(r, (u32)s->pos >> 1);
+        if (s->pos & 1) code >>= 4;
+        u32 step = kAdpcmStep[s->adpcm_idx];
+        s32 diff = (s32)(step >> 3);
+        if (code & 1) diff += (s32)(step >> 2);
+        if (code & 2) diff += (s32)(step >> 1);
+        if (code & 4) diff += (s32)step;
+        if (code & 8) {
+            s->adpcm -= diff;
+            if (s->adpcm < -0x7fff) s->adpcm = -0x7fff;
+        } else {
+            s->adpcm += diff;
+            if (s->adpcm > 0x7fff) s->adpcm = 0x7fff;
+        }
+        s->adpcm_idx += kAdpcmIndex[code & 7];
+        if (s->adpcm_idx < 0) s->adpcm_idx = 0;
+        else if (s->adpcm_idx > 88) s->adpcm_idx = 88;
+        s->cur = s->adpcm;
+        break;
+    }
+    case 3:
+        if (ch >= 8 && ch <= 13) {
+            u32 duty = r->cnt >> 24 & 7;
+            s->cur = duty != 7 && (u32)(7 - (s->pos & 7)) <= duty ? 0x7fff : -0x7fff;
+        } else if (ch >= 14) {
+            if (s->lfsr & 1) {
+                s->lfsr = (u16)(s->lfsr >> 1 ^ 0x6000);
+                s->cur = -0x7fff;
+            } else {
+                s->lfsr >>= 1;
+                s->cur = 0x7fff;
+            }
+        } else {
+            s->cur = 0;
+        }
+        break;
+    }
+}
+
+static s32 run_channel(int ch) {
+    SpuChannelRegs *r = &spu_ch[ch];
+    if (!(r->cnt & 0x80000000u)) return 0;
+    if (format_of(ch) != 3 && ((u32)r->pnt + r->len) * 4 < 16) return 0;
+    ChState *s = &sCh[ch];
+    s->timer += TIMER_STEP;
+    while (s->timer >= 0x10000) {
+        s->timer = r->tmr + (s->timer - 0x10000);
+        next_sample(ch);
+        if (!(r->cnt & 0x80000000u)) break;
+        s->hist[s->hn++ & (FIR_HIST - 1)] = (s16)(s->cur < -0x8000 ? -0x8000 : s->cur > 0x7fff ? 0x7fff : s->cur);
+    }
+    u32 per = 0x10000u - r->tmr;
+    s32 v = per < TIMER_STEP && format_of(ch) != 3 ? filtered(s, r->tmr, per) : s->cur;
+    return (v << kVolShift[r->cnt >> 8 & 3]) * (s32)(r->cnt & 0x7f);
+}
+
+static inline void pan_out(int ch, s32 v, s64 *l, s64 *r) {
+    s32 pan = (s32)(spu_ch[ch].cnt >> 16 & 0x7f);
+    *l += ((s64)v * (128 - pan)) >> 10;
+    *r += ((s64)v * pan) >> 10;
+}
+
+static inline s32 clamp16(s64 v) { return v < -0x8000 ? -0x8000 : v > 0x7fff ? 0x7fff : (s32)v; }
+
+static void capture(int idx, s32 v) {
+    if (!(spu_capcnt[idx] & 0x80)) return;
+    sCap[idx].timer += TIMER_STEP;
+    u32 len = (u32)(spu_caplen[idx] ? spu_caplen[idx] : 1) * 4;
+    while (sCap[idx].timer >= 0x10000) {
+        sCap[idx].timer = spu_ch[idx * 2 + 1].tmr + (sCap[idx].timer - 0x10000);
+        uintptr_t a = spu_capdad[idx] + sCap[idx].pos;
+        if (spu_capcnt[idx] & 8) {
+            if (spu_capdad[idx] && sCap[idx].pos + 1 <= len) *(s8 *)a = (s8)(v >> 8);
+            sCap[idx].pos += 1;
+        } else {
+            if (spu_capdad[idx] && sCap[idx].pos + 2 <= len) *(s16 *)a = (s16)v;
+            sCap[idx].pos += 2;
+        }
+        if (sCap[idx].pos >= len) {
+            sCap[idx].pos = 0;
+            if (spu_capcnt[idx] & 4) {
+                spu_capcnt[idx] &= ~0x80;
+                break;
+            }
+        }
+    }
+}
+
+static void mix_one(s16 out[2]) {
+    if (!(spu_soundcnt & 0x8000)) {
+        out[0] = out[1] = 0;
+        return;
+    }
+    s64 l = 0, r = 0;
+    s32 v[16];
+    for (int i = 0; i < 16; i++) v[i] = run_channel(i);
+    pan_out(0, v[0], &l, &r);
+    pan_out(2, v[2], &l, &r);
+    if (!(spu_soundcnt & 0x1000)) pan_out(1, v[1], &l, &r);
+    if (!(spu_soundcnt & 0x2000)) pan_out(3, v[3], &l, &r);
+    for (int i = 4; i < 16; i++) pan_out(i, v[i], &l, &r);
+    capture(0, spu_capcnt[0] & 2 ? clamp16(v[0] >> 11) : clamp16(l >> 8));
+    capture(1, spu_capcnt[1] & 2 ? clamp16(v[2] >> 11) : clamp16(r >> 8));
+    s64 lo = 0, ro = 0, dummy = 0;
+    switch (spu_soundcnt >> 8 & 3) {
+    case 0: lo = l; break;
+    case 1: pan_out(1, v[1], &lo, &dummy); break;
+    case 2: pan_out(3, v[3], &lo, &dummy); break;
+    case 3: pan_out(1, v[1], &lo, &dummy); pan_out(3, v[3], &lo, &dummy); break;
+    }
+    switch (spu_soundcnt >> 10 & 3) {
+    case 0: ro = r; break;
+    case 1: pan_out(1, v[1], &dummy, &ro); break;
+    case 2: pan_out(3, v[3], &dummy, &ro); break;
+    case 3: pan_out(1, v[1], &dummy, &ro); pan_out(3, v[3], &dummy, &ro); break;
+    }
+    s32 mv = spu_soundcnt & 0x7f;
+    out[0] = (s16)clamp16((lo * mv >> 7) >> 8);
+    out[1] = (s16)clamp16((ro * mv >> 7) >> 8);
+}
+
+void spu_mix_until(u64 cycles) {
+    s16 buf[512 * 2];
+    u32 n = 0;
+    while (sMixed + SAMPLE_CYCLES <= cycles) {
+        mix_one(&buf[n * 2]);
+        sMixed += SAMPLE_CYCLES;
+        if (++n == 512) {
+            snd7_output(buf, n);
+            n = 0;
+        }
+    }
+    if (n) snd7_output(buf, n);
+}

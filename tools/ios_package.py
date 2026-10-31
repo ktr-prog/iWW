@@ -1,0 +1,261 @@
+#!/usr/bin/env python3
+"""Package the iOS build (tools/configure_host.py --os ios) as an app and an unsigned .ipa for sideloading.
+
+    python3 tools/ios_package.py build/hostios_usa/acww build/ios/iWW.ipa [--version 1.0] [--build 1] [--sign-adhoc]
+
+Writes <out dir>/Payload/iWW.app (the program, Info.plist, the icons, PkgInfo) and zips it as the .ipa. The app is
+not signed with a developer certificate: the sideloading tool (AltStore, SideStore, Sideloadly, ...) signs it with the
+installing Apple ID. --sign-adhoc gives it an ad-hoc signature first (codesign, on a Mac), which those tools replace.
+Only the Python standard library is used (the icons are drawn here, see draw_icon). See docs/ios.md.
+"""
+import argparse
+import os
+import plistlib
+import re
+import shutil
+import stat
+import struct
+import subprocess
+import sys
+import time
+import zipfile
+import zlib
+from pathlib import Path
+
+APP_NAME = "iWW"          # (the bundle's name: iWW.app)
+DISPLAY_NAME = "iWW"      # (on the home screen and in the Files app)
+EXECUTABLE = "acww"
+BUNDLE_ID = "io.github.acww-native.acww"
+MIN_IOS = "12.0"  # (--min-ios: the build's deployment target)
+
+# the icons: (file name, pixels); iOS picks them by CFBundleIconFiles' base names and the @2x/@3x/~ipad suffixes
+ICONS = [
+    ("AppIcon60x60@2x.png", 120),
+    ("AppIcon60x60@3x.png", 180),
+    ("AppIcon76x76@2x~ipad.png", 152),
+    ("AppIcon83.5x83.5@2x~ipad.png", 167),
+]
+
+
+def info_plist(version: str, build: str, commit: str = "", min_ios: str = MIN_IOS) -> dict:
+    orient = ["UIInterfaceOrientationPortrait"]  # (portrait only, for now)
+    return {
+        "CFBundleDevelopmentRegion": "en",
+        "CFBundleDisplayName": DISPLAY_NAME,
+        "CFBundleExecutable": EXECUTABLE,
+        "CFBundleIdentifier": BUNDLE_ID,
+        "CFBundleInfoDictionaryVersion": "6.0",
+        "CFBundleName": APP_NAME,
+        "CFBundlePackageType": "APPL",
+        "CFBundleShortVersionString": version,
+        "CFBundleVersion": build,
+        "ACWWCommit": commit,  # (shown with the build number on the settings screen and at start-up)
+        # (local play, when switched on in the settings: the other copies on the network, found with Bonjour)
+        "NSLocalNetworkUsageDescription": "Local play finds the other copies of the game on your Wi-Fi network.",
+        "NSBonjourServices": ["_acww._udp"],
+        "CFBundleSupportedPlatforms": ["iPhoneOS"],
+        "CFBundleIcons": {"CFBundlePrimaryIcon": {"CFBundleIconFiles": ["AppIcon60x60"]}},
+        "CFBundleIcons~ipad": {"CFBundlePrimaryIcon": {"CFBundleIconFiles": ["AppIcon60x60", "AppIcon76x76",
+                                                                              "AppIcon83.5x83.5"]}},
+        "DTPlatformName": "iphoneos",
+        "LSRequiresIPhoneOS": True,
+        "MinimumOSVersion": min_ios,
+        "UIDeviceFamily": [1, 2],
+        "UIRequiredDeviceCapabilities": ["arm64"],
+        # (a launch screen: without one iOS runs the app in an old phone's resolution, letterboxed)
+        "UILaunchScreen": {},
+        "UIRequiresFullScreen": True,
+        "UIStatusBarHidden": True,
+        "UISupportedInterfaceOrientations": orient,
+        "UISupportedInterfaceOrientations~ipad": orient + ["UIInterfaceOrientationPortraitUpsideDown"],
+        # the Documents folder in the Files app (On My iPhone > iWW): the game goes there, the save is written there
+        "UIFileSharingEnabled": True,
+        "LSSupportsOpeningDocumentsInPlace": True,
+        # (DS-to-DS play looks for other copies on the local network)
+        # (SDL can reach some controllers over Bluetooth itself; the app uses Apple's controller support instead,
+        # but iOS ends any app that touches Bluetooth without this text)
+        "NSBluetoothAlwaysUsageDescription": "Bluetooth is used for game controllers.",
+    }
+
+
+# ---- the icon: a village scene in the game's soft style - a round fruit tree on a grassy hill under a pale sky, with
+# clouds and flowers (an original picture, drawn here: no image libraries needed)
+def draw_icon(n: int) -> bytes:
+    def mix(c0, c1, t):
+        return tuple(c0[i] + (c1[i] - c0[i]) * t for i in range(3))
+
+    def inside_circle(x, y, cx, cy, r):
+        return (x - cx) ** 2 + (y - cy) ** 2 <= r * r
+
+    def inside_ellipse(x, y, cx, cy, rx, ry):
+        return ((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2 <= 1
+
+    def inside_rrect(x, y, x0, y0, x1, y1, r):
+        if x < x0 or x > x1 or y < y0 or y > y1:
+            return False
+        qx = max(x0 + r - x, 0, x - (x1 - r))
+        qy = max(y0 + r - y, 0, y - (y1 - r))
+        return qx * qx + qy * qy <= r * r
+
+    sky_top, sky_low = (122, 200, 240), (214, 240, 236)
+    cloud, cloud_shade = (255, 255, 255), (226, 238, 246)
+    hill_back, hill, hill_light = (82, 160, 72), (112, 190, 82), (146, 210, 104)
+    trunk, trunk_dark = (150, 98, 56), (118, 74, 40)
+    leaves_dark, leaves, leaves_light = (46, 132, 64), (66, 160, 74), (110, 196, 98)
+    fruit, fruit_light = (236, 84, 62), (255, 170, 140)
+    canopy = ((60, 40, 22), (42, 50, 15), (78, 50, 15), (60, 27, 15), (48, 33, 12), (72, 33, 12))
+    fruits = ((48, 47, 3.6), (70, 39, 3.6), (63, 56, 3.6), (52, 31, 3.2))
+    flowers = ((22, 100, (255, 255, 255)), (31, 108, (255, 196, 214)), (95, 98, (255, 196, 214)),
+               (102, 107, (255, 255, 255)), (86, 106, (255, 236, 150)))
+
+    def color(x, y):  # (x, y in 0..120, y down)
+        c = mix(sky_top, sky_low, min(1.0, y / 84))
+        for cx, cy, r in ((18, 20, 8), (28, 17, 10), (38, 21, 7), (90, 26, 6), (98, 23, 8), (106, 27, 6)):
+            if inside_circle(x, y, cx, cy, r):
+                c = cloud_shade if y > cy + r * 0.35 else cloud
+        if inside_ellipse(x, y, 18, 118, 62, 38):
+            c = hill_back
+        if inside_ellipse(x, y, 74, 128, 80, 44):
+            c = hill_light if inside_ellipse(x, y, 66, 124, 74, 38) and y < 92 else hill
+        for fx, fy, fc in flowers:
+            if y > 88:
+                for dx, dy in ((-1.6, 0), (1.6, 0), (0, -1.6), (0, 1.6)):
+                    if inside_circle(x, y, fx + dx, fy + dy, 1.5):
+                        c = fc
+                if inside_circle(x, y, fx, fy, 1.0):
+                    c = (250, 200, 60)
+        if inside_ellipse(x, y, 60, 92, 15, 3.2):
+            c = mix(c, (60, 120, 50), 0.35)  # (the tree's shadow)
+        if inside_rrect(x, y, 55, 52, 65, 92, 3):
+            c = trunk_dark if x > 61.5 else trunk
+        for cx, cy, r in canopy:
+            if inside_circle(x, y, cx, cy, r + 1.3):
+                c = leaves_dark
+        for cx, cy, r in canopy:
+            if inside_circle(x, y, cx, cy, r):
+                c = leaves
+        for cx, cy, r in canopy:
+            if inside_circle(x, y, cx - r * 0.3, cy - r * 0.32, r * 0.55):
+                c = leaves_light
+        for fx, fy, r in fruits:
+            if inside_circle(x, y, fx, fy, r):
+                c = fruit_light if inside_circle(x, y, fx - r * 0.35, fy - r * 0.35, r * 0.38) else fruit
+        return c
+
+    rows = []
+    k = 4  # (k x k samples a pixel)
+    for py in range(n):
+        row = bytearray([0])  # (PNG filter: none)
+        for px in range(n):
+            acc = [0.0, 0.0, 0.0]
+            for sy in range(k):
+                for sx in range(k):
+                    c = color((px + (sx + 0.5) / k) * 120 / n, (py + (sy + 0.5) / k) * 120 / n)
+                    acc[0] += c[0]
+                    acc[1] += c[1]
+                    acc[2] += c[2]
+            row += bytes(int(min(255, max(0, round(v / (k * k))))) for v in acc)
+        rows.append(bytes(row))
+
+    def chunk(kind, data):
+        return struct.pack(">I", len(data)) + kind + data + struct.pack(">I", zlib.crc32(kind + data) & 0xffffffff)
+
+    return (b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", n, n, 8, 2, 0, 0, 0))
+            + chunk(b"IDAT", zlib.compress(b"".join(rows), 9)) + chunk(b"IEND", b""))
+
+
+def custom_icon(src: str, dst: Path, n: int) -> bool:
+    """The user's picture as an n x n PNG icon (sips on a Mac, else Pillow); False if there is none."""
+    if not src or not os.path.isfile(src):
+        return False
+    if shutil.which("sips"):
+        out = subprocess.run(["sips", "-g", "pixelWidth", "-g", "pixelHeight", src], capture_output=True, text=True,
+                             check=True).stdout
+        w = int(re.search(r"pixelWidth: (\d+)", out).group(1))
+        h = int(re.search(r"pixelHeight: (\d+)", out).group(1))
+        side = min(w, h)
+        tmp = str(dst) + ".tmp.png"
+        subprocess.run(["sips", "-s", "format", "png", "--cropToHeightWidth", str(side), str(side), src, "--out", tmp],
+                       check=True, capture_output=True)
+        subprocess.run(["sips", "-z", str(n), str(n), tmp, "--out", str(dst)], check=True, capture_output=True)
+        os.remove(tmp)
+        return True
+    try:
+        from PIL import Image
+    except ImportError:
+        sys.exit(f"ios_package.py: {src}: no sips (macOS) or Pillow to make the icon from it")
+    im = Image.open(src).convert("RGB")
+    side = min(im.size)
+    left, top = (im.size[0] - side) // 2, (im.size[1] - side) // 2
+    im.crop((left, top, left + side, top + side)).resize((n, n), Image.LANCZOS).save(dst, "PNG")
+    return True
+
+
+def main():
+    p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    p.add_argument("binary", help="the iOS build's program (build/hostios_usa/acww)")
+    p.add_argument("ipa", help="the .ipa to write")
+    p.add_argument("--version", default="1.0", help="CFBundleShortVersionString")
+    p.add_argument("--build", default="1", help="CFBundleVersion")
+    p.add_argument("--min-ios", default=MIN_IOS, help="MinimumOSVersion (the build's --ios-min)")
+    p.add_argument("--commit", default="", help="the source's commit (shown in the app with the build number)")
+    p.add_argument("--sign-adhoc", action="store_true", help="an ad-hoc signature (codesign, macOS only)")
+    p.add_argument("--icon", default="ios/icon.png",
+                   help="a picture for the app's icon (any size; cropped to a square in its middle), if the file is "
+                        "there; else the icon drawn here (default: ios/icon.png)")
+    args = p.parse_args()
+
+    binary = Path(args.binary)
+    if not binary.is_file():
+        sys.exit(f"ios_package.py: no {binary} (build it first: docs/ios.md)")
+    with open(binary, "rb") as f:
+        magic = f.read(4)
+    if magic != b"\xcf\xfa\xed\xfe":  # (MH_MAGIC_64, little-endian: an arm64 Mach-O)
+        sys.exit(f"ios_package.py: {binary} isn't a 64-bit Mach-O program")
+
+    ipa = Path(args.ipa)
+    stage = ipa.parent / "Payload"
+    app = stage / f"{APP_NAME}.app"
+    if stage.exists():
+        shutil.rmtree(stage)
+    app.mkdir(parents=True)
+    shutil.copyfile(binary, app / EXECUTABLE)
+    os.chmod(app / EXECUTABLE, 0o755)
+    with open(app / "Info.plist", "wb") as f:
+        plistlib.dump(info_plist(args.version, args.build, args.commit, args.min_ios), f, fmt=plistlib.FMT_XML)
+    (app / "PkgInfo").write_bytes(b"APPL????")
+    # (tools/ios_check.py found the save states' ranges wrong: the app turns them off)
+    off = binary.parent / "savestates-off"
+    if off.is_file():
+        shutil.copyfile(off, app / "savestates-off")
+        print(f"ios_package.py: save states off: {off.read_text().strip()}")
+    for name, n in ICONS:
+        if not custom_icon(args.icon, app / name, n):
+            (app / name).write_bytes(draw_icon(n))
+
+    if args.sign_adhoc:
+        subprocess.run(["codesign", "--force", "--sign", "-", "--timestamp=none", str(app)], check=True)
+
+    # the .ipa: a zip of Payload/ (the program keeps its executable permission)
+    if ipa.exists():
+        ipa.unlink()
+    now = time.localtime()[:6]
+    with zipfile.ZipFile(ipa, "w", zipfile.ZIP_DEFLATED) as z:
+        for root, dirs, files in os.walk(stage):
+            dirs.sort()
+            rel_root = Path(root).relative_to(ipa.parent)
+            zi = zipfile.ZipInfo(str(rel_root).replace(os.sep, "/") + "/", date_time=now)
+            zi.external_attr = (stat.S_IFDIR | 0o755) << 16
+            z.writestr(zi, b"")
+            for name in sorted(files):
+                path = Path(root) / name
+                zi = zipfile.ZipInfo(str(rel_root / name).replace(os.sep, "/"), date_time=now)
+                mode = os.stat(path).st_mode & 0o777
+                zi.external_attr = (stat.S_IFREG | mode) << 16
+                zi.compress_type = zipfile.ZIP_DEFLATED
+                z.writestr(zi, path.read_bytes())
+    print(f"ios_package.py: {ipa} ({ipa.stat().st_size // 1024} KB)")
+
+
+if __name__ == "__main__":
+    main()

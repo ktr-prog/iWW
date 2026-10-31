@@ -1,0 +1,7 @@
+#ifndef PROTO_PROTO_OV004_UNK_OV004_02229660_SWITCH_H
+#define PROTO_PROTO_OV004_UNK_OV004_02229660_SWITCH_H
+
+
+#include "types.h"
+
+#endif

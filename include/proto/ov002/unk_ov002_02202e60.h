@@ -1,0 +1,7 @@
+#ifndef PROTO_PROTO_OV002_UNK_OV002_02202E60_H
+#define PROTO_PROTO_OV002_UNK_OV002_02202E60_H
+
+
+#include "types.h"
+
+#endif

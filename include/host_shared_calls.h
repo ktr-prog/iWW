@@ -1,0 +1,187 @@
+#ifndef HOST_SHARED_CALLS_H
+#define HOST_SHARED_CALLS_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+typedef struct HostSharedCandidate {
+    unsigned overlay;
+    const void *addr;
+} HostSharedCandidate;
+typedef struct HostSharedCall {
+    unsigned count;
+    const HostSharedCandidate *cands;
+} HostSharedCall;
+
+void *Modern_SharedResolve(const HostSharedCall *call);
+
+void Shared_BarberMachine_Start(void);
+void * Shared_BuildingList_FindByItem(unsigned int a0);
+int Shared_CreatureBook_ActivateFocus(void * a0);
+void Shared_CreatureBook_DrawRows(void * a0, int a1);
+void Shared_CreatureBook_EndScrollTouch(void * a0);
+int Shared_CreatureBook_GetFocusX(void * a0);
+int Shared_CreatureBook_GetFocusY(void * a0);
+int Shared_CreatureBook_GetFocusedTab(void * a0);
+int Shared_CreatureBook_IsFocusOnPageArrow(void * a0);
+void Shared_CreatureBook_RefreshRowIcons(void * a0);
+int Shared_CreatureBook_WaitScrollHoldStart(void * a0);
+void Shared_DateTimePicker_BeginFrame(void * a0);
+void Shared_DateTimePicker_CancelList(void * a0);
+void Shared_DateTimePicker_DecideList(void * a0);
+int Shared_DateTimePicker_EndHandDrag(void * a0);
+int Shared_DateTimePicker_GrabHand(void * a0, unsigned int a1, unsigned int a2);
+int Shared_DateTimePicker_HitTestList(void * a0, int a1, int a2);
+int Shared_DateTimePicker_UpdateHandAnim(void * a0);
+int Shared_DateTimePicker_UpdateListClose(void * a0);
+int Shared_DateTimePicker_UpdateListOpen(void * a0);
+int Shared_DwcFriend_GetProfileId(int a0);
+int Shared_DwcFriend_IsIdle(void);
+int Shared_FieldInsect_GetPosAndKind(void * a0, unsigned int a1);
+void Shared_FieldObj_FreeCedarFileBufs(void * a0, void * a1, void * a2, void * a3);
+int Shared_FieldObj_LoadIconModels(void * a0);
+int Shared_FieldObj_LoadStones(void);
+void * Shared_FieldObjectManager_Create(void);
+int Shared_Field_GetStructureTexSuffix(void);
+void Shared_FishCatch_Reset(void * a0, int a1);
+int Shared_FishCatch_StateStart(void * a0, unsigned int a1);
+void Shared_FishShadow_EnterSpawn(void);
+void Shared_FishShadow_RunAi(void * a0, int a1, int a2, int a3);
+int Shared_GeneralMenuHeader_GetStyle(void);
+int Shared_InvItem_IsDeliveryItem(unsigned int a0);
+int Shared_InvItem_IsNonTransferable(unsigned int a0);
+int Shared_InvItem_IsNotFishInsectOrFlower(unsigned int a0);
+int Shared_InvItem_IsTurnipFishOrInsect(unsigned int a0);
+void Shared_InventoryBg_DrawSprite(void * a0, int a1);
+void Shared_InventoryBg_Init(void * a0, unsigned int a1);
+void Shared_InventoryBg_LoadBg(void * a0, int a1);
+void Shared_InventoryBg_LoadPictureForHeldItem(void * a0);
+void Shared_InventoryBg_PreUpdate(void * a0);
+void Shared_InventoryBg_ResetHighlight(void * a0);
+void Shared_InventoryBg_SetBellsPanelMode(void * a0, unsigned int a1);
+void Shared_InventoryBg_StartBlink(void * a0, unsigned int a1);
+void Shared_InventoryItemGrid_ClearMarks(void * a0);
+void Shared_InventoryItemGrid_ClearSlot(void * a0, int a1);
+void Shared_InventoryItemGrid_DisableSlotRange(void * a0, unsigned char a1, unsigned char a2);
+void Shared_InventoryItemGrid_DrawExtraMarks(void * a0, int a1, int a2);
+void Shared_InventoryItemGrid_Exit(void * a0);
+unsigned int Shared_InventoryItemGrid_FindBoxSlotAt(void * a0, int a1, int a2);
+unsigned short Shared_InventoryItemGrid_GetSlotItem(void * a0, int a1);
+int Shared_InventoryItemGrid_HitTestSlot21(void * a0, int a1, int a2);
+int Shared_InventoryItemGrid_IsSlotDisabled(void * a0, int a1);
+void Shared_InventoryItemGrid_LoadPockets(void * a0);
+void Shared_InventoryItemGrid_SetCursorSlot(void * a0, unsigned int a1);
+void Shared_InventoryItemGrid_SetHeldItem(void * a0, unsigned int a1, int a2);
+void Shared_InventoryItemGrid_ShowSlotName(void * a0, void * a1, int a2);
+void Shared_InventoryItemGrid_StartPresentAnim(void * a0, unsigned int a1, int a2);
+int Shared_InventoryItemGrid_UpdatePresentAnim(void * a0);
+void Shared_Inventory_PlayPickUpSe(void);
+void Shared_Keyboard_ClearHighlight(void * a0);
+int Shared_Keyboard_DeleteRange(void * a0, void * a1, int a2, int a3, int a4);
+void Shared_Keyboard_DisableModifierKeys(void * a0);
+void Shared_Keyboard_DrawCopyPasteKeys(void * a0, int a1, int a2);
+void Shared_Keyboard_DrawCopyPasteKeysChat(void * a0, int a1, int a2);
+void Shared_Keyboard_EnableKey(void * a0, int a1);
+void Shared_Keyboard_EnterTabRowAtX(void * a0, int a1);
+void Shared_Keyboard_EnterTabRowAtX2(void * a0, int a1);
+int Shared_Keyboard_GetSelectedEmotion(void * a0);
+unsigned char Shared_Keyboard_GetTypedRunLength(void * a0);
+int Shared_Keyboard_HandleModeKey(void * a0, int a1, int a2);
+void Shared_Keyboard_HighlightKey(void * a0, int a1);
+int Shared_Keyboard_InsertCharMultiline(void * a0, void * a1, int a2, void * a3, int a4, int a5, int a6, int a7, int a8, int a9);
+int Shared_Keyboard_IsOnButtonKey(void * a0, int a1);
+void Shared_Keyboard_LoadEmotionIcons(void * a0);
+void Shared_Keyboard_LoadLetterChars(void * a0, int a1);
+void Shared_Keyboard_MarkScreenDirty(void * a0);
+int Shared_Keyboard_ModifyCharKey104(void * a0, int a1);
+void Shared_Keyboard_PlayCopySe(void);
+int Shared_Keyboard_PressCursorKey(void * a0);
+void Shared_Keyboard_Reload(void * a0, int a1);
+int Shared_Keyboard_ReplaceCharBeforeCursor(void * a0, void * a1, int a2, int a3);
+void Shared_Keyboard_ResetTypedRun(void * a0);
+void Shared_Keyboard_RestoreLastPage(void * a0, int a1);
+void Shared_Keyboard_SelectEmotionByCode(void * a0, int a1);
+void Shared_Keyboard_SelectSendKey(void * a0);
+void Shared_Keyboard_SetTextFieldPos(void * a0, int a1, int a2);
+int Shared_Keyboard_TickKeyRepeat(void * a0);
+int Shared_Keyboard_TouchKey(void * a0, int a1, unsigned int a2);
+int Shared_Keyboard_TouchSendKey(void);
+int Shared_LetterGrid_GetSlotY(void * a0, int a1);
+void Shared_LetterGrid_LoadPocketLetters(void * a0);
+void Shared_LetterGrid_SetLetters0A(void * a0, void * a1);
+void Shared_LetterGrid_SetLetters2D(void * a0, void * a1);
+int Shared_LetterGrid_UpdatePopAnim(void * a0);
+int Shared_LocalWl_SetEventCallback(void * a0);
+void Shared_NumberPad_Draw(void * a0, int a1);
+void Shared_NumberPad_DrawKeypadFrame(int a0);
+unsigned int Shared_NumberPad_GetCursorX(void * a0);
+int Shared_NumberPad_GetValue(void * a0);
+unsigned int Shared_NumberPad_HitTestKey(void * a0, int a1, int a2);
+int Shared_NumberPad_IsCursorOnButton(void * a0);
+void Shared_NumberPad_PlayCancelSe(void);
+int Shared_NumberPad_PressCursorKey(void * a0);
+void Shared_NumberPad_SetAmounts(void * a0, int a1, int a2, int a3);
+void Shared_PlayerActor_EndAct3C(void * a0, int a1);
+void Shared_PlayerActor_EndFillHole(void * a0);
+void Shared_PlayerActor_EndFishWait(void * a0, int a1);
+void Shared_PlayerActor_EndShovelStrike(void * a0);
+void Shared_PlayerActor_EndTreeShake(void * a0);
+void Shared_PlayerActor_EndUmbrellaSpin(void * a0);
+void * Shared_PlayerActor_GetTrackTarget(unsigned int a0);
+int Shared_PlayerActor_LocalEndWatch(void);
+int Shared_PlayerActor_LocalRequestDoorApproach(void * a0, void * a1, void * a2);
+void Shared_PlayerActor_MainAct5C(void * a0);
+void Shared_PlayerActor_MainMailboxWait(void * a0);
+void Shared_PlayerActor_MainReleaseCreature(void * a0);
+void Shared_PlayerActor_MainShovelStrike(void * a0);
+void Shared_PlayerActor_MainThrowBottle(void * a0);
+void Shared_PlayerActor_NetAct12(void);
+int Shared_PlayerActor_NetAct82(void * a0, int a1);
+void Shared_PlayerActor_NetAxeBreak(void * a0, short a1);
+int Shared_PlayerActor_NetAxeFollowThrough(void * a0, short a1);
+void Shared_PlayerActor_NetFishWait(void * a0, short a1);
+void Shared_PlayerActor_NetFtrPushMove(void);
+int Shared_PlayerActor_RequestAct3C(void * a0, int a1, int a2);
+int Shared_PlayerActor_RoomInteractAt(void * a0, int a1, int a2);
+void Shared_PlayerActor_SetupAct3C(void * a0);
+void Shared_PlayerActor_SetupAxeFollowThrough(void * a0);
+void Shared_PlayerActor_SetupFirework(void * a0);
+void Shared_PlayerActor_SetupFishEscape(void * a0);
+void Shared_PlayerActor_SetupStorageClose(void * a0, void * a1);
+void Shared_PlayerActor_SetupTreeShakeRelease(void * a0, void * a1);
+int Shared_PocketMenu_CanEditRoom(void);
+unsigned int Shared_PocketMenu_GetPlayerSlot(void);
+void Shared_PocketMenu_SetSlotItem(void * a0, unsigned int a1, unsigned int a2, unsigned int a3);
+void Shared_PocketMenu_StartRemoveBlink(void * a0);
+void Shared_PopupChoice_Update(void * a0);
+void Shared_RoomObjTex_Construct(void * a0);
+int Shared_Room_PickRandomWalkTarget(void * a0, void * a1, int a2);
+int Shared_Sock_Bind(long a0, void * a1);
+int Shared_Sock_Startup(void * a0);
+int Shared_SpNpcKappn_GetAnimState(void);
+void Shared_StarSky_CancelUpload(void * a0);
+void Shared_StarSky_DrawArrows(void * a0, int a1, int a2);
+int Shared_StarSky_FindConstellationByLine(unsigned short a0);
+int Shared_StarSky_HitArrow(void * a0, int a1, int a2);
+int Shared_StarSky_IsConstellationFree(void * a0);
+void Shared_StarSky_RebuildScreen(void * a0, unsigned int a1, int a2);
+int Shared_StarSky_ScreenToCell(void * a0, int a1, int a2, void * a3, void * a4);
+int Shared_StarSky_ScreenToCellInScope(void * a0, int a1, int a2, void * a3, void * a4);
+void Shared_StarSky_ScrollInDir(void * a0, int a1, int a2);
+void Shared_StarSky_ScrollX(void * a0, int a1);
+void Shared_StarSky_SetScroll(void * a0, int a1, int a2);
+void Shared_StarSky_SetScrollTarget(void * a0, int a1, int a2);
+void Shared_TownMapImage_AllocGlobal(void);
+void Shared_TownMapImage_BuildMarkersGlobal(unsigned int a0);
+void Shared_TownMapImage_FinishGlobal(void * a0, void * a1);
+void Shared_TownMapMarkers_Clear(void * a0);
+void * Shared_TownMapMarkers_Get(void * a0, unsigned int a1);
+void Shared_Wlx_StartExchange(void);
+void Shared_Wlx_Stop(void);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif

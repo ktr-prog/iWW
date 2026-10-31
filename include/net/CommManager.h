@@ -1,0 +1,200 @@
+#ifndef NET_COMMMANAGER_H
+#define NET_COMMMANAGER_H
+
+#include "types.h"
+
+
+struct CommRecvLenRow {
+    u32 v[3];
+};
+
+struct Unk_02072408_Tail {
+    u32 pad[9];
+    u32 a4c[3];
+    u32 a58[3];
+};
+
+class CommManager {
+public:
+    /* 0x000 */ u8 slotActive[4];
+    /* 0x004 */ u16 sendSeq;
+    /* 0x006 */ u8 mode;
+    /* 0x007 */ u8 pendingMode;
+    /* 0x008 */ u8 *sendBufs;
+    /* 0x00c */ u32 sendCredits[3];
+    /* 0x018 */ u32 ackCounts[3];
+    /* 0x024 */ u8 *recvBufs;
+    /* 0x028 */ union {
+        CommRecvLenRow unk_28[4];
+        Unk_02072408_Tail unk_28t;
+    };
+    /* 0x064 */ s32 myAid;
+    /* 0x068 */ u32 localSlot;
+    /* 0x06c */ u8 memberCount;
+    /* 0x06d */ u8 maxSyncVarSize;
+    /* 0x06e */ u8 pad_6e[2];
+    /* 0x070 */ void *syncCompareBuf;
+    /* 0x074 */ u8 started;
+    /* 0x078 */ u8 *syncVarBuf;
+    /* 0x07c */ u8 syncVarDirty[0xc4 - 0x7c];
+    /* 0x0c4 */ u8 *recordBuf;
+    /* 0x0c8 */ u32 recordLen;
+    /* 0x0cc */ u8 *recordWritePtr;
+    /* 0x0d0 */ u8 *curRecordStart;
+    /* 0x0d4 */ u8 *curRecordEnd;
+    /* 0x0d8 */ u8 *sendQueueBuf;
+    /* 0x0dc */ u32 sendQueueLen;
+    /* 0x0e0 */ u8 *readPtr;
+    /* 0x0e4 */ u8 *deferredBuf;
+    /* 0x0e8 */ u32 deferredLen;
+    /* 0x0ec */ u8 *heldBuf;
+    /* 0x0f0 */ u32 heldLen;
+    /* 0x0f4 */ u8 *loopbackBuf;
+    /* 0x0f8 */ u32 loopbackLen;
+    /* 0x0fc */ u8 *auxBufA;
+    /* 0x100 */ u32 auxLenA;
+    /* 0x104 */ u8 *auxWritePtrA;
+    /* 0x108 */ u8 *auxBufB;
+    /* 0x10c */ u32 auxLenB;
+    /* 0x110 */ u8 *auxWritePtrB;
+    /* 0x114 */ s16 sentSeq;
+    /* 0x116 */ s16 confirmedSeq;
+    /* 0x118 */ u32 controlLen;
+    /* 0x11c */ u32 latchedErrorFlags;
+    /* 0x120 */ u32 errorFlags;
+    /* 0x124 */ u32 errorMode;
+    /* 0x128 */ u16 noAckFrames[3];
+    /* 0x12e */ u16 sendRetry;
+    /* 0x130 */ u16 sendRetryLimit;
+    /* 0x132 */ u16 sessionMemberMask;
+    /* 0x134 */ u8 wifiFriendList[0x3e0];
+    /* 0x514 */ u8 wifiUserData[0x50];
+
+    CommManager();
+    ~CommManager();
+
+    u8 *getWifiUserData();
+    u8 *getWifiFriendList();
+    void setSessionMemberMask(u32 v);
+    u32 getSendRetryLimit();
+    void setSendRetryLimit(u32 v);
+    u32 getSendRetry();
+    void setSendRetry(u32 v);
+    void clearNoAckFrames();
+    void resetNoAckFrames(s32 i);
+    u32 getNoAckFrames(s32 i);
+    u32 getErrorMode();
+    void setErrorMode(u32 v);
+    u32 getErrorFlags();
+    void setErrorFlags(u32 v);
+    u32 getLatchedErrorFlags();
+    void setLatchedErrorFlags(u32 v);
+    void appendControl(void *src, u32 n);
+    void clearControlLen();
+    u32 getControlLen();
+    void setControlLen(u32 v);
+    void clearConfirmedSeq();
+
+    void clearSentSeq();
+    s16 getConfirmedSeq();
+    s16 getSentSeq();
+    void setConfirmedSeq(s16 v);
+    void setSentSeq(s16 v);
+    u32 getAuxLenB();
+    void setAuxLenB(u32 v);
+    void clearAuxLenB();
+    void setAuxBufB(u8 *v);
+    u8 *getAuxBufB();
+    void appendAuxA(u8 *src, u32 n);
+    u32 getAuxLenA();
+    void setAuxLenA(u32 v);
+    void clearAuxLenA();
+    void setAuxBufA(u8 *v);
+    u8 *getAuxBufA();
+    void dispatchLoopback();
+    u32 getLoopbackLen();
+    void setLoopbackLen(u32 v);
+    void clearLoopbackLen();
+    void setLoopbackBuf(u8 *v);
+    u8 *getLoopbackBuf();
+    void dispatchHeld();
+    u32 getHeldLen();
+    void setHeldLen(u32 v);
+    void clearHeldLen();
+    void setHeldBuf(u8 *v);
+    u8 *getHeldBuf();
+    void flushDeferred();
+    u32 getDeferredLen();
+    void setDeferredLen(u32 v);
+    void clearDeferredLen();
+    void setDeferredBuf(u8 *v);
+    u8 *getDeferredBuf();
+    void readRecord(u8 *src, u32 n);
+    u8 *getReadPtr();
+    void setReadPtr(u8 *v);
+    u32 getSendQueueLen();
+    void setSendQueueLen(u32 v);
+    void resetSendQueueLen();
+    void setSendQueueBuf(u8 *v);
+    u8 *getSendQueueBuf();
+    void endRecord(u32 a, u32 b);
+    void writeRecord(u8 *p, u32 n);
+    void beginRecord();
+    u32 getRecordLen();
+    void setRecordLen(u32 v);
+    void resetRecordBuf();
+    void setRecordBuf(u8 *v);
+    u8 *getRecordBuf();
+    void clearSyncVarDirty();
+    void setSyncVarDirty(s32 i, u32 v);
+    u32 isSyncVarDirty(s32 i);
+    u8 *getSyncVar(u32 i);
+    void setSyncVarBuf(u8 *v);
+    u8 *getSyncVarBuf();
+    void clearMemberCount();
+    void setMemberCount(u32 v);
+    BOOL isLocalSlot(u32 v);
+    BOOL isMyAid(u32 v);
+    u32 getRecvWriteSlot(s32 a);
+    u32 getRecvReadSlot(s32 a);
+    void popRecvSlot(s32 a);
+    void pushRecvSlot(s32 a);
+    void clearRecvRingIndices();
+    void processReceived();
+    void clearRecvRings();
+    void clearRecvLen(s32 a, u32 b);
+    void setRecvLen(s32 a, u32 b, u32 c);
+    u32 getRecvLen(s32 a, u32 b);
+    void setRecvBufs(u8 *v);
+    u8 *getRecvBufByPeer(s32 a, s32 b);
+    u8 *getRecvBuf(s32 a, s32 b);
+    void clearAckCounts();
+    void incAckCount(s32 a);
+    void setAckCount(s32 a, u32 v);
+    u32 getAckCount(s32 a);
+
+    void resetSendCredits();
+    void resetSendCredit(s32 a);
+    void subSendCredit(s32 a, u32 b);
+    void addSendCredit(s32 a, u32 b);
+    u32 getSendCredit(s32 a);
+    u8 *getSendBuf(s32 i);
+    void setSendBufs(u8 *p);
+    u8 getPendingMode();
+    void setPendingMode(u32 v);
+    u8 getMode();
+    void setMode(u32 v);
+    void incSendSeq();
+    s16 getSendSeq();
+    BOOL isOnline();
+    void clearSlotsActive();
+    u32 isSlotActive(s32 i);
+    void setSlotActive(s32 i, u32 v);
+    BOOL isSendReady();
+    BOOL sendPackets(u8 *a1, u32 a2, u32 a3, u8 *s4, u32 s5, u16 s6, u8 *s7, u32 s8, u16 s9);
+    void reset();
+    void initLocal();
+    void init();
+};
+
+#endif

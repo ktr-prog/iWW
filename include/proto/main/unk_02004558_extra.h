@@ -1,0 +1,7 @@
+#ifndef PROTO_PROTO_MAIN_UNK_02004558_EXTRA_H
+#define PROTO_PROTO_MAIN_UNK_02004558_EXTRA_H
+
+
+#include "types.h"
+
+#endif

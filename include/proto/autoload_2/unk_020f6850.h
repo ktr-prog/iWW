@@ -1,0 +1,7 @@
+#ifndef PROTO_PROTO_AUTOLOAD_2_UNK_020F6850_H
+#define PROTO_PROTO_AUTOLOAD_2_UNK_020F6850_H
+
+
+#include "types.h"
+
+#endif

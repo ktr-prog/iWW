@@ -1,0 +1,7 @@
+#ifndef PROTO_PROTO_OV009_UNK_OV009_0225B880_SWITCH_H
+#define PROTO_PROTO_OV009_UNK_OV009_0225B880_SWITCH_H
+
+
+#include "types.h"
+
+#endif
