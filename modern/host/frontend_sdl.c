@@ -881,10 +881,6 @@ static void frame_body(void) {
     ios_layout();
     ios_stats();
     ios_states();
-    {
-        extern int gHostSingleScreen;
-        sTouch.single = gHostSingleScreen;
-    }
     sShm->keys = keyboard_keys() | pad_keys() | tc_keys(&sTouch);
     sShm->stick = stick_word();
 #else

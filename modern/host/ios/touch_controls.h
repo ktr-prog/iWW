@@ -32,7 +32,6 @@ typedef struct {
     int stylus_x, stylus_y;
     unsigned stylus_presses;
     float stick_x, stick_y;
-    int single;
 } TcState;
 
 void tc_reset(TcState *s);
