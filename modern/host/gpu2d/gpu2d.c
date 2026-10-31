@@ -1,9 +1,14 @@
 
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "gpu2d_internal.h"
 
 static Engine sEngine[2];
+static int sSingle;
+static u8 sFrontOnly[SCREEN_W * SCREEN_H];
+static u32 sNoLine3d[SCREEN_W];
+int gHostSingleScreen;
 static u16 sPowCnt;
 static u8 sVramCnt[9];
 static u32 sScreen[2][SCREEN_W * SCREEN_H];
@@ -321,13 +326,13 @@ static void compose_line(Engine *e, int line, const u32 *line3d, u32 *dst) {
     window_line(e, obj, mask);
     obj_mosaic_x(e, &e->obj);
     int has3d = e->num == 0 && (dispcnt & 8) && (dispcnt & 0x100) && line3d;
-    int top3d = e->num == 1 && line3d && gpu2d_tall_3d_ok();
+    int top3d = e->num == 1 && sSingle;
     int defer3d = e->num == 0 && (dispcnt & 8) && (dispcnt & 0x100) && sDefer3d;
     if (has3d || defer3d) gpu2d_feature(e, F_3D);
     u32 *defer = e->defer + line * SCREEN_W;
     s32 hofs3d = reg16(e, REG_BGHOFS) & 0x1ff;
     if (hofs3d & 0x100) hofs3d -= 0x200;
-    enum { OBJ_ORDER = 4 + 4, TOP3D = 7 };
+    enum { OBJ_ORDER = 4 + 4 };
     u8 order[4 * 5];
     int layers = 0;
     for (u32 p = 0; p < 4; p++) {
@@ -335,18 +340,17 @@ static void compose_line(Engine *e, int line, const u32 *line3d, u32 *dst) {
         for (int n = 0; n < 4; n++)
             if ((reg16(e, REG_BGCNT + 2 * n) & 3) == p && (dispcnt & 0x100u << n)) order[layers++] = (u8)n;
     }
-    if (top3d) {
-        int at = layers;
-        u32 back = 0;
+    u32 back = 0;
+    if (top3d)
         for (int k = 0; k < layers; k++)
-            if (order[k] < 4 && (reg16(e, REG_BGCNT + 2 * order[k]) & 3) >= back) back = reg16(e, REG_BGCNT + 2 * order[k]) & 3;
+            if (order[k] < 4 && (reg16(e, REG_BGCNT + 2 * order[k]) & 3) > back) back = reg16(e, REG_BGCNT + 2 * order[k]) & 3;
+    if (top3d) {
+        int m2 = 0;
         for (int k = 0; k < layers; k++) {
             u32 pr = order[k] >= OBJ_ORDER ? (u32)(order[k] - OBJ_ORDER) : reg16(e, REG_BGCNT + 2 * order[k]) & 3;
-            if (pr >= back) { at = k; break; }
+            if (pr < back) order[m2++] = order[k];
         }
-        memmove(order + at + 1, order + at, (size_t)(layers - at));
-        order[at] = TOP3D;
-        layers++;
+        layers = m2;
     }
     u16 bldcnt = reg16(e, REG_BLDCNT), bldalpha = reg16(e, REG_BLDALPHA);
     u32 effect = bldcnt >> 6 & 3, first = bldcnt & 0x3f, second = bldcnt >> 8 & 0x3f;
@@ -369,13 +373,6 @@ static void compose_line(Engine *e, int line, const u32 *line3d, u32 *dst) {
                     col[found] = rgb6(obj_color(e, dispcnt, obj, x));
                     lay[found++] = LAYER_OBJ;
                 }
-            } else if (n == TOP3D) {
-                u32 c = line3d[x];
-                if (!(c >> 24 & 0x1f)) continue;
-                if (!found) alpha3d = c >> 24 & 0x1f;
-                is3d[found] = 1;
-                col[found] = c & 0x3f3f3f;
-                lay[found++] = LAYER_BG0;
             } else if (!(m & 1 << n)) {
                 continue;
             } else if (n == 0 && defer3d) {
@@ -395,6 +392,7 @@ static void compose_line(Engine *e, int line, const u32 *line3d, u32 *dst) {
                 lay[found++] = (u8)n;
             }
         }
+        if (top3d) sFrontOnly[line * SCREEN_W + x] = (u8)(found != 0);
         if (!found) lay[1] = LAYER_NONE;
         u32 out = col[0], eff = EFF_NONE;
         int effOk = m & 0x20, below2nd = (second >> lay[1]) & 1;
@@ -466,8 +464,10 @@ static void render_line(Engine *e, const Gpu2dFrameInput *in, int line) {
         for (int x = 0; x < SCREEN_W; x++) composed[x] = 0x3f3f3f;
     } else {
         for (int n = 0; n < 4; n++) gpu2d_render_bg_line(e, n, line);
-        const u32 *l3 = e->num == 0 ? in->lines3d : in->lines3dTop;
-        compose_line(e, line, l3 ? l3 + line * SCREEN_W : NULL, composed);
+        const u32 *l3 = in->lines3d ? in->lines3d + line * SCREEN_W : NULL;
+        if (e->num == 1) l3 = NULL;
+        else if (sSingle && line < SCREEN_H / 2) l3 = in->lines3dTop ? in->lines3dTop + line * SCREEN_W : sNoLine3d;
+        compose_line(e, line, l3, composed);
     }
     obj_mosaic_y(e, line);
     u32 mode = dispcnt >> 16 & (e->num ? 1 : 3);
@@ -557,9 +557,45 @@ static void gpu_versions(const Gpu2dFrameInput *in) {
 }
 const Gpu2dGpuFrame *gpu2d_gpu_frame(void) { return &sGpuFrame; }
 
+static u32 sCanvas[SCREEN_W * SCREEN_H * 2];
+static void single_compose(const Gpu2dFrameInput *in) {
+    const Engine *a = &sEngine[0], *b = &sEngine[1];
+    u32 backdrop = rgb6(pal16(a->palette, 0));
+    u16 mb = reg16(a, REG_MASTER_BRIGHT);
+    u32 f = mb & 0x1f;
+    if (f > 16) f = 16;
+    const int half = SCREEN_H / 2;
+    for (int y = 0; y < SCREEN_H * 2; y++) {
+        u32 *d = sCanvas + y * SCREEN_W;
+        if (y < half) memcpy(d, a->out + y * SCREEN_W, SCREEN_W * sizeof *d);
+        else if (y >= SCREEN_H + half) memcpy(d, a->out + (y - SCREEN_H) * SCREEN_W, SCREEN_W * sizeof *d);
+        else {
+            const u32 *l3 = y < SCREEN_H ? (in->lines3dTop ? in->lines3dTop + y * SCREEN_W : sNoLine3d)
+                                         : in->lines3d + (y - SCREEN_H) * SCREEN_W;
+            for (int x = 0; x < SCREEN_W; x++) {
+                u32 c = l3[x], al = c >> 24 & 31, o = backdrop;
+                if (al == 31) o = c & 0x3f3f3f;
+                else if (al) o = blend3d(c & 0x3f3f3f, backdrop, al);
+                if ((mb >> 14) == 1 && f) o = brighten(o, f, 0);
+                else if ((mb >> 14) == 2 && f) o = darken(o, f, 15);
+                d[x] = o;
+            }
+        }
+        if (y < SCREEN_H)
+            for (int x = 0; x < SCREEN_W; x++)
+                if (sFrontOnly[y * SCREEN_W + x]) d[x] = b->out[y * SCREEN_W + x];
+    }
+    memcpy(sEngine[1].out, sCanvas, sizeof sEngine[1].out);
+    memcpy(sEngine[0].out, sCanvas + SCREEN_W * SCREEN_H, sizeof sEngine[0].out);
+}
+
 void gpu2d_render_frame(const Gpu2dFrameInput *in) {
     sGpu = in->gpu;
     sDefer3d = in->defer3d || sGpu;
+    static int off = -1;
+    if (off < 0) off = getenv("ACWW_SINGLE") && atoi(getenv("ACWW_SINGLE")) == 0;
+    sSingle = !off && !sGpu && !sDefer3d && in->lines3d && gpu2d_tall_3d_ok();
+    gHostSingleScreen = sSingle;
     map_vram(in);
     if (sGpu) {
         gpu_tables(in);
@@ -620,6 +656,7 @@ void gpu2d_render_frame(const Gpu2dFrameInput *in) {
         window_vertical(e, SCREEN_H);
     }
     if (sGpu) sGpuFrame.tables[0][G2T_SCREEN_A] = (sPowCnt & 0x8000) ? 0 : 1;
+    if (sSingle) single_compose(in);
     for (int n = 0; n < 2; n++) {
         int screen = (sPowCnt & 0x8000) ? n : 1 - n;
         if (sGpu == 1) {

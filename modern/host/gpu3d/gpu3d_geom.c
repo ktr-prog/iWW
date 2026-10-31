@@ -428,7 +428,11 @@ static void screen_position(G3Vertex *v) {
 
 static int sClipK = 1;
 static int sTall;
-void gpu3d_set_tall(int on) { sTall = on && g3_tall_supported(); }
+void gpu3d_set_tall(int on) {
+    extern int sTallWanted;
+    sTall = on && g3_tall_supported();
+    sTallWanted = sTall;
+}
 static G3Vertex sClipBuf[2][10];
 static s64 plane_d(const s32 *pos, int comp, int sign) {
     s64 k = comp == 1 && sign > 0 ? sClipK : 1;

@@ -177,6 +177,10 @@ static void stylus_point(TcState *s, const TcLayout *l, float x, float y) {
     TcRect sc = l->screens;
     float half = sc.h / 2;
     int px = (int)floorf((x - sc.x) * 256.0f / sc.w), py = (int)floorf((y - (sc.y + half)) * 192.0f / half);
+    if (s->single) {
+        int cy = (int)floorf((y - sc.y) * 192.0f / half);
+        py = cy < 96 ? cy : cy - 192;
+    }
     s->stylus_x = px < 0 ? 0 : px > 255 ? 255 : px;
     s->stylus_y = py < 0 ? 0 : py > 191 ? 191 : py;
 }
@@ -204,6 +208,10 @@ int tc_pointer(TcState *s, const TcLayout *l, int64_t id, int event, float x, fl
         TcRect sc = l->screens;
         if (inside(sc, x, y)) {
             int bottom = y >= sc.y + sc.h / 2;
+            if (s->single) {
+                int cy = (int)floorf((y - sc.y) * 384.0f / sc.h);
+                bottom = cy < 96 || cy >= 192;
+            }
             if (bottom) {
                 for (int j = 0; j < TC_MAX_POINTERS; j++)
                     if (j != i && s->p[j].used && s->p[j].what == WHAT_STYLUS) s->p[j].what = WHAT_NOTHING;

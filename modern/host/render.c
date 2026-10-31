@@ -525,7 +525,7 @@ void render_frame(void) {
             if (sGpu2dMode == 2 && !sSelftest) render_check_gpu2d();
         }
     }
-    if (sGpu2d && sOwn3d) gpu3d_set_tall(gpu2d_tall_3d_ok());
+    if (sGpu2d && sOwn3d) gpu3d_set_tall(gpu2d_tall_3d_ok() && !(getenv("ACWW_SINGLE") && atoi(getenv("ACWW_SINGLE")) == 0));
     if (sGpu3d) gpu3d_run_frame();
     if (sCompare && !sSelftest) {
         render_compare("frame", host_frame());
