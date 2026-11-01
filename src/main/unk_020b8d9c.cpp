@@ -6316,6 +6316,24 @@ extern "C" void Sky_HBlankMain()
     IO_W(&REG16(0x4000052), gWeatherManager.lineBlend[gWeatherManager.lineBufferIndex][y]);
 }
 
+#ifdef HOST
+extern "C" int Sky_HostExtLine(int line, s32 *out)
+{
+    if (sSkyOutdoors == 0) return 0;
+    s32 i0 = gWeatherManager.screenOffsetY[gWeatherManager.bufferIndex];
+    if (i0 < 0) i0 = 0;
+    if (i0 > 0xbe) i0 = 0xbe;
+    SkyLineAffine *e0 = &gWeatherManager.lineAffine[gWeatherManager.lineBufferIndex][i0];
+    SkyLineAffine *e1 = e0 + 1;
+    out[0] = sSkyGradient.lineColors[sSkyGradient.bufferIndex][i0];
+    out[1] = (u16)e0->pa;
+    out[2] = (u16)e0->x;
+    out[3] = (u16)(e0->y + (e1->y - e0->y) * line);
+    out[4] = gWeatherManager.lineBlend[gWeatherManager.lineBufferIndex][i0];
+    return 1;
+}
+#endif
+
 extern "C" void Sky_HBlankSub()
 {
     s32 y = IO_R(&REG16(0x4000006)) + gWeatherManager.screenOffsetY[gWeatherManager.bufferIndex];

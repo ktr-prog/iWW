@@ -616,7 +616,6 @@ static void render_ext_sky(const Gpu2dFrameInput *in) {
     u8 dc[4], bc[8];
     memcpy(dc, b->regs + REG_DISPCNT, 4);
     memcpy(bc, b->regs + REG_BGCNT, 8);
-    for (int n = 2; n < 4; n++) b->regs[REG_BGCNT + 2 * n + 1] |= 0x20;
     {
         u32 d = reg32(b, REG_DISPCNT);
         int back = -1, bp = -1;
@@ -641,11 +640,35 @@ static void render_ext_sky(const Gpu2dFrameInput *in) {
         if ((o[1] >> 6) != 0 || (o[3] >> 6) > 1 || (o[1] & 1)) o[0] = 0xc0, o[1] = 0x02;
     }
     b->oam = stars;
+    extern int Sky_HostExtLine(int line, s32 *out);
+    s32 sl[5];
+    u8 regs[REG_SIZE], back[2], rw[2];
+    s32 rx[2], ry[2], rl = b->refLine;
+    memcpy(rx, b->refX, sizeof rx), memcpy(ry, b->refY, sizeof ry), memcpy(rw, b->refWritten, sizeof rw);
+    memcpy(regs, b->regs, REG_SIZE);
+    memcpy(back, in->palette + 0x400, 2);
     for (int r = 0; r < ext; r++) {
+        if (Sky_HostExtLine(r - ext, sl)) {
+            u8 *pal = (u8 *)in->palette + 0x400;
+            pal[0] = (u8)sl[0], pal[1] = (u8)(sl[0] >> 8);
+            b->regs[0x30] = (u8)sl[1], b->regs[0x31] = (u8)(sl[1] >> 8);
+            for (int k = 0; k < 4; k++) b->regs[0x38 + k] = (u8)((u32)sl[2] >> 8 * k), b->regs[0x3c + k] = (u8)((u32)sl[3] >> 8 * k);
+            b->regs[0x52] = (u8)sl[4], b->regs[0x53] = (u8)(sl[4] >> 8);
+            b->regs[REG_BGCNT + 7] |= 0x20;
+            for (int i = 0; i < 2; i++) {
+                b->refX[i] = ref28(b, 0x28 + 0x10 * (u32)i);
+                b->refY[i] = ref28(b, 0x2c + 0x10 * (u32)i);
+            }
+            b->refLine = r - ext;
+        }
         for (int n = 0; n < 4; n++) gpu2d_render_bg_line(b, n, r - ext);
         gpu2d_render_obj_line(b, ((r - ext) % SCREEN_H + SCREEN_H) % SCREEN_H, &b->obj);
         compose_line(b, 0, top ? top + r * SCREEN_W : NULL, sExtSky + r * SCREEN_W);
     }
+    memcpy(b->regs, regs, REG_SIZE);
+    memcpy((u8 *)in->palette + 0x400, back, 2);
+    memcpy(b->refX, rx, sizeof rx), memcpy(b->refY, ry, sizeof ry), memcpy(b->refWritten, rw, sizeof rw);
+    b->refLine = rl;
     memcpy(b->regs + REG_DISPCNT, dc, 4);
     memcpy(b->regs + REG_BGCNT, bc, 8);
     b->oam = oam;
