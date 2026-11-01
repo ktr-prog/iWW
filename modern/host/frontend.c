@@ -266,6 +266,17 @@ int host_pocket_action(int state) {
     fprintf(stderr, "pocketmenu: action %#x\n", act);
     return (int)act;
 }
+extern int Scene_HostWarp(u32 id, s32 x, s32 z);
+static void warp_test(void) {
+    static const char *spec;
+    static int done;
+    unsigned at, id;
+    float x, z;
+    if (!spec) spec = getenv("ACWW_WARP") ? getenv("ACWW_WARP") : "";
+    if (done || sscanf(spec, "%u:%x:%f:%f", &at, &id, &x, &z) != 4 || host_frame() < at) return;
+    done = 1;
+    fprintf(stderr, "warp: scene %#x: %d\n", id, Scene_HostWarp(id, (s32)(x * 8192), (s32)(z * 8192)));
+}
 static void showoff_test(void) {
     static const char *spec;
     static unsigned at, kind = 1, item = 0;
@@ -466,6 +477,7 @@ void host_test_post_task(void) {
     lights_test();
     fish_test();
     showoff_test();
+    warp_test();
     pocket_test();
     test_ca();
     if (!sWfcTest) sWfcTest = getenv("ACWW_WFC_TEST") ? getenv("ACWW_WFC_TEST") : "";

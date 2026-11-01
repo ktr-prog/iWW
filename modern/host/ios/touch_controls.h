@@ -18,6 +18,7 @@ typedef struct {
     int controls;
     TcRect button[TC_COUNT];
     int stick;
+    float stick_size;
 } TcLayout;
 
 void tc_layout(TcLayout *l, int w, int h, float pt, const float safe[4], int controls);
@@ -34,6 +35,7 @@ typedef struct {
     unsigned stylus_presses;
     float stick_x, stick_y;
     int canvas_rows;
+    float stick_cx, stick_cy;
 } TcState;
 int tc_canvas_rows(const TcLayout *l);
 
@@ -46,6 +48,7 @@ unsigned tc_stylus_presses(const TcState *s);
 uint32_t tc_held(const TcState *s);
 uint32_t tc_dpad_dirs(const TcState *s);
 int tc_stick(const TcState *s, float *x, float *y);
+int tc_stick_center(const TcState *s, float *x, float *y);
 
 void tc_draw(uint32_t *px, int w, int h, int which, int pressed, uint32_t dirs);
 #define TC_KNOB 0.46f

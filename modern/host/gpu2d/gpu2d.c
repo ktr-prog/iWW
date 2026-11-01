@@ -5,7 +5,7 @@
 #include "gpu2d_internal.h"
 
 static Engine sEngine[2];
-static int sSingle, sSingleBlank, sA3dNow, sA3dPrev;
+static int sSingle, sSingleBlank, sA3dNow, sA3dPrev, sOutdoors;
 static u8 sSkyA[SCREEN_W * SCREEN_H];
 int gHostSingleScreen;
 static u16 sPowCnt;
@@ -405,7 +405,7 @@ static void compose_line(Engine *e, int line, const u32 *line3d, u32 *dst) {
             }
         }
         if (sSingle && e->num == 0 && is3d[0]) sA3dNow = 1;
-        if (sSingle && e->num == 0) sSkyA[line * SCREEN_W + x] = (u8)(is3d[0] && (line3d[x + hofs3d] >> 31));
+        if (sSingle && e->num == 0) sSkyA[line * SCREEN_W + x] = (u8)(sOutdoors && is3d[0] && (line3d[x + hofs3d] >> 31));
         if (!found) lay[1] = LAYER_NONE;
         u32 out = col[0], eff = EFF_NONE;
         int effOk = m & 0x20, below2nd = (second >> lay[1]) & 1;
@@ -717,6 +717,10 @@ void gpu2d_render_frame(const Gpu2dFrameInput *in) {
         sSingleBlank = sSingle && !now;
     }
     gHostSingleScreen = sSingle;
+    {
+        extern int Scene_InTown(void);
+        sOutdoors = Scene_InTown();
+    }
     sA3dPrev = sA3dNow;
     sA3dNow = 0;
     map_vram(in);

@@ -47,25 +47,20 @@ void tc_layout(TcLayout *l, int w, int h, float pt, const float safe[4], int con
         float top = sy + sch, bottom = sy + sh, ch = bottom - top;
         float rh = clampf(ch * 0.17f, 30 * pt, 44 * pt);
         float rowY = top + m * 0.75f;
-        float lrw = clampf(sw * 0.18f, 56 * pt, 120 * pt);
-        l->button[TC_L] = rect(sx + m, rowY, lrw, rh);
-        l->button[TC_R] = rect(sx + sw - m - lrw, rowY, lrw, rh);
         float gap = 8 * pt, ssh = rh * 0.8f;
-        float room = l->button[TC_R].x - (l->button[TC_L].x + lrw) - 2 * gap;
-        float ssw = minf(clampf(sw * 0.15f, 48 * pt, 100 * pt), (room - 2 * gap) / 3);
-        float x0 = sx + sw / 2 - (3 * ssw + 2 * gap) / 2, sy0 = rowY + (rh - ssh) / 2;
-        static const int kRow[3] = {TC_SAVE, TC_START, TC_LOAD};
-        for (int i = 0; i < 3; i++) l->button[kRow[i]] = rect(x0 + i * (ssw + gap), sy0, ssw, ssh);
+        float ssw = minf(clampf(sw * 0.17f, 52 * pt, 110 * pt), (sw - 2 * m - 3 * gap) / 4);
+        float x0 = sx + sw / 2 - (4 * ssw + 3 * gap) / 2, sy0 = rowY + (rh - ssh) / 2;
+        static const int kRow[4] = {TC_SAVE, TC_START, TC_LOAD, TC_MENU};
+        for (int i = 0; i < 4; i++) l->button[kRow[i]] = rect(x0 + i * (ssw + gap), sy0, ssw, ssh);
         float aTop = rowY + rh + m * 0.5f, aBottom = bottom - m * 0.5f, ah = aBottom - aTop;
         float k = minf(minf(ah, sw * 0.44f), 230 * pt);
         float cy = aTop + ah / 2;
-        float lcx = maxf(sx + sw * 0.25f, sx + m + k / 2), rcx = minf(sx + sw * 0.75f, sx + sw - m - k / 2);
-        l->button[TC_DPAD] = square_at(lcx, cy, k * 0.92f);
-        face_buttons(l, rcx, cy, k);
-        float gx0 = lcx + k * 0.46f + gap, gx1 = rcx - k * 0.19f - gap;
-        float mw = minf(ssw, gx1 - gx0), mh = ssh;
-        if (mw < ssh * 1.2f) mw = ssh * 1.2f;
-        l->button[TC_MENU] = rect((gx0 + gx1) / 2 - mw / 2, minf(cy + k * 0.46f, aBottom) - mh, mw, mh);
+        float rcx = minf(sx + sw * 0.75f, sx + sw - m - k / 2);
+        float d = k * 0.40f, o = k * 0.24f;
+        l->button[TC_A] = square_at(rcx + o, cy - o * 0.55f, d);
+        l->button[TC_B] = square_at(rcx - o, cy + o * 0.55f, d);
+        l->stick_size = k * 0.92f;
+        l->button[TC_DPAD] = rect(sx, aTop, sw * 0.5f, aBottom - aTop);
     } else {
         const float minSide = 150 * pt;
         float sch = sh, scw = sch / 1.5f, side = (sw - scw) / 2;
@@ -93,13 +88,16 @@ void tc_layout(TcLayout *l, int w, int h, float pt, const float safe[4], int con
             float aTop = menu.y + ssh + m * 0.75f, aBottom = small.y - m, ah = aBottom - aTop;
             float k = minf(minf(ah, pw), 260 * pt);
             float cy = aTop + ah / 2;
+            (void)shoulder;
             if (s == 0) {
-                l->button[TC_L] = shoulder, l->button[TC_SAVE] = smallA, l->button[TC_START] = smallB;
+                l->button[TC_SAVE] = smallA, l->button[TC_START] = smallB;
                 l->button[TC_MENU] = menu;
-                l->button[TC_DPAD] = square_at(cx, cy, k * 0.92f);
+                l->stick_size = k * 0.92f;
+                l->button[TC_DPAD] = rect(p.x, aTop, p.w, aBottom - aTop);
             } else {
-                l->button[TC_R] = shoulder, l->button[TC_LOAD] = rect(cx - ssw / 2, small.y, ssw, ssh);
+                l->button[TC_LOAD] = rect(cx - ssw / 2, small.y, ssw, ssh);
                 face_buttons(l, cx, cy, k);
+                l->button[TC_X] = l->button[TC_Y] = rect(0, 0, 0, 0);
             }
         }
     }
@@ -115,25 +113,12 @@ enum { DIR_RIGHT = 1u << 4, DIR_LEFT = 1u << 5, DIR_UP = 1u << 6, DIR_DOWN = 1u 
 
 void tc_reset(TcState *s) { memset(s, 0, sizeof *s); }
 
-static uint32_t dpad_dirs(const TcLayout *l, float x, float y) {
-    TcRect r = l->button[TC_DPAD];
-    float dx = x - (r.x + r.w / 2), dy = (r.y + r.h / 2) - y;
-    if (dx * dx + dy * dy < (r.w * 0.12f) * (r.w * 0.12f)) return 0;
-    float a = atan2f(dy, dx) * (180.0f / 3.14159265f);
-    uint32_t k = 0;
-    if (a > -62.5f && a < 62.5f) k |= DIR_RIGHT;
-    if (a > 27.5f && a < 152.5f) k |= DIR_UP;
-    if (a > 117.5f || a < -117.5f) k |= DIR_LEFT;
-    if (a > -152.5f && a < -27.5f) k |= DIR_DOWN;
-    return k;
-}
 
 #define STICK_DEAD 0.12f
 #define STICK_DPAD 0.40f
-static uint32_t stick_at(const TcLayout *l, float x, float y, float *sx, float *sy) {
-    TcRect r = l->button[TC_DPAD];
-    float range = r.w * TC_KNOB_TRAVEL;
-    float dx = (x - (r.x + r.w / 2)) / range, dy = ((r.y + r.h / 2) - y) / range;
+static uint32_t stick_at(const TcLayout *l, const TcState *st, float x, float y, float *sx, float *sy) {
+    float range = l->stick_size * TC_KNOB_TRAVEL;
+    float dx = (x - st->stick_cx) / range, dy = (st->stick_cy - y) / range;
     float m = sqrtf(dx * dx + dy * dy);
     if (m > 1) dx /= m, dy /= m, m = 1;
     if (m < STICK_DEAD) { *sx = *sy = 0; return 0; }
@@ -172,8 +157,7 @@ static int button_at(const TcLayout *l, float x, float y) {
 }
 static int dpad_at(const TcLayout *l, float x, float y) {
     TcRect r = l->button[TC_DPAD];
-    float g = r.w * 0.08f;
-    return r.w > 0 && x >= r.x - g && x < r.x + r.w + g && y >= r.y - g && y < r.y + r.h + g;
+    return r.w > 0 && inside(r, x, y);
 }
 
 int tc_canvas_rows(const TcLayout *l) {
@@ -228,8 +212,12 @@ int tc_pointer(TcState *s, const TcLayout *l, int64_t id, int event, float x, fl
             } else {
                 s->p[i].what = WHAT_NOTHING;
             }
-        } else if (l->controls && dpad_at(l, x, y)) {
+        } else if (l->controls && button_at(l, x, y) < 0 && dpad_at(l, x, y)) {
             s->p[i].what = TC_DPAD;
+            TcRect z = l->button[TC_DPAD];
+            float half = l->stick_size / 2;
+            s->stick_cx = clampf(x, z.x + half, z.x + z.w - half);
+            s->stick_cy = clampf(y, z.y + half, z.y + z.h - half);
         } else if (l->controls) {
             int b = button_at(l, x, y);
             s->p[i].what = b >= 0 ? b : WHAT_NOTHING;
@@ -242,11 +230,7 @@ int tc_pointer(TcState *s, const TcLayout *l, int64_t id, int event, float x, fl
     if (w == WHAT_STYLUS) {
         stylus_point(s, l, x, y);
     } else if (w == TC_DPAD) {
-        if (l->stick) {
-            s->p[i].keys = stick_at(l, x, y, &s->stick_x, &s->stick_y);
-        } else {
-            s->p[i].keys = dpad_dirs(l, x, y);
-        }
+        s->p[i].keys = stick_at(l, s, x, y, &s->stick_x, &s->stick_y);
     } else if (w >= 0) {
         int b = button_at(l, x, y);
         s->p[i].what = b >= 0 ? b : WHAT_SLIDING;
@@ -277,6 +261,15 @@ uint32_t tc_held(const TcState *s) {
         if (s->p[i].what != TC_DPAD || s->p[i].keys) h |= 1u << s->p[i].what;
     }
     return h;
+}
+
+int tc_stick_center(const TcState *s, float *x, float *y) {
+    for (int i = 0; i < TC_MAX_POINTERS; i++)
+        if (s->p[i].used && s->p[i].what == TC_DPAD) {
+            *x = s->stick_cx, *y = s->stick_cy;
+            return 1;
+        }
+    return 0;
 }
 
 int tc_stick(const TcState *s, float *x, float *y) {
@@ -347,21 +340,6 @@ static float shape_sd(int which, int w, int h, float x, float y, uint32_t *arm) 
     return sd_box(x, y, cx, cy, w / 2.0f - 1, hh, hh);
 }
 
-static float arrow_cover(int w, int h, float px, float py, uint32_t dir) {
-    float cx = w / 2.0f, cy = h / 2.0f, half = minf((float)w, (float)h) / 2 - 1;
-    float at = half * 0.68f, s = half * 0.17f;
-    float n = 0;
-    for (int j = 0; j < 4; j++) {
-        for (int i = 0; i < 4; i++) {
-            float x = px + (i + 0.5f) / 4 - cx, y = py + (j + 0.5f) / 4 - cy;
-            float u = dir == DIR_RIGHT ? x : dir == DIR_LEFT ? -x : dir == DIR_DOWN ? y : -y;
-            float v = dir == DIR_RIGHT || dir == DIR_LEFT ? y : x;
-            u -= at;
-            if (u >= -s && u <= s && fabsf(v) <= (s - u) / 2) n += 1;
-        }
-    }
-    return n / 16;
-}
 
 static void label(uint32_t *px, int w, int h, const char *text, float alpha) {
     int n = (int)strlen(text);
@@ -386,59 +364,63 @@ static void label(uint32_t *px, int w, int h, const char *text, float alpha) {
     }
 }
 
+static void glass_pixel(uint32_t *d, float d_edge, float yfrac, float rim, int pressed, float cover) {
+    float fill = pressed ? 0.34f : 0.16f;
+    fill += (1 - yfrac) * 0.10f;
+    float edge = clampf(d_edge + rim + 0.5f, 0, 1);
+    float rimA = 0.30f + (1 - yfrac) * 0.45f;
+    float a = fill + (rimA - fill) * edge;
+    blend(d, 0xffffff, a * cover);
+    if (yfrac < 0.42f) {
+        float sheen = (0.42f - yfrac) / 0.42f;
+        blend(d, 0xffffff, 0.16f * sheen * sheen * cover * (1 - edge));
+    }
+    if (yfrac > 0.70f) blend(d, 0x203040, 0.10f * (yfrac - 0.70f) / 0.30f * cover * (1 - edge));
+}
+
 void tc_draw(uint32_t *px, int w, int h, int which, int pressed, uint32_t dirs) {
     static const char *const kLabel[TC_COUNT] = {"A", "B", "X", "Y", "L", "R", "START", "SELECT", "SAVE", "LOAD", "MENU",
                                                  ""};
+    (void)dirs;
     memset(px, 0, (size_t)w * h * 4);
     if (w <= 2 || h <= 2) return;
-    float rim = maxf(1.5f, minf((float)w, (float)h) * (which == TC_DPAD ? 0.025f : 0.05f));
-    const float kFill = 0.22f, kFillPressed = 0.55f, kRim = 0.62f;
+    float rim = maxf(1.2f, minf((float)w, (float)h) * 0.035f);
     for (int y = 0; y < h; y++) {
         for (int x = 0; x < w; x++) {
             uint32_t arm;
             float d = shape_sd(which, w, h, x + 0.5f, y + 0.5f, &arm);
             float cover = clampf(0.5f - d, 0, 1);
             if (cover <= 0) continue;
-            int lit = which == TC_DPAD ? (arm && (dirs & arm)) : pressed;
-            float a = lit ? kFillPressed : kFill;
-            float rimAmount = clampf(d + rim + 0.5f, 0, 1);
-            a = a + (kRim - a) * rimAmount;
-            blend(&px[y * w + x], 0xffffff, a * cover);
-            if (which == TC_DPAD && arm) {
-                float c = arrow_cover(w, h, (float)x, (float)y, arm);
-                if (c > 0) blend(&px[y * w + x], 0xffffff, 0.75f * c);
-            }
+            glass_pixel(&px[y * w + x], d, (y + 0.5f) / h, rim, pressed, cover);
         }
     }
-    if (which != TC_DPAD) label(px, w, h, kLabel[which], pressed ? 1.0f : 0.85f);
+    if (which != TC_DPAD) label(px, w, h, kLabel[which], pressed ? 1.0f : 0.92f);
 }
 
 void tc_draw_stick_base(uint32_t *px, int w, int h) {
     memset(px, 0, (size_t)w * h * 4);
     if (w <= 2 || h <= 2) return;
     float cx = w / 2.0f, cy = h / 2.0f, R = minf((float)w, (float)h) / 2 - 1;
-    float rim = maxf(1.5f, R * 0.05f);
+    float rim = maxf(1.2f, R * 0.04f);
     for (int y = 0; y < h; y++)
         for (int x = 0; x < w; x++) {
             float d = len2(x + 0.5f - cx, y + 0.5f - cy) - R;
             float cover = clampf(0.5f - d, 0, 1);
             if (cover <= 0) continue;
-            float a = 0.14f + (0.55f - 0.14f) * clampf(d + rim + 0.5f, 0, 1);
-            blend(&px[y * w + x], 0xffffff, a * cover);
+            glass_pixel(&px[y * w + x], d, (y + 0.5f) / h, rim, 0, cover * 0.85f);
         }
 }
 void tc_draw_stick_knob(uint32_t *px, int w, int h, int pressed) {
     memset(px, 0, (size_t)w * h * 4);
     if (w <= 2 || h <= 2) return;
     float cx = w / 2.0f, cy = h / 2.0f, R = minf((float)w, (float)h) / 2 - 1;
-    float rim = maxf(1.5f, R * 0.08f);
+    float rim = maxf(1.2f, R * 0.07f);
     for (int y = 0; y < h; y++)
         for (int x = 0; x < w; x++) {
             float d = len2(x + 0.5f - cx, y + 0.5f - cy) - R;
             float cover = clampf(0.5f - d, 0, 1);
             if (cover <= 0) continue;
-            float a0 = pressed ? 0.62f : 0.40f;
-            float a = a0 + (0.75f - a0) * clampf(d + rim + 0.5f, 0, 1);
-            blend(&px[y * w + x], 0xffffff, a * cover);
+            glass_pixel(&px[y * w + x], d, (y + 0.5f) / h, rim, pressed, cover);
+            glass_pixel(&px[y * w + x], d, (y + 0.5f) / h, rim, 0, cover * 0.6f);
         }
 }

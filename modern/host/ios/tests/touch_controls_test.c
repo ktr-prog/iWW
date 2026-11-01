@@ -114,22 +114,23 @@ static void check_layout(const Device *d, int side, int controls, const char *di
         CHECK(sw >= 230, "%s %s: screens only %.0f pt wide", d->name, o, sw);
         for (int i = 0; i < TC_COUNT; i++) {
             TcRect a = l.button[i];
-            if (i == TC_SELECT) {
-                CHECK(a.w == 0 && a.h == 0, "%s %s: a SELECT button", d->name, o);
+            if (i == TC_SELECT || i == TC_L || i == TC_R || i == TC_X || i == TC_Y) {
+                CHECK(a.w == 0 && a.h == 0, "%s %s: a %s button", d->name, o, kName[i]);
                 continue;
             }
             CHECK(a.w > 0 && a.h > 0, "%s %s: %s has no size", d->name, o, kName[i]);
             CHECK(contains(sr, a, 0.5f), "%s %s: %s outside the safe area", d->name, o, kName[i]);
             CHECK(!overlap(a, l.screens), "%s %s: %s over the screens", d->name, o, kName[i]);
             for (int j = i + 1; j < TC_COUNT; j++)
-                CHECK(!overlap_controls(i, j, a, l.button[j]), "%s %s: %s and %s overlap", d->name, o, kName[i], kName[j]);
+                CHECK(i == TC_DPAD || j == TC_DPAD || !overlap_controls(i, j, a, l.button[j]), "%s %s: %s and %s overlap",
+                      d->name, o, kName[i], kName[j]);
             float minSide = (i <= TC_Y ? 44 : i == TC_DPAD ? 120 : 26) * pt;
+            if (i == TC_DPAD) CHECK(l.stick_size >= 110 * pt, "%s %s: circle pad only %.0f pt", d->name, o, l.stick_size / pt);
             CHECK(a.h >= minSide - 0.5f && a.w >= minSide - 0.5f, "%s %s: %s too small (%.0f x %.0f pt)", d->name, o,
                   kName[i], a.w / pt, a.h / pt);
         }
-        printf("  %-22s %-7s screens %3.0fx%3.0f pt (DS x%.2f), A/B/X/Y %2.0f pt, D-pad %3.0f pt, L/R %3.0fx%2.0f pt\n",
-               d->name, o, l.screens.w / pt, l.screens.h / pt, l.screens.w / 256.0f, l.button[TC_A].w / pt,
-               l.button[TC_DPAD].w / pt, l.button[TC_L].w / pt, l.button[TC_L].h / pt);
+        printf("  %-22s %-7s screens %3.0fx%3.0f pt (DS x%.2f), A/B %2.0f pt, circle pad %3.0f pt\n", d->name, o,
+               l.screens.w / pt, l.screens.h / pt, l.screens.w / 256.0f, l.button[TC_A].w / pt, l.stick_size / pt);
     } else {
         CHECK(fabsf(l.screens.w - sr.w) < 1 || fabsf(l.screens.h - sr.h) < 1, "%s %s: screens not as large as they fit",
               d->name, o);
@@ -147,7 +148,7 @@ static void check_touch(void) {
     tc_reset(&s);
     static const uint32_t kBits[] = {1u << 0, 1u << 1, 1u << 10, 1u << 11, 1u << 9, 1u << 8, 1u << 3, 1u << 2, 0, 0, 0};
     for (int b = 0; b < TC_DPAD; b++) {
-        if (b == TC_SELECT) continue;
+        if (l.button[b].w <= 0) continue;
         tc_pointer(&s, &l, 7, TC_DOWN, cx(l.button[b]), cy(l.button[b]));
         CHECK(tc_keys(&s) == kBits[b], "button %s gives keys %#x", kName[b], tc_keys(&s));
         CHECK(tc_held(&s) == 1u << b, "button %s held %#x", kName[b], tc_held(&s));
@@ -162,34 +163,17 @@ static void check_touch(void) {
     tc_pointer(&s, &l, 1, TC_MOVE, cx(l.button[TC_A]), cy(l.button[TC_A]));
     CHECK(tc_keys(&s) == 1, "slid back onto A: keys %#x", tc_keys(&s));
     TcRect dp = l.button[TC_DPAD];
-    struct { float a; uint32_t k; } dirs[] = {
-        {0, 1u << 4}, {90, 1u << 6}, {180, 1u << 5}, {270, 1u << 7},
-        {45, 1u << 4 | 1u << 6}, {135, 1u << 5 | 1u << 6}, {225, 1u << 5 | 1u << 7}, {315, 1u << 4 | 1u << 7},
-        {20, 1u << 4}, {70, 1u << 6},
-    };
-    for (unsigned i = 0; i < sizeof dirs / sizeof dirs[0]; i++) {
-        float r = dp.w * 0.35f, a = dirs[i].a * 3.14159265f / 180;
-        float x = cx(dp) + r * cosf(a), y = cy(dp) - r * sinf(a);
-        tc_pointer(&s, &l, 2, i == 0 ? TC_DOWN : TC_MOVE, x, y);
-        CHECK(tc_keys(&s) == (dirs[i].k | 1u), "D-pad at %.0f degrees (with A): keys %#x, want %#x", dirs[i].a,
-              tc_keys(&s), dirs[i].k | 1u);
-        CHECK(tc_dpad_dirs(&s) == dirs[i].k, "D-pad dirs at %.0f", dirs[i].a);
-    }
-    tc_pointer(&s, &l, 2, TC_MOVE, cx(dp), cy(dp));
-    CHECK(tc_keys(&s) == 1u, "D-pad centre: keys %#x", tc_keys(&s));
-    tc_pointer(&s, &l, 2, TC_MOVE, cx(dp), cy(dp) - dp.h * 2);
-    CHECK(tc_keys(&s) == (1u | 1u << 6), "far above the D-pad: keys %#x", tc_keys(&s));
-    tc_pointer(&s, &l, 2, TC_UP, 0, 0);
+    float pcx = dp.x + dp.w / 2, pcy = dp.y + dp.h / 2;
     tc_pointer(&s, &l, 1, TC_UP, 0, 0);
-    CHECK(tc_keys(&s) == 0, "all released: keys %#x", tc_keys(&s));
     {
         TcLayout st = l;
-        st.stick = 1;
-        float range = dp.w * TC_KNOB_TRAVEL, sx, sy;
-        tc_pointer(&s, &st, 2, TC_DOWN, cx(dp) + range * 0.05f, cy(dp));
+        float range = l.stick_size * TC_KNOB_TRAVEL, sx, sy, scx, scy;
+        tc_pointer(&s, &st, 2, TC_DOWN, pcx, pcy);
+        CHECK(tc_stick_center(&s, &scx, &scy) && fabsf(scx - pcx) < 1 && fabsf(scy - pcy) < 1, "circle pad where touched");
+        tc_pointer(&s, &st, 2, TC_MOVE, pcx + range * 0.05f, pcy);
         CHECK(tc_stick(&s, &sx, &sy) && sx == 0 && sy == 0 && tc_keys(&s) == 0, "stick dead zone: %f %f keys %#x", sx, sy,
               tc_keys(&s));
-        tc_pointer(&s, &st, 2, TC_MOVE, cx(dp) + range * 0.3f, cy(dp));
+        tc_pointer(&s, &st, 2, TC_MOVE, pcx + range * 0.3f, pcy);
         CHECK(tc_stick(&s, &sx, &sy) && sx > 0.15f && sx < 0.3f && fabsf(sy) < 1e-4f && tc_keys(&s) == 0,
               "stick small push: %f %f keys %#x", sx, sy, tc_keys(&s));
         struct { float a; uint32_t k; } sd[] = {
@@ -198,7 +182,7 @@ static void check_touch(void) {
         };
         for (unsigned i = 0; i < sizeof sd / sizeof sd[0]; i++) {
             float a = sd[i].a * 3.14159265f / 180;
-            tc_pointer(&s, &st, 2, TC_MOVE, cx(dp) + range * 2 * cosf(a), cy(dp) - range * 2 * sinf(a));
+            tc_pointer(&s, &st, 2, TC_MOVE, pcx + range * 2 * cosf(a), pcy - range * 2 * sinf(a));
             int held = tc_stick(&s, &sx, &sy);
             CHECK(held && fabsf(sqrtf(sx * sx + sy * sy) - 1) < 1e-3f && fabsf(sx - cosf(a)) < 1e-3f &&
                   fabsf(sy - sinf(a)) < 1e-3f && tc_keys(&s) == sd[i].k,
@@ -206,6 +190,7 @@ static void check_touch(void) {
         }
         tc_pointer(&s, &st, 2, TC_UP, 0, 0);
         CHECK(!tc_stick(&s, &sx, &sy) && sx == 0 && sy == 0 && tc_keys(&s) == 0, "stick released");
+        CHECK(!tc_stick_center(&s, &scx, &scy), "circle pad gone when released");
     }
     TcRect sc = l.screens;
     int x, y;

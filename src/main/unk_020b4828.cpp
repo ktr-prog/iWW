@@ -1421,3 +1421,11 @@ extern "C" BOOL Scene_NoPlayerInUnsharedScene(void) {
     return TRUE;
 }
 
+
+#ifdef HOST64
+extern "C" int Scene_HostWarp(u32 id, s32 x, s32 z) {
+    VecFx32 v;
+    v.x = x, v.y = 0, v.z = z;
+    return SceneWarp_RequestAt(Scene_GetWarpRequest(), (u8)id, &v, 0x400000, 0, 2, 2);
+}
+#endif

@@ -650,7 +650,7 @@ static void ios_layout(void) {
     int changed = ow != sLayout.w || oh != sLayout.h || sShowControls != sLayout.controls;
     if (changed) tc_reset(&sTouch);
     tc_layout(&sLayout, ow, oh, sPt, in, sShowControls);
-    sLayout.stick = feature_on(FEAT_CIRCLE_PAD);
+    sLayout.stick = 1;
     {
         extern int gHostCanvasRows;
         gHostCanvasRows = tc_canvas_rows(&sLayout);
@@ -690,8 +690,11 @@ static SDL_Texture *control_texture(int w, int h, uint32_t *px) {
     }
     return t;
 }
-static void ios_draw_stick(TcRect r) {
-    int w = (int)(r.w + 0.5f), kw = (int)(r.w * TC_KNOB + 0.5f);
+static void ios_draw_stick(void) {
+    float ccx, ccy;
+    if (!tc_stick_center(&sTouch, &ccx, &ccy)) return;
+    float size = sLayout.stick_size;
+    int w = (int)(size + 0.5f), kw = (int)(size * TC_KNOB + 0.5f);
     if (w <= 0 || kw <= 0) return;
     if (w != sStickW) {
         if (sStickBase) SDL_DestroyTexture(sStickBase);
@@ -711,11 +714,11 @@ static void ios_draw_stick(TcRect r) {
     }
     float sx, sy;
     int held = tc_stick(&sTouch, &sx, &sy);
-    SDL_Rect dst = {(int)(r.x + 0.5f), (int)(r.y + 0.5f), w, w};
-    if (sStickBase) SDL_SetTextureAlphaMod(sStickBase, 170), SDL_RenderCopy(sRen, sStickBase, 0, &dst);
-    float cx = r.x + r.w / 2 + sx * r.w * TC_KNOB_TRAVEL, cy = r.y + r.h / 2 - sy * r.w * TC_KNOB_TRAVEL;
+    SDL_Rect dst = {(int)(ccx - w / 2.0f + 0.5f), (int)(ccy - w / 2.0f + 0.5f), w, w};
+    if (sStickBase) SDL_RenderCopy(sRen, sStickBase, 0, &dst);
+    float cx = ccx + sx * size * TC_KNOB_TRAVEL, cy = ccy - sy * size * TC_KNOB_TRAVEL;
     SDL_Rect k = {(int)(cx - kw / 2.0f + 0.5f), (int)(cy - kw / 2.0f + 0.5f), kw, kw};
-    if (sStickKnob[held]) SDL_SetTextureAlphaMod(sStickKnob[held], 170), SDL_RenderCopy(sRen, sStickKnob[held], 0, &k);
+    if (sStickKnob[held]) SDL_RenderCopy(sRen, sStickKnob[held], 0, &k);
 }
 
 static void ios_draw_controls(void) {
@@ -724,8 +727,8 @@ static void ios_draw_controls(void) {
         TcRect r = sLayout.button[b];
         int w = (int)(r.w + 0.5f), h = (int)(r.h + 0.5f);
         if (w <= 0 || h <= 0) continue;
-        if (b == TC_DPAD && sLayout.stick) {
-            ios_draw_stick(r);
+        if (b == TC_DPAD) {
+            ios_draw_stick();
             continue;
         }
         if (w != sButtonW[b] || h != sButtonH[b]) {
@@ -751,7 +754,7 @@ static void ios_draw_controls(void) {
             if (!*t) continue;
         }
         SDL_Rect dst = {(int)(r.x + 0.5f), (int)(r.y + 0.5f), w, h};
-        SDL_SetTextureAlphaMod(*t, b == TC_LOAD && !host_state_have() ? 70 : 170);
+        SDL_SetTextureAlphaMod(*t, b == TC_LOAD && !host_state_have() ? 110 : 255);
         SDL_RenderCopy(sRen, *t, 0, &dst);
     }
 }
