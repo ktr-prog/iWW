@@ -366,17 +366,22 @@ static void label(uint32_t *px, int w, int h, const char *text, float alpha) {
 }
 
 static void glass_pixel(uint32_t *d, float d_edge, float yfrac, float rim, int pressed, float cover) {
-    float fill = pressed ? 0.34f : 0.16f;
-    fill += (1 - yfrac) * 0.10f;
+    float fill = pressed ? 0.26f : 0.08f;
+    fill += (1 - yfrac) * 0.06f;
     float edge = clampf(d_edge + rim + 0.5f, 0, 1);
-    float rimA = 0.30f + (1 - yfrac) * 0.45f;
+    float rimA = 0.22f + (1 - yfrac) * 0.55f;
     float a = fill + (rimA - fill) * edge;
     blend(d, 0xffffff, a * cover);
-    if (yfrac < 0.42f) {
-        float sheen = (0.42f - yfrac) / 0.42f;
-        blend(d, 0xffffff, 0.16f * sheen * sheen * cover * (1 - edge));
+    float inner = clampf(1 - (-d_edge) / (rim * 3.5f), 0, 1) * (1 - edge);
+    blend(d, 0xffffff, 0.14f * inner * inner * cover);
+    if (yfrac < 0.48f) {
+        float sheen = (0.48f - yfrac) / 0.48f;
+        blend(d, 0xffffff, 0.26f * sheen * sheen * sheen * cover * (1 - edge));
     }
-    if (yfrac > 0.70f) blend(d, 0x203040, 0.10f * (yfrac - 0.70f) / 0.30f * cover * (1 - edge));
+    if (yfrac > 0.62f) {
+        float glow = (yfrac - 0.62f) / 0.38f;
+        blend(d, 0xd8ecff, 0.12f * glow * glow * cover * (1 - edge));
+    }
 }
 
 void tc_draw(uint32_t *px, int w, int h, int which, int pressed, uint32_t dirs) {

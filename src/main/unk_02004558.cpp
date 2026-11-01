@@ -7680,6 +7680,10 @@ extern "C" int PlayerActor_HostShowOff(void *obj, u32 kind, u32 item) {
 extern "C" PlayerData *PlayerData_GetCurrent();
 extern "C" int PlayerActor_HostSetPocket(int idx, u32 item) {
     PlayerData *p = PlayerData_GetCurrent();
+    if (p && idx == -1) {
+        *p->getHeldItem() = (u16)item;
+        return 1;
+    }
     if (!p || idx < 0 || idx >= 15) return 0;
     ((PlayerInventory *)p->getInventory())->pockets[idx] = (u16)item;
     return 1;

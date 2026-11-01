@@ -264,15 +264,7 @@ extern "C" void Main_LateUpdate(u32 r) {
     HudObjGfx_FlushCameraButton();
     Sky_SwapBuffers();
     HBlank_RunFrame();
-#ifdef HOST
-    if (HostTick_StepEnds()) {
-        HostTick_EnterLegacy();
-        Snd_Update();
-        HostTick_LeaveLegacy();
-    }
-#else
     Snd_Update();
-#endif
 }
 
 extern "C" void Main_PreTaskHook(void) {

@@ -2335,6 +2335,21 @@ void NpcEmotionFx::update(VecFx32 *a, s16 b, s32 c, u16 d) {
             Effect_SetPosition(effects[i], a, &b, NULL);
         }
     }
+#ifdef HOST
+    {
+        static const void *owner[64];
+        static u32 last[64];
+        u32 key = (u32)c << 16 | d;
+        s32 i, f = -1;
+        for (i = 0; i < 64; i++) {
+            if (owner[i] == this) break;
+            if (!owner[i] && f < 0) f = i;
+        }
+        if (i == 64) i = f >= 0 ? f : (s32)(((uptr)this >> 4) & 63), owner[i] = this, last[i] = ~key;
+        if (last[i] == key) return;
+        last[i] = key;
+    }
+#endif
     for (s32 j = 0; j < 2; j++) {
         updateSlot(a, b, c, d, j);
     }

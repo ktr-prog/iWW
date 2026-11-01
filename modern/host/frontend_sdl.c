@@ -684,6 +684,7 @@ static SDL_Texture *control_texture(int w, int h, uint32_t *px) {
     }
     return t;
 }
+static int sCtlAlpha = 255;
 static void ios_draw_stick(void) {
     float ccx, ccy;
     if (!tc_stick_center(&sTouch, &ccx, &ccy)) return;
@@ -709,10 +710,10 @@ static void ios_draw_stick(void) {
     float sx, sy;
     int held = tc_stick(&sTouch, &sx, &sy);
     SDL_Rect dst = {(int)(ccx - w / 2.0f + 0.5f), (int)(ccy - w / 2.0f + 0.5f), w, w};
-    if (sStickBase) SDL_RenderCopy(sRen, sStickBase, 0, &dst);
+    if (sStickBase) SDL_SetTextureAlphaMod(sStickBase, (Uint8)sCtlAlpha), SDL_RenderCopy(sRen, sStickBase, 0, &dst);
     float cx = ccx + sx * size * TC_KNOB_TRAVEL, cy = ccy - sy * size * TC_KNOB_TRAVEL;
     SDL_Rect k = {(int)(cx - kw / 2.0f + 0.5f), (int)(cy - kw / 2.0f + 0.5f), kw, kw};
-    if (sStickKnob[held]) SDL_RenderCopy(sRen, sStickKnob[held], 0, &k);
+    if (sStickKnob[held]) SDL_SetTextureAlphaMod(sStickKnob[held], (Uint8)sCtlAlpha), SDL_RenderCopy(sRen, sStickKnob[held], 0, &k);
 }
 
 static void ios_draw_controls(void) {
@@ -748,7 +749,7 @@ static void ios_draw_controls(void) {
             if (!*t) continue;
         }
         SDL_Rect dst = {(int)(r.x + 0.5f), (int)(r.y + 0.5f), w, h};
-        SDL_SetTextureAlphaMod(*t, 255);
+        SDL_SetTextureAlphaMod(*t, (Uint8)sCtlAlpha);
         SDL_RenderCopy(sRen, *t, 0, &dst);
     }
 }
@@ -817,7 +818,14 @@ static void ios_show(const uint32_t *overlay, int changed) {
         SDL_FRect d2 = {s2.x, s2.y, s2.w, s2.h};
         SDL_RenderCopyF(sRen, sOverlayTex, 0, &d2);
     }
-    if (sLayout.controls && !sTouch.buttons_off) ios_draw_controls();
+    {
+        int target = sLayout.controls && !sTouch.buttons_off ? 255 : 0;
+        sCtlAlpha += target > sCtlAlpha ? 24 : -24;
+        if ((target - sCtlAlpha) * (target ? 1 : -1) < 0) sCtlAlpha = target;
+        if (sCtlAlpha > 255) sCtlAlpha = 255;
+        if (sCtlAlpha < 0) sCtlAlpha = 0;
+    }
+    if (sLayout.controls && sCtlAlpha > 0) ios_draw_controls();
 }
 
 static void ios_background(void) {
@@ -907,7 +915,8 @@ static void frame_body(void) {
     sShm->stick = stick_word();
     {
         float sx = 0, sy = 0;
-        if (tc_stick(&sTouch, &sx, &sy) && sx * sx + sy * sy >= 0.92f * 0.92f) sShm->keys |= 1u << 1;
+        extern int gHostStickRun;
+        gHostStickRun = tc_stick(&sTouch, &sx, &sy) && sx * sx + sy * sy >= 0.92f * 0.92f;
     }
 #else
     sShm->keys = keyboard_keys() | pad_keys();

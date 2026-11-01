@@ -1,4 +1,7 @@
 #include "types.h"
+#ifdef HOST
+extern "C" int gHostStickRun;
+#endif
 #include "host_input.h"
 extern "C" s32 Math_Sqrt64(u64 x);
 #include "proto/main/unk_020b4828.h"
@@ -843,6 +846,11 @@ void PlayerActor::readInput() {
                     res = 0;
                 }
             }
+#ifdef HOST
+            {
+                if (gHostStickRun && res > 0) res = 0x1000;
+            }
+#endif
             this->inputMagnitude = res;
             if (res > 0xc32) {
                 fast = 1;

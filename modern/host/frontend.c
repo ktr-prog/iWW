@@ -253,7 +253,7 @@ static void pocket_test(void) {
     unsigned at, item;
     if (!spec) spec = getenv("ACWW_POCKET") ? getenv("ACWW_POCKET") : "";
     if (done || sscanf(spec, "%u:%x", &at, &item) != 2 || host_frame() < at) return;
-    done = 1, fprintf(stderr, "pocket: %x: %d\n", item, PlayerActor_HostSetPocket(0, item));
+    done = 1, fprintf(stderr, "pocket: %x: %d\n", item, PlayerActor_HostSetPocket(getenv("ACWW_POCKET_HELD") ? -1 : 0, item));
 }
 int host_pocket_action(int state) {
     static const char *spec;
@@ -586,6 +586,7 @@ void host_test_post_task(void) {
 
 static int sInputWantsTurn;
 int gHostCanvasRows = 384;
+int gHostStickRun;
 static u32 sLastTouchDown, sLastKeys;
 int host_input_wants_turn(void) {
     int r = sInputWantsTurn;

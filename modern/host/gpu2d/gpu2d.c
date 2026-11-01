@@ -607,7 +607,7 @@ static void render_ext_sky(const Gpu2dFrameInput *in) {
     int rows = gHostCanvasRows < SCREEN_H ? SCREEN_H : gHostCanvasRows > CANVAS_MAX ? CANVAS_MAX : gHostCanvasRows;
     int t = rows - SCREEN_H, ext = t - SCREEN_H;
     sExtRows = 0;
-    if (ext <= 0 || !(sPowCnt & 0x200) || (reg32(b, REG_DISPCNT) & 0x80) || !(reg32(b, REG_DISPCNT) >> 16 & 1)) return;
+    if (ext <= 0 || !sA3dPrev || !(sPowCnt & 0x200) || (reg32(b, REG_DISPCNT) & 0x80) || !(reg32(b, REG_DISPCNT) >> 16 & 1)) return;
     const u32 *top = in->topRows == t ? in->lines3dTop : NULL;
     ObjLine *saved = malloc(sizeof *saved);
     if (!saved) return;
@@ -723,7 +723,7 @@ static void single_compose(const Gpu2dFrameInput *in, int blank) {
         }
         const u32 *l3 = top3d ? top3d + y * SCREEN_W : NULL;
         for (int x = 0; x < SCREEN_W; x++) {
-            u32 o = skyTop;
+            u32 o = sA3dPrev ? skyTop : 0;
             u32 c = l3 && sA3dPrev ? l3[x] : 0, al = c >> 24 & 31;
             if (al) {
                 o = al == 31 ? c & 0x3f3f3f : blend3d(c & 0x3f3f3f, o, al);
