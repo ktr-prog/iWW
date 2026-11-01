@@ -13,9 +13,9 @@ Screenshots:
 
 Features:
 
-- 60 FPS! (Experimental WIP)
+- 60 FPS (Experimental WIP)
+- Solo screen view (Experimental WIP)
 - No screen borders
-- (WIP) Solo screen view
 - Accepts EU and US .sav files
 - Seamless transition between touchscreen and button input
 - Improved touch input delay
