@@ -70,6 +70,7 @@ static void town_dump(void) {
         for (s32 x = 0; x < g->width * 16; x++) {
             u16 *c = BlockMap_GetItemPtr(g, x >> 4, z >> 4, x & 15, z & 15, 0);
             if (c && (*c & 0xff00) == 0x5000) fprintf(f, "structure %04x at %d %d\n", *c, x, z);
+            else if (c && *c != 0xfff1 && getenv("ACWW_TOWNDUMP_ALL")) fprintf(f, "item %04x at %d %d\n", *c, x, z);
         }
     fclose(f);
 }
@@ -267,6 +268,13 @@ int host_pocket_action(int state) {
     return (int)act;
 }
 extern int Scene_HostWarp(u32 id, s32 x, s32 z);
+extern void Actor_HostDump(void);
+static void actor_dump(void) {
+    static const char *spec;
+    unsigned at;
+    if (!spec) spec = getenv("ACWW_ACTORDUMP") ? getenv("ACWW_ACTORDUMP") : "";
+    if (sscanf(spec, "%u", &at) == 1 && at == (unsigned)host_frame()) Actor_HostDump(), fflush(stdout);
+}
 static void warp_test(void) {
     static const char *spec;
     static int done;
@@ -478,6 +486,7 @@ void host_test_post_task(void) {
     fish_test();
     showoff_test();
     warp_test();
+    actor_dump();
     pocket_test();
     test_ca();
     if (!sWfcTest) sWfcTest = getenv("ACWW_WFC_TEST") ? getenv("ACWW_WFC_TEST") : "";
@@ -560,6 +569,13 @@ int host_input_wants_turn(void) {
 }
 
 void frontend_frame(void) {
+    if (getenv("ACWW_SCENELOG")) {
+        extern unsigned Scene_GetCurrent(void);
+        extern int Scene_InTown(void);
+        static unsigned last = 0xffff;
+        unsigned sc = Scene_GetCurrent();
+        if (sc != last) fprintf(stderr, "scene %#x town %d frame %llu\n", sc, Scene_InTown(), (unsigned long long)host_frame()), last = sc;
+    }
     {
         static int env = -1;
         if (env < 0) env = getenv("ACWW_CANVAS_ROWS") ? atoi(getenv("ACWW_CANVAS_ROWS")) : 0;

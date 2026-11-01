@@ -225,3 +225,14 @@ void Actor::calcModelMatrix(void *out) {
 
 
 extern "C" unsigned char *HostActor_Pos(void *actor) { return (unsigned char *)&((Actor *)actor)->position; }
+
+#ifdef HOST64
+extern "C" int printf(const char *, ...);
+extern "C" void Actor_HostDump(void) {
+    for (u32 id = 0; id < 0x300; id++) {
+        Actor *a = 0;
+        while ((a = (Actor *)Actor::findByProfile(id, a)) != 0)
+            printf("actor %#x at %.2f %.2f %.2f\n", id, a->position.x / 8192.0, a->position.y / 8192.0, a->position.z / 8192.0);
+    }
+}
+#endif

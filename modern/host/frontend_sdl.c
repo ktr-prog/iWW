@@ -831,7 +831,7 @@ static void ios_show(const uint32_t *overlay, int changed) {
         SDL_FRect d2 = {s2.x, s2.y, s2.w, s2.h};
         SDL_RenderCopyF(sRen, sOverlayTex, 0, &d2);
     }
-    if (sLayout.controls) ios_draw_controls();
+    if (sLayout.controls && !sTouch.buttons_off) ios_draw_controls();
 }
 
 static void ios_background(void) {
@@ -913,6 +913,10 @@ static void frame_body(void) {
     ios_stats();
     ios_states();
     sTouch.canvas_rows = sShm->rows >= 192 && sShm->rows <= 640 ? (int)sShm->rows : 0;
+    {
+        extern int Scene_InTown(void);
+        sTouch.buttons_off = !Scene_InTown();
+    }
     sShm->keys = keyboard_keys() | pad_keys() | tc_keys(&sTouch);
     sShm->stick = stick_word();
 #else

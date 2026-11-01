@@ -36,6 +36,7 @@ typedef struct {
     float stick_x, stick_y;
     int canvas_rows;
     float stick_cx, stick_cy;
+    int buttons_off;
 } TcState;
 int tc_canvas_rows(const TcLayout *l);
 

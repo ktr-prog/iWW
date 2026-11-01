@@ -603,8 +603,11 @@ static void single_compose(const Gpu2dFrameInput *in, int blank) {
     static u32 ref[SCREEN_W];
     static int haveRef;
     const Engine *a = &sEngine[0], *b = &sEngine[1];
-    int t = in->topRows < 0 ? 0 : in->topRows > CANVAS_MAX - SCREEN_H ? CANVAS_MAX - SCREEN_H : in->topRows;
-    int rows = t + SCREEN_H;
+    extern int gHostCanvasRows;
+    int want = gHostCanvasRows < SCREEN_H ? SCREEN_H : gHostCanvasRows > CANVAS_MAX ? CANVAS_MAX : gHostCanvasRows;
+    int t = want - SCREEN_H;
+    int rows = want;
+    const u32 *top3d = in->topRows == t ? in->lines3dTop : NULL;
     u16 mb = reg16(a, REG_MASTER_BRIGHT);
     u32 f = mb & 0x1f;
     if (f > 16) f = 16;
@@ -650,7 +653,7 @@ static void single_compose(const Gpu2dFrameInput *in, int blank) {
             for (int x = 0; x < SCREEN_W; x++) d[x] = argb(b->out[by * SCREEN_W + x]);
             continue;
         }
-        const u32 *l3 = in->lines3dTop ? in->lines3dTop + y * SCREEN_W : NULL;
+        const u32 *l3 = top3d ? top3d + y * SCREEN_W : NULL;
         for (int x = 0; x < SCREEN_W; x++) {
             u32 o = skyTop;
             u32 c = l3 && sA3dPrev ? l3[x] : 0, al = c >> 24 & 31;
@@ -701,6 +704,62 @@ static void classic_compose(const Gpu2dFrameInput *in) {
     sCanvasRows = rows;
 }
 
+static s16 sScrDelta[2][8];
+static const u8 *smooth_2d(const Gpu2dFrameInput *in) {
+    static u8 prev[0x800], cur[0x800], out[0x800];
+    static u16 sprev[2][8], scur[2][8];
+    static int k, have, on = -1;
+    extern int32_t gVBlanksPerFrame;
+    if (on < 0) on = !getenv("ACWW_SMOOTH") || atoi(getenv("ACWW_SMOOTH")) != 0;
+    memset(sScrDelta, 0, sizeof sScrDelta);
+    u16 now[2][8];
+    for (int n = 0; n < 2; n++)
+        for (int j = 0; j < 8; j++) now[n][j] = reg16(&sEngine[n], REG_BGHOFS + 2 * (u32)j) & 0x1ff;
+    if (!have || memcmp(cur, in->oam, 0x800) || memcmp(scur, now, sizeof now)) {
+        memcpy(prev, have ? cur : in->oam, 0x800);
+        memcpy(sprev, have ? scur : now, sizeof now);
+        memcpy(cur, in->oam, 0x800);
+        memcpy(scur, now, sizeof now);
+        have = 1, k = 0;
+    }
+    k++;
+    int period = gVBlanksPerFrame;
+    if (!on || sGpu || period <= 1 || period > 4 || k >= period) return in->oam;
+    int t = k * 256 / period;
+    for (int n = 0; n < 2; n++)
+        for (int j = 0; j < 8; j++) {
+            int d = (((int)scur[n][j] - sprev[n][j] + 256) & 511) - 256;
+            if (d && d <= 32 && d >= -32) sScrDelta[n][j] = (s16)-(d * (256 - t) / 256);
+        }
+    memcpy(out, in->oam, 0x800);
+    for (int i = 0; i < 256; i++) {
+        u8 *o = out + i * 8;
+        const u8 *q = prev + i * 8;
+        u16 c0 = (u16)(o[0] | o[1] << 8), c1 = (u16)(o[2] | o[3] << 8), c2 = (u16)(o[4] | o[5] << 8);
+        u16 p0 = (u16)(q[0] | q[1] << 8), p1 = (u16)(q[2] | q[3] << 8), p2 = (u16)(q[4] | q[5] << 8);
+        if ((c0 & 0xff00) != (p0 & 0xff00) || (c1 & 0xfe00) != (p1 & 0xfe00) || c2 != p2) continue;
+        if ((c0 & 0x300) == 0x200 || (c0 >> 14) == 3) continue;
+        int dy = (((c0 & 0xff) - (p0 & 0xff) + 128) & 255) - 128;
+        int dx = (((c1 & 0x1ff) - (p1 & 0x1ff) + 256) & 511) - 256;
+        if ((!dx && !dy) || dx > 32 || dx < -32 || dy > 32 || dy < -32) continue;
+        int y = ((c0 & 0xff) - dy * (256 - t) / 256) & 0xff;
+        int x = ((c1 & 0x1ff) - dx * (256 - t) / 256) & 0x1ff;
+        c0 = (u16)((c0 & 0xff00) | y), c1 = (u16)((c1 & 0xfe00) | x);
+        o[0] = (u8)c0, o[1] = (u8)(c0 >> 8), o[2] = (u8)c1, o[3] = (u8)(c1 >> 8);
+    }
+    return out;
+}
+static void scroll_shift(Engine *e, int sign) {
+    for (int j = 0; j < 8; j++) {
+        int d = sScrDelta[e->num][j] * sign;
+        if (!d) continue;
+        u32 off = REG_BGHOFS + 2 * (u32)j;
+        u16 v = reg16(e, off);
+        v = (u16)((v & ~0x1ff) | ((v + d) & 0x1ff));
+        e->regs[off] = (u8)v, e->regs[off + 1] = (u8)(v >> 8);
+    }
+}
+
 void gpu2d_render_frame(const Gpu2dFrameInput *in) {
     sGpu = in->gpu;
     sDefer3d = in->defer3d || sGpu;
@@ -724,6 +783,7 @@ void gpu2d_render_frame(const Gpu2dFrameInput *in) {
     sA3dPrev = sA3dNow;
     sA3dNow = 0;
     map_vram(in);
+    const u8 *oam = smooth_2d(in);
     if (sGpu) {
         gpu_tables(in);
         sGpuFrame.palettes = sPalettes[0];
@@ -736,7 +796,7 @@ void gpu2d_render_frame(const Gpu2dFrameInput *in) {
     for (int n = 0; n < 2; n++) {
         Engine *e = &sEngine[n];
         e->palette = in->palette + 0x400 * n;
-        e->oam = in->oam + 0x400 * n;
+        e->oam = oam + 0x400 * n;
         for (int i = 0; i < 2; i++) {
             e->refX[i] = ref28(e, 0x28 + 0x10 * (u32)i);
             e->refY[i] = ref28(e, 0x2c + 0x10 * (u32)i);
@@ -761,7 +821,9 @@ void gpu2d_render_frame(const Gpu2dFrameInput *in) {
             else if (line == 0 && e->haveNextLine0) e->obj = e->objNextLine0;
             else if (line == 0) memset(&e->obj, 0, sizeof e->obj);
             else gpu2d_render_obj_line(e, line, &e->obj);
+            scroll_shift(e, 1);
             render_line(e, in, line);
+            scroll_shift(e, -1);
         }
         if (in->hblank) in->hblank(line, in->hblankContext);
         if (sGpu) gpu_versions(in);

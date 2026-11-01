@@ -200,7 +200,8 @@ int tc_pointer(TcState *s, const TcLayout *l, int64_t id, int event, float x, fl
         if (i == TC_MAX_POINTERS) return 0;
         s->p[i].used = 1, s->p[i].id = id, s->p[i].keys = 0;
         TcRect sc = s->canvas_rows > 0 ? l->fill : l->screens;
-        int onButton = s->canvas_rows > 0 && l->controls && (dpad_at(l, x, y) || button_at(l, x, y) >= 0);
+        int ctl = l->controls && !s->buttons_off;
+        int onButton = s->canvas_rows > 0 && ctl && (dpad_at(l, x, y) || button_at(l, x, y) >= 0);
         if (inside(sc, x, y) && !onButton) {
             int bottom = y >= sc.y + sc.h / 2;
             if (s->canvas_rows > 0) bottom = y >= sc.y + sc.h * (float)(s->canvas_rows - 192) / (float)s->canvas_rows;
@@ -212,18 +213,18 @@ int tc_pointer(TcState *s, const TcLayout *l, int64_t id, int event, float x, fl
             } else {
                 s->p[i].what = WHAT_NOTHING;
             }
-        } else if (l->controls && button_at(l, x, y) < 0 && dpad_at(l, x, y)) {
+        } else if (ctl && button_at(l, x, y) < 0 && dpad_at(l, x, y)) {
             s->p[i].what = TC_DPAD;
             TcRect z = l->button[TC_DPAD];
             float half = l->stick_size / 2;
             s->stick_cx = clampf(x, z.x + half, z.x + z.w - half);
             s->stick_cy = clampf(y, z.y + half, z.y + z.h - half);
-        } else if (l->controls) {
+        } else if (ctl) {
             int b = button_at(l, x, y);
             s->p[i].what = b >= 0 ? b : WHAT_NOTHING;
         } else {
             s->p[i].what = WHAT_NOTHING;
-            return 1;
+            return !l->controls;
         }
     }
     int w = s->p[i].what;

@@ -40,6 +40,9 @@ typedef struct G3Polygon {
     s32 ytop, ybottom, xtop, xbottom;
     u32 sortKey;
     int index;
+    int sub;
+    s32 vp[6];
+    s16 clipk, yofs;
     G3Vertex orig[4];
     int norig;
 } G3Polygon;
@@ -58,6 +61,7 @@ typedef struct G3RenderState {
     u16 fogOffset;
     u8 fogTable[32];
     int yofs;
+    u32 serial;
 } G3RenderState;
 
 extern G3RenderState gG3Render;
@@ -65,6 +69,7 @@ extern const uint8_t *const *gG3Banks;
 extern u8 gG3VramCnt[9];
 
 void g3_render(void);
+int g3_rebuild_polygon(G3Polygon *dst, const G3Polygon *src, const s32 (*pos)[4], G3Vertex *vbuf, int room);
 const u32 *g3_frame_lines(void);
 int g3_tall_supported(void);
 int g3_frame_tall(void);
