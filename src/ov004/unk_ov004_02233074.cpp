@@ -1,4 +1,5 @@
 #include "gfx/Model.h"
+#include "host_tick.h"
 #include "host_labels.h"
 #include "host_overlay_vars.h"
 #include "gfx/TwoLayerAnimModel.h"
@@ -388,7 +389,7 @@ BOOL FurnitureManager::onCreate() {
 BOOL FurnitureManager::onExecute() {
     soundList.tryInit();
     soundList.update();
-    sFtrMgrCycleCounter = (sFtrMgrCycleCounter + 1) % 0x28;
+    if (TICK_STEP_ENDS()) sFtrMgrCycleCounter = (sFtrMgrCycleCounter + 1) % 0x28;
     if (FtrMgr_GetMaxFurniture() > 1) {
         if (Backup_GetStatus(gBackup) == 4) {
             if (!Scene_InUnk6To8()) {

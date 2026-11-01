@@ -727,7 +727,7 @@ JointBlend::~JointBlend() {}
 
 BOOL JointBlend::advance() {
     if (blendStep != 0) {
-        blendRatio += blendStep;
+        blendRatio += TICK_PART(blendStep);
         if (blendRatio >= 0x1000) {
             blendRatio = 0x1000;
             blendStep = 0;

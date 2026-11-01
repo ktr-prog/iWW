@@ -846,11 +846,6 @@ void PlayerActor::readInput() {
                     res = 0;
                 }
             }
-#ifdef HOST
-            {
-                if (gHostStickRun && res > 0) res = 0x1000;
-            }
-#endif
             this->inputMagnitude = res;
             if (res > 0xc32) {
                 fast = 1;
@@ -915,6 +910,7 @@ void PlayerActor::readInput() {
             if (host_circle_pad(&sx, &sy)) {
                 s32 m = (s32)((u32)Math_Sqrt64((u64)((s64)sx * sx + (s64)sy * sy)) << 12) / 105;
                 if (m > 0x1000) m = 0x1000;
+                if (gHostStickRun) this->inputRun = 1, m = 0x1000;
                 if (this->inputRun == 0) m = (s32)((u32)m * 0xc32) >> 12;
                 this->inputMagnitude = (u16)m;
                 this->inputAngle = (s16)Math_Atan2(sx, -sy);

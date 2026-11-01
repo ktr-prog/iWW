@@ -1,4 +1,5 @@
 #include "game/BoxCollider.h"
+#include "host_tick.h"
 #include "host_labels.h"
 #include "host_overlay_vars.h"
 #include "proto/main/unk_020b4828.h"
@@ -290,7 +291,7 @@ BOOL RoomShell::onExecute() {
     }
     if (clockPos.x != 0) {
         s32 id = FtrMgr_GetCycleCounter();
-        if (id == 9 || id == 0x1d) {
+        if ((id == 9 || id == 0x1d) && TICK_STEP_ENDS()) {
             clockSe.callRequestSustained(0x4d1);
         }
     }

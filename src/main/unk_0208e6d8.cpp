@@ -156,9 +156,11 @@ void TalkBusyIcon::draw() {
 }
 
 void TalkBusyIcon::update() {
+    TICK_LEGACY_BEGIN()
     static Unk_020e10dc_Fn tbl[2] = {&TalkBusyIcon::updateHidden, &TalkBusyIcon::updateShown};
     rotation += 0x1111;
     (this->*tbl[state])();
+    TICK_LEGACY_END()
 }
 
 void TalkBusyIcon::init() { enterHidden(); }

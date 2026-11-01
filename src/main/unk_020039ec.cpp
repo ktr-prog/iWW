@@ -1,4 +1,5 @@
 #include "types.h"
+#include "host_tick.h"
 #include "host_labels.h"
 #include "gfx/Camera.h"
 #include "gfx/VecFx32.h"
@@ -182,7 +183,9 @@ extern "C" void Snd_Init() {
 }
 
 extern "C" void Snd_Update() {
+    TICK_LEGACY_BEGIN()
     Melody_Update();
+    TICK_LEGACY_END()
     gSndMgr.update();
     if (gSndScene != 0 && gCamera != 0) {
         gSndScene->update(gCameraDistance);
