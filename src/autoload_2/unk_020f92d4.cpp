@@ -124,6 +124,20 @@ void spl_push_front(void *, void *);
 
 typedef void (*IFn)(void *, SplPt *, s32 *, EU *);
 
+#ifdef HOST
+extern "C" void spl_host_shift(void *ev, s32 num, s32 den) {
+    EU *e = (EU *)ev;
+    SplPt *lists[2] = {e->l8, e->l16};
+    for (s32 k = 0; k < 2; k++)
+        for (SplPt *p = lists[k]; p != 0; p = p->next) {
+            p->w8 += (s32)((s64)(p->w20 + e->w44) * num / den);
+            p->w12 += (s32)((s64)(p->w24 + e->w48) * num / den);
+            p->w16 += (s32)((s64)(p->w28 + e->w52) * num / den);
+            p->h32 += (s16)(p->s34 * num / den);
+        }
+}
+#endif
+
 extern "C" void spl_calc(MU *m, EU *e) {
     SplPt *next;
     RU *res = e->res;

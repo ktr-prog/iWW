@@ -386,15 +386,29 @@ extern "C" void SPL_Calc(Mgr *m) {
     if (data_021f5c38 > 1) data_021f5c38 = 0;
 }
 
+#ifdef HOST
+extern "C" s32 HostTick_Steps(void);
+extern "C" u32 gHostTick;
+extern "C" void spl_host_shift(void *ev, s32 num, s32 den);
+#endif
 extern "C" void SPL_Draw(Mgr *m, s32 *viewMtx, SplPosFn cb) {
     Entry *e;
     IO_W((vu16 *)0x04000060, (u16)((IO_R((vu16 *)0x04000060) & ~0x3000) | 8));
     m->w38 = viewMtx;
     e = m->act;
     if (e == 0) return;
+#ifdef HOST
+    s32 steps = HostTick_Steps(), k = steps > 1 ? (s32)((gHostTick % (u32)steps + 1) % (u32)steps) : 0;
+#endif
     do {
         m->cur = e;
+#ifdef HOST
+        if (k) spl_host_shift(e, k, steps);
+#endif
         if (e->fl.b3 == 0) spl_draw(m, cb);
+#ifdef HOST
+        if (k) spl_host_shift(e, -k, steps);
+#endif
         e = e->next;
     } while (e != 0);
 }
