@@ -2826,8 +2826,8 @@ extern "C" void Insect_HopArc(Rec *self, s16 *cnt) {
         Insect_GetDirVec(&v, self->rotY);
     }
     if (self->state == 5 || Insect_CheckObstacle(self, 0x50, 0xe38) == 0) {
-        pos->x += func_01ffcb0c((self->moveSpeed + 2) << 12, v.x);
-        pos->z += func_01ffcb0c((self->moveSpeed + 2) << 12, v.z);
+        pos->x += TICK_PART(func_01ffcb0c((self->moveSpeed + 2) << 12, v.x));
+        pos->z += TICK_PART(func_01ffcb0c((self->moveSpeed + 2) << 12, v.z));
     }
     if (self->state == 9 || self->state == 11) {
         switch (self->kind) {
@@ -2960,13 +2960,13 @@ extern "C" void Insect_EscapeRun(Rec *self, s16 *cnt) {
         self->rotY = r6;
     }
     if (r7 == 0x1a) {
-        pos->z += func_01ffcb0c(func_01ffcb0c(self->moveSpeed << 12, v.z), 0x400);
-        pos->x += func_01ffcb0c(func_01ffcb0c(self->moveSpeed << 12, v.x), 0x400);
+        pos->z += TICK_PART(func_01ffcb0c(func_01ffcb0c(self->moveSpeed << 12, v.z), 0x400));
+        pos->x += TICK_PART(func_01ffcb0c(func_01ffcb0c(self->moveSpeed << 12, v.x), 0x400));
     } else {
-        pos->x += func_01ffcb0c(v.x, (mul * self->moveSpeed) << 12);
+        pos->x += TICK_PART(func_01ffcb0c(v.x, (mul * self->moveSpeed) << 12));
         s32 vz = *(volatile s32 *)&v.z;
         mul = mul * self->moveSpeed;
-        pos->z += func_01ffcb0c(vz, mul << 12);
+        pos->z += TICK_PART(func_01ffcb0c(vz, mul << 12));
     }
     *cnt = *cnt + 1;
 }
@@ -3237,8 +3237,8 @@ extern "C" void Flea_Update(Rec *self) {
         if (Insect_SteerAroundObstacle(self) == 0) {
             V3 v;
             Insect_GetDirVec(&v, self->rotY);
-            pos->x += func_01ffcb0c(self->moveSpeed << 12, v.x);
-            pos->z += func_01ffcb0c(self->moveSpeed << 12, v.z);
+            pos->x += TICK_PART(func_01ffcb0c(self->moveSpeed << 12, v.x));
+            pos->z += TICK_PART(func_01ffcb0c(self->moveSpeed << 12, v.z));
         }
         if (y0 > 0x1000) {
             d1 = *p << 12;
@@ -3355,7 +3355,7 @@ extern "C" void Stinger_Update(Rec *self) {
                 *p23e = 0;
             } else if (pos->y > 0 && self->kind == 0x36) {
                 s32 t = func_01ffcb0c(FX_Div(0x1000, 0x12000), k << 12);
-                pos->y += t + k * k * -10;
+                pos->y += TICK_PART(t + k * k * -10);
                 *p23e = *p23e + 3;
                 if (pos->y <= 0) {
                     *p23e = 0;
@@ -3426,10 +3426,10 @@ extern "C" BOOL Insect_GroundWalk(Rec *self) {
             Insect_SplashIfWater(self);
             result = FALSE;
         } else {
-            pos->y -= 0x200;
+            pos->y -= TICK_PART(0x200);
         }
     } else {
-        pos->y -= 0x200;
+        pos->y -= TICK_PART(0x200);
     }
     if (Insect_SteerAroundObstacle(self)) {
         self->unk_24b = 0;
@@ -3462,8 +3462,8 @@ extern "C" BOOL Insect_GroundWalk(Rec *self) {
     } else if (c % 2 == 0) {
         self->rotY = self->rotY - sp;
     }
-    pos->x += func_01ffcb0c(v.x, (r6 * self->moveSpeed) << 12);
-    pos->z += func_01ffcb0c(v.z, (r6 * self->moveSpeed) << 12);
+    pos->x += TICK_PART(func_01ffcb0c(v.x, (r6 * self->moveSpeed) << 12));
+    pos->z += TICK_PART(func_01ffcb0c(v.z, (r6 * self->moveSpeed) << 12));
     *cnt = *cnt + 1;
     self->unk_24b = 1;
     return result;
@@ -3786,7 +3786,7 @@ extern "C" void TreeBug_ClimbUp(Rec *self, s16 *cnt) {
             ang = (s16)(ang + 0x16b);
             self->rotX += 0xb6;
         }
-        pos->y += 0x20;
+        pos->y += TICK_PART(0x20);
         (*cnt)++;
         if (pos->y > lim) {
             pos->y = lim;
@@ -3817,7 +3817,7 @@ extern "C" void TreeBug_ClimbDown(Rec *self, s16 *cnt) {
             ang = (s16)(ang + 0x16b);
             self->rotX += 0xb6;
         }
-        pos->y -= 0x20;
+        pos->y -= TICK_PART(0x20);
         (*cnt)++;
         if (pos->y < lim) {
             pos->y = lim;
@@ -3917,20 +3917,20 @@ extern "C" void TreeBug_DropAndFly(Rec *o, s16 *p) {
         Insect_PlaySe(o, 0, 1);
     }
     if (o->rotY >= 0) {
-        pos->x += 0x200;
+        pos->x += TICK_PART(0x200);
     } else {
-        pos->x -= 0x200;
+        pos->x -= TICK_PART(0x200);
     }
     if (Insect_FadeOut(o, 1)) {
         Insect_Despawn(o);
     } else {
         s32 t = FX_Div(*p << 12, 0x4000);
-        pos->y += func_01ffcb0c(func_01ffcb0c(0x100, t), t);
+        pos->y += TICK_PART(func_01ffcb0c(func_01ffcb0c(0x100, t), t));
         *p = *p + 1;
         if (o->state == 0xb && (o->rotY == 0x6001 || o->rotY == -0x6001)) {
-            pos->z -= 0x100;
+            pos->z -= TICK_PART(0x100);
         } else {
-            pos->z += 0x100;
+            pos->z += TICK_PART(0x100);
         }
         if (st == 0x14) {
             if (((o->model.numFrames << 4) >> 16) < 0x18) {

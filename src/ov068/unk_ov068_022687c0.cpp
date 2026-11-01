@@ -1,4 +1,5 @@
 #include "ds_div.h"
+#include "host_tick.h"
 #include "host_shared_calls.h"
 #include "types.h"
 #include "gfx/VecFx32.h"
@@ -265,7 +266,7 @@ void Pondskater_Skate(Insect *o, s16 *p) {
     w.y = 0;
     w.z = 0x29;
     Vec_RotateY(&w, o->rotY);
-    o->position.x = o->position.x + func_01ffcb0c((*p * o->moveSpeed) << 12, w.x);
+    o->position.x = o->position.x + TICK_PART(func_01ffcb0c((*p * o->moveSpeed) << 12, w.x));
     pos->z = pos->z + func_01ffcb0c((*p * o->moveSpeed) << 12, w.z);
     *p = *p - 1;
     FieldPos_ToUnit(&x, &z, pos);
@@ -769,8 +770,8 @@ void Insect::mosquitoChase(s16 *p) {
     s16 na = ang + rotY;
     rotY = na;
     Insect_GetDirVec(&v, na);
-    pos->x += func_01ffcb0c(v.x, 0x8000);
-    pos->z += func_01ffcb0c(v.z, 0x8000);
+    pos->x += TICK_PART(func_01ffcb0c(v.x, 0x8000));
+    pos->z += TICK_PART(func_01ffcb0c(v.z, 0x8000));
     s32 r = Random_GlobalBelow(8);
     Insect_FlutterBob(this, *p, 0x2800, (r + 0x12) << 12);
 }
@@ -849,8 +850,8 @@ void Insect::beeChasePlayer() {
         h = h + 0x1554;
         rotY = h;
         Insect_GetDirVec(&v, h);
-        pos->x += func_01ffcb0c(0x23000, v.x);
-        pos->z += func_01ffcb0c(0x23000, v.z);
+        pos->x += TICK_PART(func_01ffcb0c(0x23000, v.x));
+        pos->z += TICK_PART(func_01ffcb0c(0x23000, v.z));
         Bee_UpdateSwarmAnim(&scale, &model, cur - h);
         *cnt = 9;
         return;
@@ -893,12 +894,12 @@ void Insect::beeChasePlayer() {
     Insect_GetDirVec(&w, h);
     if (dist > 0xe000) {
         r6 <<= 12;
-        pos->x += FX_Div(func_01ffcb0c(r6, w.x), 0x3800);
-        pos->z += FX_Div(func_01ffcb0c(r6, w.z), 0x3800);
+        pos->x += TICK_PART(FX_Div(func_01ffcb0c(r6, w.x), 0x3800));
+        pos->z += TICK_PART(FX_Div(func_01ffcb0c(r6, w.z), 0x3800));
     } else {
         r6 <<= 12;
-        pos->x += FX_Div(func_01ffcb0c(r6, w.x), 0x5000);
-        pos->z += FX_Div(func_01ffcb0c(r6, w.z), 0x5000);
+        pos->x += TICK_PART(FX_Div(func_01ffcb0c(r6, w.x), 0x5000));
+        pos->z += TICK_PART(FX_Div(func_01ffcb0c(r6, w.z), 0x5000));
     }
     Bee_UpdateSwarmAnim(&scale, &model, (cur - h) * 5);
 }
@@ -1003,7 +1004,7 @@ void Stinger_Walk(Insect *o, s16 *p, u32 mode) {
         if (o->kind == 0x36 &&
             (*p > 0 || (o->frameCounter % 10 == 0 && Random_GlobalBelow(100) > 0x4b))) {
             s32 t = *p;
-            o->position.y = o->position.y + (func_01ffcb0c(FX_Div(0x1000, 0x12000), t << 12) + t * t * -10);
+            o->position.y = o->position.y + TICK_PART((func_01ffcb0c(FX_Div(0x1000, 0x12000), t << 12) + t * t * -10));
             if (*p == 0) {
                 Actor *q = (Actor *)PlayerActor_GetActor(4);
                 if (q) {
@@ -1258,7 +1259,7 @@ BOOL Insect::insectFindFlowerTarget(s16 *out, s32 *dist, VecFx32 *pos) {
     } else {
         pos->x += 0x1000;
         pos->y = FX_Div(0xb000, 0x10000);
-        pos->z += 0x1000;
+        pos->z += TICK_PART(0x1000);
     }
     *out = Math_AngleXZ(p, pos);
     *out = *out - rotY;

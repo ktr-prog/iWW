@@ -1052,8 +1052,8 @@ extern "C" void FishShadow_MoveAccelerate(Obj_f9 *o)
     c = data_02135f44[((u16)o->wobblePhase >> 4) * 2];
     d = data_02135f44[((u16)o->rotY >> 4) * 2 + 1];
     z = func_01ffcb0c(t, d) + func_01ffcb0c(q, c);
-    o->position.x += x;
-    o->position.z += z;
+    o->position.x += TICK_PART(x);
+    o->position.z += TICK_PART(z);
     if (o->stateTimer >= 10) {
         FishShadow_SetAnimSpeed(o, 0x20);
     } else {
@@ -1123,8 +1123,8 @@ extern "C" void FishShadow_MoveFlee(Obj_f8 *self)
     s138 = *(volatile s16 *)&data_02135f44[(((u16)self->rotY >> 4) * 2) + 1];
     t = func_01ffcb0c(a, s138);
     y = t + func_01ffcb0c(sq, s142);
-    self->position.x += x;
-    self->position.z += y;
+    self->position.x += TICK_PART(x);
+    self->position.z += TICK_PART(y);
     if (self->hasFin) {
         if (self->stateTimer >= 10) {
             FishShadow_SetAnimSpeed(self, 3);

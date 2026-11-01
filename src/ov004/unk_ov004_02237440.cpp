@@ -669,7 +669,7 @@ extern "C" s32 MuseumInsect_TickTimer(void *self_) {
     MuseumInsect *self = (MuseumInsect *)self_;
     s32 t = (s16)self->stateTimer;
     if (t > 0) {
-        self->stateTimer = t - 1;
+        self->stateTimer = t - (TICK_STEP_ENDS() ? 1 : 0);
         return 0;
     }
     return 1;
@@ -1431,7 +1431,7 @@ extern "C" void MuseumInsect_PondSkaterGlide(void *self_, s16 *p)
     s32 *hi = &self->boundsMax.x;
     s32 *lo = &self->boundsMin.x;
     MuseumInsect_MakeStepDir(&d, self->yaw);
-    self->position.x += func_01ffcb0c((*p * self->moveSpeed) << 12, d.x);
+    self->position.x += TICK_PART(func_01ffcb0c((*p * self->moveSpeed) << 12, d.x));
     v->z += func_01ffcb0c((*p * self->moveSpeed) << 12, d.z);
     v->y = 0x200;
     *p = *p - 1;
@@ -1759,7 +1759,7 @@ extern "C" void MuseumInsect_MoleCricketJump(MuseumInsect *self, s16 *p)
     s32 k = (self->moveSpeed + 2) << 12;
     VecFx32 d;
     MuseumInsect_MakeStepDir(&d, self->yaw);
-    self->position.x += func_01ffcb0c(k, d.x);
+    self->position.x += TICK_PART(func_01ffcb0c(k, d.x));
     v->z += func_01ffcb0c(k, d.z);
     v->y += (25 - *p) * (*p * 4);
     BOOL ok;
@@ -3132,8 +3132,8 @@ void MuseumInsect::wander()
     }
     MuseumInsect_MakeStepDir(&l.v, ang);
     yaw = ang;
-    pos->z += func_01ffcb0c(func_01ffcb0c(moveSpeed << 12, l.v.z), 0x80);
-    pos->x += func_01ffcb0c(func_01ffcb0c(moveSpeed << 12, l.v.x), 0x80);
+    pos->z += TICK_PART(func_01ffcb0c(func_01ffcb0c(moveSpeed << 12, l.v.z), 0x80));
+    pos->x += TICK_PART(func_01ffcb0c(func_01ffcb0c(moveSpeed << 12, l.v.x), 0x80));
     s32 x = pos->x;
     if (x < p58[0] || x > p60[0]) pos->x = l.sv.x;
     s32 z = pos->z;
