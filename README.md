@@ -14,7 +14,7 @@ Screenshots:
 Features:
 
 - No screen borders
-- (WIP) single screen view
+- (WIP) Solo screen view
 - Accepts EU and US .sav files
 - Seamless transition between touchscreen and button input
 - Improved touch input delay
