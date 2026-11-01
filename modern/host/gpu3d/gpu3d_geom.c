@@ -659,7 +659,7 @@ static void submit_polygon(void) {
         while ((w >> wsize) && wsize < 32) wsize += 4;
         s64 z;
         if (poly->wbuffer) z = 0;
-        else if (x->pos[3]) z = ((((s64)x->pos[2] << 14) / x->pos[3]) + 0x3fff) << 9;
+        else if (x->pos[3]) z = ((s64)x->pos[2] << 23) / x->pos[3] + 0x7fffff;
         else z = 0;
         if (z < 0) z = 0;
         if (z > 0xffffff) z = 0xffffff;

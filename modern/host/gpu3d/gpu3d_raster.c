@@ -467,6 +467,7 @@ static void fog_pass(void) {
         s32 z = (s32)(sDepth[i] >> 9);
         s32 d;
         s32 b0 = r->fogOffset + step;
+        if (z > b0) z = b0 + (z - b0) / 2;
         if (z < b0 || !step) d = z < b0 ? r->fogTable[0] : r->fogTable[31];
         else {
             s32 n = (z - b0) / step;

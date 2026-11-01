@@ -621,14 +621,20 @@ static void single_compose(const Gpu2dFrameInput *in, int blank) {
         haveRef = 1;
     }
     int iris = gHostIrisRadius >= 0 && (reg32(b, REG_DISPCNT) & 0x2000);
-    u32 skyTop = b->out[0];
+    static u32 skyTop, skyCand;
+    static int skyHave, skyRun;
     {
+        u32 dom = b->out[0];
         int best = 0;
         for (int x = 0; x < SCREEN_W; x += 4) {
             int n = 0;
             for (int k = 0; k < SCREEN_W; k += 4) n += b->out[k] == b->out[x];
-            if (n > best) best = n, skyTop = b->out[x];
+            if (n > best) best = n, dom = b->out[x];
         }
+        if (!skyHave) skyTop = dom, skyHave = 1;
+        if (dom == skyTop) skyRun = 0;
+        else if (dom == skyCand) { if (++skyRun >= 30) skyTop = dom, skyRun = 0; }
+        else skyCand = dom, skyRun = 1;
     }
     double cx = SCREEN_W / 2.0, cy = rows / 2.0, rr = (double)gHostIrisRadius * gHostIrisRadius;
     for (int y = 0; y < rows; y++) {
