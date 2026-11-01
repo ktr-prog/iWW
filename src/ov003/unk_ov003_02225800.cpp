@@ -5342,12 +5342,14 @@ L268:
 #define sInsectJointAnimExtFmt "%s.nsbca"
 #define sInsectTexAnimPathFmt "/insect/51/bug%d.nsbta"
 BOOL InsectManager::onExecute() { using namespace s04;
+    TICK_LEGACY_BEGIN()
     FieldInsect_UpdateAll(this);
     if ((gCommManager)->isSlotActive(gCommManager->myAid) == 0) {
         SpecialInsect_UpdateAll(this);
     }
     HeldInsect_UpdateAll(this);
     Insect_UpdateSpawning(this);
+    TICK_LEGACY_END()
     return TRUE;
 }
 #undef sInsectPathFmt0x

@@ -7,7 +7,7 @@
 extern "C" {
 #endif
 
-enum { TC_A, TC_B, TC_X, TC_Y, TC_L, TC_R, TC_START, TC_SELECT, TC_SAVE, TC_LOAD, TC_MENU, TC_DPAD, TC_COUNT };
+enum { TC_A, TC_B, TC_X, TC_Y, TC_L, TC_R, TC_START, TC_SELECT, TC_MENU, TC_DPAD, TC_COUNT };
 
 typedef struct { float x, y, w, h; } TcRect;
 

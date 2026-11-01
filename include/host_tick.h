@@ -14,6 +14,10 @@ HOST_TICK_C s32 HostTick_Part(s32 x);
 HOST_TICK_C s32 HostTick_Rate(s32 r);
 HOST_TICK_C s32 HostTick_Div(s32 x);
 HOST_TICK_C BOOL HostTick_StepEnds(void);
+HOST_TICK_C void HostTick_EnterLegacy(void);
+HOST_TICK_C void HostTick_LeaveLegacy(void);
+#define TICK_LEGACY_BEGIN() if (TICK_STEP_ENDS()) { HostTick_EnterLegacy();
+#define TICK_LEGACY_END() HostTick_LeaveLegacy(); }
 #define TICK_STEPS() HostTick_Steps()
 #define TICK_PART(x) HostTick_Part(x)
 #define TICK_RATE(r) HostTick_Rate(r)
@@ -25,6 +29,8 @@ HOST_TICK_C BOOL HostTick_StepEnds(void);
 #define TICK_RATE(r) (r)
 #define TICK_DIV(x) (x)
 #define TICK_STEP_ENDS() TRUE
+#define TICK_LEGACY_BEGIN() {
+#define TICK_LEGACY_END() }
 #endif
 
 #endif

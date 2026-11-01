@@ -19,8 +19,9 @@ extern "C" BOOL HostTick_Native(void) {
     if (on < 0) on = !(getenv("ACWW_TICK20") && getenv("ACWW_TICK20")[0] == '1');
     return on;
 }
+static s32 sLegacy;
 extern "C" s32 HostTick_Steps(void) {
-    if (!HostTick_Native()) return 1;
+    if (!HostTick_Native() || sLegacy) return 1;
     s32 n = gVBlanksPerFrame;
     return n < 1 ? 1 : n > 4 ? 4 : n;
 }
@@ -47,6 +48,30 @@ extern "C" s32 HostTick_Div(s32 x) {
     if (n == 1 || x == 0) return x;
     s32 v = x / n;
     return v ? v : (x > 0 ? 1 : -1);
+}
+#include "sys/PadState.h"
+extern "C" u8 gTouchHeld, gTouchChanged;
+extern "C" BOOL HostTick_StepEnds(void);
+static u16 sAccTrig, sSavedTrig;
+static u8 sAccTouch, sSavedChanged;
+extern "C" void HostTick_NoteInput(void) {
+    sAccTrig |= gPad.trig;
+    if (gTouchChanged) sAccTouch = gTouchHeld ? 1 : 2;
+}
+extern "C" void HostTick_ClearInput(void) {
+    if (HostTick_StepEnds()) sAccTrig = 0, sAccTouch = 0;
+}
+extern "C" void HostTick_EnterLegacy(void) {
+    if (sLegacy++) return;
+    sSavedTrig = gPad.trig;
+    sSavedChanged = gTouchChanged;
+    gPad.trig = sAccTrig;
+    if (!gTouchChanged && sAccTouch == (gTouchHeld ? 1 : 2)) gTouchChanged = 1;
+}
+extern "C" void HostTick_LeaveLegacy(void) {
+    if (--sLegacy) return;
+    gPad.trig = sSavedTrig;
+    gTouchChanged = sSavedChanged;
 }
 extern "C" BOOL HostTick_StepEnds(void) {
     s32 n = HostTick_Steps();

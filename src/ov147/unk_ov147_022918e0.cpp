@@ -1,4 +1,5 @@
 #include "types.h"
+#include "host_tick.h"
 #include "host_labels.h"
 #include "host_overlay_vars.h"
 #include "Unk_020d8c7c.h"
@@ -259,11 +260,13 @@ BOOL TitleScreen::onDelete() {
 }
 
 BOOL TitleScreen::onExecute() {
+    TICK_LEGACY_BEGIN()
     if (sTitleStates[titleState].update) {
         (this->*sTitleStates[titleState].update)();
     }
     updateLogo();
     blinkText.update();
+    TICK_LEGACY_END()
     return TRUE;
 }
 

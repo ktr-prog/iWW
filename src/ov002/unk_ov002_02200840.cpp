@@ -581,8 +581,10 @@ BOOL MenuProc::onExecute() {
     });
         MenuProc_onExecute_tbl_init = 1;
     }
+    TICK_LEGACY_BEGIN()
     keyRepeat.update();
     (this->*MenuProc_onExecute_tbl[phase])();
+    TICK_LEGACY_END()
     return TRUE;
 }
 

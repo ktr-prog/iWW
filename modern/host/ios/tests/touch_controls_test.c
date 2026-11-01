@@ -44,7 +44,7 @@ static int overlap_controls(int i, int j, TcRect a, TcRect b) {
 static float cx(TcRect r) { return r.x + r.w / 2; }
 static float cy(TcRect r) { return r.y + r.h / 2; }
 
-static const char *kName[TC_COUNT] = {"A", "B", "X", "Y", "L", "R", "START", "SELECT", "SAVE", "LOAD", "MENU", "DPAD"};
+static const char *kName[TC_COUNT] = {"A", "B", "X", "Y", "L", "R", "START", "SELECT", "MENU", "DPAD"};
 
 static void write_preview(const char *dir, const char *dev, const char *orient, int controls, const TcLayout *l,
                           float pt, const float safe[4]) {

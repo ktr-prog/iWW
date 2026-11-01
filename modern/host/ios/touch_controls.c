@@ -48,10 +48,10 @@ void tc_layout(TcLayout *l, int w, int h, float pt, const float safe[4], int con
         float rh = clampf(ch * 0.17f, 30 * pt, 44 * pt);
         float rowY = top + m * 0.75f;
         float gap = 8 * pt, ssh = rh * 0.8f;
-        float ssw = minf(clampf(sw * 0.17f, 52 * pt, 110 * pt), (sw - 2 * m - 3 * gap) / 4);
-        float x0 = sx + sw / 2 - (4 * ssw + 3 * gap) / 2, sy0 = rowY + (rh - ssh) / 2;
-        static const int kRow[4] = {TC_SAVE, TC_START, TC_LOAD, TC_MENU};
-        for (int i = 0; i < 4; i++) l->button[kRow[i]] = rect(x0 + i * (ssw + gap), sy0, ssw, ssh);
+        float ssw = minf(clampf(sw * 0.17f, 52 * pt, 110 * pt), (sw - 2 * m - gap) / 2);
+        float x0 = sx + sw / 2 - (2 * ssw + gap) / 2, sy0 = rowY + (rh - ssh) / 2;
+        static const int kRow[2] = {TC_START, TC_MENU};
+        for (int i = 0; i < 2; i++) l->button[kRow[i]] = rect(x0 + i * (ssw + gap), sy0, ssw, ssh);
         float aTop = rowY + rh + m * 0.5f, aBottom = bottom - m * 0.5f, ah = aBottom - aTop;
         float k = minf(minf(ah, sw * 0.44f), 230 * pt);
         float cy = aTop + ah / 2;
@@ -90,12 +90,12 @@ void tc_layout(TcLayout *l, int w, int h, float pt, const float safe[4], int con
             float cy = aTop + ah / 2;
             (void)shoulder;
             if (s == 0) {
-                l->button[TC_SAVE] = smallA, l->button[TC_START] = smallB;
+                (void)smallA;
+                l->button[TC_START] = smallB;
                 l->button[TC_MENU] = menu;
                 l->stick_size = k * 0.92f;
                 l->button[TC_DPAD] = rect(p.x, aTop, p.w, aBottom - aTop);
             } else {
-                l->button[TC_LOAD] = rect(cx - ssw / 2, small.y, ssw, ssh);
                 face_buttons(l, cx, cy, k);
                 l->button[TC_X] = l->button[TC_Y] = rect(0, 0, 0, 0);
             }
@@ -106,7 +106,7 @@ void tc_layout(TcLayout *l, int w, int h, float pt, const float safe[4], int con
 
 static const uint32_t kBit[TC_COUNT] = {
     [TC_A] = 1u << 0, [TC_B] = 1u << 1, [TC_X] = 1u << 10, [TC_Y] = 1u << 11, [TC_L] = 1u << 9, [TC_R] = 1u << 8,
-    [TC_START] = 1u << 3, [TC_SELECT] = 1u << 2, [TC_SAVE] = 0, [TC_LOAD] = 0, [TC_MENU] = 0, [TC_DPAD] = 0,
+    [TC_START] = 1u << 3, [TC_SELECT] = 1u << 2, [TC_MENU] = 0, [TC_DPAD] = 0,
 };
 enum { WHAT_STYLUS = -1, WHAT_NOTHING = -2, WHAT_SLIDING = TC_COUNT };
 enum { DIR_RIGHT = 1u << 4, DIR_LEFT = 1u << 5, DIR_UP = 1u << 6, DIR_DOWN = 1u << 7 };
@@ -380,7 +380,7 @@ static void glass_pixel(uint32_t *d, float d_edge, float yfrac, float rim, int p
 }
 
 void tc_draw(uint32_t *px, int w, int h, int which, int pressed, uint32_t dirs) {
-    static const char *const kLabel[TC_COUNT] = {"A", "B", "X", "Y", "L", "R", "START", "SELECT", "SAVE", "LOAD", "MENU",
+    static const char *const kLabel[TC_COUNT] = {"A", "B", "X", "Y", "L", "R", "START", "SELECT", "MENU",
                                                  ""};
     (void)dirs;
     memset(px, 0, (size_t)w * h * 4);

@@ -258,14 +258,21 @@ static void pocket_test(void) {
 int host_pocket_action(int state) {
     static const char *spec;
     static int done, last = -1;
-    unsigned at, act;
     if (!spec) spec = getenv("ACWW_POCKET_ACTION") ? getenv("ACWW_POCKET_ACTION") : "";
-    if (sscanf(spec, "%u:%x", &at, &act) != 2) return -1;
+    if (!*spec) return -1;
     if (state != last) fprintf(stderr, "pocketmenu: state %#x (frame %llu)\n", state, (unsigned long long)host_frame()), last = state;
-    if (done || host_frame() < at || state != 0) return -1;
-    done = 1;
-    fprintf(stderr, "pocketmenu: action %#x\n", act);
-    return (int)act;
+    int k = 0;
+    for (const char *p = spec; p && *p; k++) {
+        unsigned at, act;
+        if (sscanf(p, "%u:%x", &at, &act) == 2 && !(done >> k & 1) && host_frame() >= at && state == 0) {
+            done |= 1 << k;
+            fprintf(stderr, "pocketmenu: action %#x\n", act);
+            return (int)act;
+        }
+        p = strchr(p, ';');
+        if (p) p++;
+    }
+    return -1;
 }
 extern int Scene_HostWarp(u32 id, s32 x, s32 z);
 extern void Actor_HostDump(void);

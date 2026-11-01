@@ -86,12 +86,14 @@ void LabelBalloon::draw() {
 void LabelBalloon::update() {
     static Unk_020e0d98_Fn tbl[4] = {&LabelBalloon::updateClosed, &LabelBalloon::updateOpening,
                                      &LabelBalloon::updateOpen, &LabelBalloon::updateClosing};
+    TICK_LEGACY_BEGIN()
     (this->*tbl[state])();
     if (state != 0) {
         layer1.update();
         layer2.update();
-        updateScreenClamp();
     }
+    TICK_LEGACY_END()
+    if (state != 0) updateScreenClamp();
 }
 
 void LabelBalloon::enableObjWindow() { objWindow = 1; }

@@ -1,4 +1,5 @@
 #include "uptr.h"
+#include "host_tick.h"
 #include "host_overlay_vars.h"
 #include "proto/main/unk_020b4828.h"
 #include "types.h"
@@ -673,7 +674,9 @@ BOOL FtrActor::onExecute() {
         if (kind == 0) {
             hasIndoorFlag6();
         }
+        TICK_LEGACY_BEGIN()
         updateActive();
+        TICK_LEGACY_END()
     } else {
         updateAppearRemove();
         if (switchState.isChanging()) {

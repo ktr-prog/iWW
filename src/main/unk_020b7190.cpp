@@ -144,7 +144,7 @@ void FieldInfoLabelBalloon::updateBlink() {
             if (FieldInfoBalloon_IsMenuTransition()) {
                 blinkFrame = 0x19;
             } else if (blinkEnabled) {
-                blinkFrame++;
+                blinkFrame += TICK_STEP_ENDS() ? 1 : 0;
                 if (blinkFrame >= 0x1e) blinkFrame = 0;
             } else {
                 blinkFrame = 1;

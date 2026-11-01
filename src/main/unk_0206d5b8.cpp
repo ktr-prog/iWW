@@ -211,6 +211,10 @@ extern "C" void Main_WaitFrame(void) {
 
 #ifdef HOST
 extern "C" BOOL HostTick_StepEnds(void);
+extern "C" void HostTick_NoteInput(void);
+extern "C" void HostTick_ClearInput(void);
+extern "C" void HostTick_EnterLegacy(void);
+extern "C" void HostTick_LeaveLegacy(void);
 extern "C" u32 gHostTick;
 extern "C" void host_touch_read(int held);
 extern "C" u8 gTouchHeld;
@@ -226,6 +230,9 @@ extern "C" void Main_PreTaskUpdate(u32 r) {
     host_touch_read(gTouchHeld);
 #endif
     Pad_Update();
+#ifdef HOST
+    HostTick_NoteInput();
+#endif
     SoftReset_Update();
     Clock_Update(r);
 }
@@ -238,6 +245,7 @@ extern "C" void Main_PostTaskUpdate(u32 r) {
     Gfx_PostTaskUpdate();
 #ifdef HOST
     if (HostTick_StepEnds()) gFrameCounter++;
+    HostTick_ClearInput();
     gHostTick++;
 #else
     gFrameCounter++;
@@ -256,7 +264,15 @@ extern "C" void Main_LateUpdate(u32 r) {
     HudObjGfx_FlushCameraButton();
     Sky_SwapBuffers();
     HBlank_RunFrame();
+#ifdef HOST
+    if (HostTick_StepEnds()) {
+        HostTick_EnterLegacy();
+        Snd_Update();
+        HostTick_LeaveLegacy();
+    }
+#else
     Snd_Update();
+#endif
 }
 
 extern "C" void Main_PreTaskHook(void) {

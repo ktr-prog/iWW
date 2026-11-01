@@ -1,4 +1,5 @@
 #include "uptr.h"
+#include "host_tick.h"
 #ifdef HOST64
 #define EFFECT_SPL_HEAP_SIZE 0x18000
 #else
@@ -789,9 +790,11 @@ BOOL EffectSplProc::onCreate()
 
 BOOL EffectSplProc::onExecute()
 {
+    TICK_LEGACY_BEGIN()
     EffectSplPool_Update(&pool);
     EffectModels_UpdateAll(modelGroups);
     SPL_Calc(splManager);
+    TICK_LEGACY_END()
     return TRUE;
 }
 

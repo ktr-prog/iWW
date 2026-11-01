@@ -70,7 +70,6 @@ void TitleBlinkText::resetBlink() {
 }
 
 BOOL TitleBlinkText::stepBlink() {
-    if (!TICK_STEP_ENDS()) return FALSE;
     BOOL same = (requestedVariant == 2) ? TRUE : FALSE;
     if (same) {
         fadingOut = 1;

@@ -3535,8 +3535,10 @@ BOOL FieldObjectManager::onCreate() {
 
 BOOL FieldObjectManager::onExecute() {
     using namespace ns_0221e4d4;
+    TICK_LEGACY_BEGIN()
     FieldItemFxTable_Update(&sFieldItemFxTable);
     TreeAnimSet_Update(&treeAnimSet);
+    TICK_LEGACY_END()
     return TRUE;
 }
 

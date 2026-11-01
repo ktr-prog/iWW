@@ -511,12 +511,6 @@ static void handle_event(const SDL_Event *e) {
         } else if (e->key.keysym.scancode == SDL_SCANCODE_RETURN && (e->key.keysym.mod & KMOD_ALT)) {
             int full = (SDL_GetWindowFlags(sWin) & SDL_WINDOW_FULLSCREEN_DESKTOP) != 0;
             SDL_SetWindowFullscreen(sWin, full ? 0 : SDL_WINDOW_FULLSCREEN_DESKTOP);
-        } else if (e->key.keysym.scancode == SDL_SCANCODE_F5 && !ui_key_bound(SDL_SCANCODE_F5)) {
-            host_state_save(&sGameSp);
-            ui_toast(host_state_message());
-        } else if (e->key.keysym.scancode == SDL_SCANCODE_F9 && !ui_key_bound(SDL_SCANCODE_F9)) {
-            host_state_load(&sGameSp);
-            ui_toast(host_state_message());
         } else if (e->key.keysym.scancode == SDL_SCANCODE_M && !ui_key_bound(SDL_SCANCODE_M)) {
             __atomic_store_n(&sMute, !sMute, __ATOMIC_RELAXED);
         }
@@ -754,7 +748,7 @@ static void ios_draw_controls(void) {
             if (!*t) continue;
         }
         SDL_Rect dst = {(int)(r.x + 0.5f), (int)(r.y + 0.5f), w, h};
-        SDL_SetTextureAlphaMod(*t, b == TC_LOAD && !host_state_have() ? 110 : 255);
+        SDL_SetTextureAlphaMod(*t, 255);
         SDL_RenderCopy(sRen, *t, 0, &dst);
     }
 }
@@ -763,14 +757,6 @@ static void ios_states(void) {
     static uint32_t was;
     uint32_t held = tc_held(&sTouch), pressed = held & ~was;
     was = held;
-    if (pressed & 1u << TC_SAVE) {
-        if (!host_state_save(&sGameSp)) fprintf(stderr, "frontend: state not saved\n");
-        ui_toast(host_state_message());
-    }
-    if (pressed & 1u << TC_LOAD && host_state_have()) {
-        if (!host_state_load(&sGameSp)) fprintf(stderr, "frontend: state not loaded\n");
-        ui_toast(host_state_message());
-    }
     if (pressed & 1u << TC_MENU) ui_open_settings();
 }
 
@@ -919,6 +905,10 @@ static void frame_body(void) {
     }
     sShm->keys = keyboard_keys() | pad_keys() | tc_keys(&sTouch);
     sShm->stick = stick_word();
+    {
+        float sx = 0, sy = 0;
+        if (tc_stick(&sTouch, &sx, &sy) && sx * sx + sy * sy >= 0.92f * 0.92f) sShm->keys |= 1u << 1;
+    }
 #else
     sShm->keys = keyboard_keys() | pad_keys();
     sShm->stick = stick_word();
