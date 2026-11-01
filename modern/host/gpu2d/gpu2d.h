@@ -24,6 +24,7 @@ typedef struct Gpu2dFrameInput {
 
 void gpu2d_reset(void);
 int gpu2d_tall_3d_ok(void);
+int gpu2d_main_on_bottom(void);
 const uint32_t *gpu2d_canvas(int *rows);
 void gpu2d_write8(uint32_t addr, uint8_t value);
 void gpu2d_write16(uint32_t addr, uint16_t value);

@@ -712,10 +712,10 @@ static void ios_draw_stick(TcRect r) {
     float sx, sy;
     int held = tc_stick(&sTouch, &sx, &sy);
     SDL_Rect dst = {(int)(r.x + 0.5f), (int)(r.y + 0.5f), w, w};
-    if (sStickBase) SDL_RenderCopy(sRen, sStickBase, 0, &dst);
+    if (sStickBase) SDL_SetTextureAlphaMod(sStickBase, 170), SDL_RenderCopy(sRen, sStickBase, 0, &dst);
     float cx = r.x + r.w / 2 + sx * r.w * TC_KNOB_TRAVEL, cy = r.y + r.h / 2 - sy * r.w * TC_KNOB_TRAVEL;
     SDL_Rect k = {(int)(cx - kw / 2.0f + 0.5f), (int)(cy - kw / 2.0f + 0.5f), kw, kw};
-    if (sStickKnob[held]) SDL_RenderCopy(sRen, sStickKnob[held], 0, &k);
+    if (sStickKnob[held]) SDL_SetTextureAlphaMod(sStickKnob[held], 170), SDL_RenderCopy(sRen, sStickKnob[held], 0, &k);
 }
 
 static void ios_draw_controls(void) {
@@ -751,7 +751,7 @@ static void ios_draw_controls(void) {
             if (!*t) continue;
         }
         SDL_Rect dst = {(int)(r.x + 0.5f), (int)(r.y + 0.5f), w, h};
-        SDL_SetTextureAlphaMod(*t, b == TC_LOAD && !host_state_have() ? 96 : 255);
+        SDL_SetTextureAlphaMod(*t, b == TC_LOAD && !host_state_have() ? 70 : 170);
         SDL_RenderCopy(sRen, *t, 0, &dst);
     }
 }

@@ -528,7 +528,10 @@ void render_frame(void) {
     }
     if (sGpu2d && sOwn3d) {
         extern int Scene_InTown(void);
-        gpu3d_set_tall(gpu2d_tall_3d_ok() && Scene_InTown() && !(getenv("ACWW_SINGLE") && atoi(getenv("ACWW_SINGLE")) == 0));
+        extern int gHostCanvasRows;
+        int aBottom = gpu2d_main_on_bottom();
+        int above = gHostCanvasRows - (aBottom ? 192 : 384);
+        gpu3d_set_tall(gpu2d_tall_3d_ok() && Scene_InTown() && above > 0 && !(getenv("ACWW_SINGLE") && atoi(getenv("ACWW_SINGLE")) == 0), above);
     }
     if (sGpu3d) gpu3d_run_frame();
     if (sCompare && !sSelftest) {

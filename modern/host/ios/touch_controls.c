@@ -43,7 +43,7 @@ void tc_layout(TcLayout *l, int w, int h, float pt, const float safe[4], int con
         float sch = sh - ctrl, scw = sch / 1.5f;
         if (scw > sw) scw = sw, sch = scw * 1.5f;
         l->screens = rect(sx + (sw - scw) / 2, sy, scw, sch);
-        l->fill = rect(0, 0, (float)w, sy + sch);
+        l->fill = rect(0, 0, (float)w, (float)h);
         float top = sy + sch, bottom = sy + sh, ch = bottom - top;
         float rh = clampf(ch * 0.17f, 30 * pt, 44 * pt);
         float rowY = top + m * 0.75f;

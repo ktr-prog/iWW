@@ -315,8 +315,9 @@ static u32 deferred_3d(const ObjLine *obj, int x, int at, u32 col0, u8 lay0, int
 
 int gpu2d_tall_3d_ok(void) {
     u32 d = reg32(&sEngine[0], REG_DISPCNT);
-    return !(sPowCnt & 0x8000) && (d & 8) && (d & 0x100) && !(d & 0x80);
+    return (d & 8) && (d & 0x100) && !(d & 0x80);
 }
+int gpu2d_main_on_bottom(void) { return !(sPowCnt & 0x8000); }
 
 static void compose_line(Engine *e, int line, const u32 *line3d, u32 *dst) {
     u32 dispcnt = reg32(e, REG_DISPCNT);
@@ -662,6 +663,38 @@ static void single_compose(const Gpu2dFrameInput *in, int blank) {
     sCanvasRows = rows;
 }
 
+extern int gHostCanvasRows;
+static void classic_compose(const Gpu2dFrameInput *in) {
+    int rows = gHostCanvasRows < SCREEN_H ? SCREEN_H : gHostCanvasRows > CANVAS_MAX ? CANVAS_MAX : gHostCanvasRows;
+    int aTop = (sPowCnt & 0x8000) != 0;
+    const Engine *top = &sEngine[aTop ? 0 : 1], *bottom = &sEngine[aTop ? 1 : 0], *a = &sEngine[0];
+    int ext = rows - 2 * SCREEN_H;
+    u16 mb = reg16(a, REG_MASTER_BRIGHT);
+    u32 f = mb & 0x1f;
+    if (f > 16) f = 16;
+    for (int y = 0; y < rows; y++) {
+        u32 *d = sCanvas + y * SCREEN_W;
+        int sy = y - ext;
+        if (sy >= SCREEN_H) {
+            for (int x = 0; x < SCREEN_W; x++) d[x] = argb(bottom->out[(sy - SCREEN_H) * SCREEN_W + x]);
+        } else if (sy >= 0) {
+            for (int x = 0; x < SCREEN_W; x++) d[x] = argb(top->out[sy * SCREEN_W + x]);
+        } else {
+            const u32 *l3 = aTop && in->lines3dTop && y < in->topRows ? in->lines3dTop + y * SCREEN_W : NULL;
+            for (int x = 0; x < SCREEN_W; x++) {
+                u32 c = l3 ? l3[x] : 0, al = c >> 24 & 31, o = 0;
+                if (al) {
+                    o = al == 31 ? c & 0x3f3f3f : blend3d(c & 0x3f3f3f, 0, al);
+                    if ((mb >> 14) == 1 && f) o = brighten(o, f, 0);
+                    else if ((mb >> 14) == 2 && f) o = darken(o, f, 15);
+                }
+                d[x] = argb(o);
+            }
+        }
+    }
+    sCanvasRows = rows;
+}
+
 void gpu2d_render_frame(const Gpu2dFrameInput *in) {
     sGpu = in->gpu;
     sDefer3d = in->defer3d || sGpu;
@@ -669,7 +702,7 @@ void gpu2d_render_frame(const Gpu2dFrameInput *in) {
     if (off < 0) off = getenv("ACWW_SINGLE") && atoi(getenv("ACWW_SINGLE")) == 0;
     {
         static int hold, swapped;
-        int now = !off && !sGpu && !sDefer3d && in->lines3d && gpu2d_tall_3d_ok();
+        int now = !off && !sGpu && !sDefer3d && in->lines3d && gpu2d_tall_3d_ok() && gpu2d_main_on_bottom();
         swapped = (sPowCnt & 0x8000) ? swapped + 1 : 0;
         if (now) hold = 120;
         else if (hold && swapped > 8) hold = 0;
@@ -742,6 +775,7 @@ void gpu2d_render_frame(const Gpu2dFrameInput *in) {
     if (sGpu) sGpuFrame.tables[0][G2T_SCREEN_A] = (sPowCnt & 0x8000) ? 0 : 1;
     sCanvasRows = 0;
     if (sSingle) single_compose(in, sSingleBlank);
+    else if (!sGpu && !sDefer3d) classic_compose(in);
     for (int n = 0; n < 2; n++) {
         int screen = (sPowCnt & 0x8000) ? n : 1 - n;
         if (sGpu == 1) {

@@ -429,11 +429,9 @@ static void screen_position(G3Vertex *v) {
 static int sClipK = 96;
 static int sTall;
 int gG3Yofs = 192;
-void gpu3d_set_tall(int on) {
+void gpu3d_set_tall(int on, int above) {
     extern int sTallWanted;
-    extern int gHostCanvasRows;
-    int rows = gHostCanvasRows < 192 ? 192 : gHostCanvasRows > G3_MAX_ROWS ? G3_MAX_ROWS : gHostCanvasRows;
-    gG3Yofs = rows - 192;
+    gG3Yofs = above < 0 ? 0 : above > G3_MAX_ROWS - 192 ? G3_MAX_ROWS - 192 : above;
     sTall = on && g3_tall_supported() && gG3Yofs > 0;
     sTallWanted = sTall;
 }
