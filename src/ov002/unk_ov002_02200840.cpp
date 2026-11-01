@@ -1,4 +1,5 @@
 #include "ds_div.h"
+#include "host_tick.h"
 #include "host_overlay_vars.h"
 #include "types.h"
 #include "sys/InputReplay.h"
@@ -94,7 +95,7 @@ void KeyRepeat::update()
         interval = delay;
         countdown = delay;
     } else if (countdown > 0) {
-        countdown--;
+        countdown -= TICK_STEP_ENDS() ? 1 : 0;
     } else {
         *p |= cur & 0xf0;
         interval = interval - intervalStep;
@@ -204,7 +205,7 @@ BOOL MenuTween::step()
     if (a == 0) {
         return TRUE;
     }
-    s32 b = stepSize;
+    s32 b = TICK_PART(stepSize);
     if (a > b) {
         progress = a - b;
     } else {

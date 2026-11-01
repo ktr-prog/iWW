@@ -4,11 +4,16 @@
 #include "types.h"
 
 #ifdef HOST
-extern "C" s32 HostTick_Steps(void);
-extern "C" s32 HostTick_Part(s32 x);
-extern "C" s32 HostTick_Rate(s32 r);
-extern "C" s32 HostTick_Div(s32 x);
-extern "C" BOOL HostTick_StepEnds(void);
+#ifdef __cplusplus
+#define HOST_TICK_C extern "C"
+#else
+#define HOST_TICK_C extern
+#endif
+HOST_TICK_C s32 HostTick_Steps(void);
+HOST_TICK_C s32 HostTick_Part(s32 x);
+HOST_TICK_C s32 HostTick_Rate(s32 r);
+HOST_TICK_C s32 HostTick_Div(s32 x);
+HOST_TICK_C BOOL HostTick_StepEnds(void);
 #define TICK_STEPS() HostTick_Steps()
 #define TICK_PART(x) HostTick_Part(x)
 #define TICK_RATE(r) HostTick_Rate(r)

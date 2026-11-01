@@ -1,4 +1,5 @@
 #include "types.h"
+#include "host_tick.h"
 #include "gfx/VecFx32.h"
 
 
@@ -29,7 +30,7 @@ ActorCollider *gActorColliderList;
 
 void SpriteAnim::update() {
     if (playOnce == 0) {
-        frameTime = frameTime + speed;
+        frameTime = frameTime + TICK_PART(speed);
         s32 f = frameTime >> 12;
         if (f >= seq->frames[frameIndex].duration) {
             frameTime = 0;
@@ -40,7 +41,7 @@ void SpriteAnim::update() {
             }
         }
     } else {
-        frameTime = frameTime + speed;
+        frameTime = frameTime + TICK_PART(speed);
         SpriteAnimSeq *t = seq;
         s32 f = frameTime >> 12;
         if (f >= t->frames[frameIndex].duration) {

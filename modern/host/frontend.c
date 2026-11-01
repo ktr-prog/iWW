@@ -270,6 +270,16 @@ int host_pocket_action(int state) {
 extern int Scene_HostWarp(u32 id, s32 x, s32 z);
 extern void Actor_HostDump(void);
 extern void Collision_HostNetScan(s32 w, s32 h);
+static void action_log(void) {
+    static int on = -1, last = -1;
+    if (on < 0) on = getenv("ACWW_ACTIONLOG") != 0;
+    if (!on) return;
+    void *o = PlayerActor_Get(4);
+    s32 action, fx[4];
+    u32 anim, mode;
+    if (!o || !PlayerActor_HostEmotionState(o, &action, &anim, &mode, fx)) return;
+    if (action != last) fprintf(stderr, "action %#x frame %llu\n", action, (unsigned long long)host_frame()), last = action;
+}
 static void net_scan(void) {
     static const char *spec;
     unsigned at;
@@ -616,6 +626,7 @@ void frontend_frame(void) {
     }
     town_dump();
     net_scan();
+    action_log();
     u32 sk = scripted_keys() | goto_keys() | sFishKeys;
     keyinput &= (u16)~(sk & 0x3ff);
     xy &= (u16)~(sk & 0x0c00);

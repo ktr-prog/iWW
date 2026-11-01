@@ -2038,6 +2038,7 @@ void TalkVoice::pushChar(u32 c)
 }
 void TalkVoice::update()
 {
+    if (!TICK_STEP_ENDS()) return;
     updateVoiceType();
     shiftHistory();
     if (instantByMsg == 0 && instantByTag == 0) {

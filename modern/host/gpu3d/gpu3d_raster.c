@@ -202,7 +202,8 @@ typedef struct {
     int down[10];
     s32 ya[10], yb[10];
 } PolyEdges;
-static PolyEdges sPE;
+static _Thread_local PolyEdges sPE;
+static _Thread_local int tBand, tBands = 1;
 static void poly_edges(const G3Polygon *p) {
     int n = p->nv, flatbottom = 0;
     s32 bx = -1;
@@ -281,7 +282,7 @@ static void draw_one_line(const G3Polygon *p, int idx) {
         if (p->v[i]->x > p->v[r]->x) r = i;
     }
     s32 y = p->ytop, x0 = p->v[l]->x, x1 = p->v[r]->x;
-    if (y < 0 || y >= H) return;
+    if (y < 0 || y >= H || y % tBands != tBand) return;
     s32 xe = x1 > x0 ? x1 - 1 : x0;
     const G3Vertex *a = p->v[l], *b = p->v[r];
     const s32 va[5] = {a->color[0], a->color[1], a->color[2], a->tex[0], a->tex[1]};
@@ -313,8 +314,9 @@ static void draw_polygon(const G3Polygon *p, int idx) {
         if (!area) full = 1;
     }
     int aa = (sR->dispcnt & 0x10) && !p->translucent && (p->attr >> 16 & 31) == 31;
-    for (s32 y = ytop; y < ybot; y++) {
-        if (y < 0 || y >= H) continue;
+    s32 y0 = ytop < 0 ? 0 : ytop;
+    y0 += ((tBand - y0 % tBands) + tBands) % tBands;
+    for (s32 y = y0; y < ybot && y < H; y += tBands) {
         Edge L, R;
         if (!edges_at(p, y, &L, &R)) continue;
         s32 a = edge_left(&L, y), b = edge_right(&R, y);
@@ -436,7 +438,8 @@ static void clear_buffers(void) {
     u32 col = rgb5_to_6(c & 31) | rgb5_to_6(c >> 5 & 31) << 8 | rgb5_to_6(c >> 10 & 31) << 16 |
               (u32)(r->clearAttrHi & 31) << 24;
     u32 depth = (u32)(r->clearDepth & 0x7fff) * 0x200 + ((r->clearDepth & 0x7fff) == 0x7fff ? 0x1ff : 0);
-    for (int i = 0; i < W * H; i++) {
+    for (int y = tBand; y < H; y += tBands)
+    for (int i = y * W; i < y * W + W; i++) {
         sColor[i] = (i < W * sR->yofs ? col & 0xffffff : col) | 0x80000000u;
         sDepth[i] = depth;
         sOpaqueId[i] = (u8)(r->clearAttrHi >> 8 & 63);
@@ -451,18 +454,20 @@ static void clear_buffers(void) {
 
 static void aa_pass(void) {
     if (!(sR->dispcnt & 0x10)) return;
-    for (int i = 0; i < W * H; i++)
+    for (int y = tBand; y < H; y += tBands)
+    for (int i = y * W; i < y * W + W; i++)
         if (sCov[i] < 31) sColor[i] = aa_resolve(sColor[i], sColor2[i], sCov[i]);
 }
 
 static void fog_pass(void) {
     const G3RenderState *r = sR;
-    if (!(r->dispcnt & 0x80) || getenv("ACWW_GPU3D_NOFOG")) return;
+    if (!(r->dispcnt & 0x80)) return;
     int shift = r->dispcnt >> 8 & 15;
     s32 step = shift <= 10 ? 0x400 >> shift : 0;
     u32 fc = r->fogColor;
     u32 fr = rgb5_to_6(fc & 31), fgc = rgb5_to_6(fc >> 5 & 31), fb = rgb5_to_6(fc >> 10 & 31), fa = fc >> 16 & 31;
-    for (int i = 0; i < W * H; i++) {
+    for (int y = tBand; y < H; y += tBands)
+    for (int i = y * W; i < y * W + W; i++) {
         if (!(sFlags[i] & 1)) continue;
         s32 z = (s32)(sDepth[i] >> 9);
         s32 d;
@@ -510,6 +515,65 @@ int gpu3d_use_wgpu(void *device, void *queue, int scale, int readback) {
     return 1;
 }
 void *gpu3d_wgpu_picture(void) { return g3w_picture(); }
+#include <pthread.h>
+#include <unistd.h>
+enum { MAX_BANDS = 4 };
+static int sBands = 1;
+static pthread_t sWorker[MAX_BANDS];
+static pthread_mutex_t sPoolMu = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t sPoolGo = PTHREAD_COND_INITIALIZER, sPoolDone = PTHREAD_COND_INITIALIZER;
+static unsigned sPoolGen;
+static int sPoolPending;
+static void render_band(int b) {
+    tBand = b;
+    tBands = sBands;
+    sPE.p = 0;
+    clear_buffers();
+    for (int i = 0; i < sR->npoly; i++) draw_polygon(sR->poly[i], i);
+    fog_pass();
+    aa_pass();
+}
+static void *band_worker(void *arg) {
+    int b = (int)(intptr_t)arg;
+    unsigned seen = 0;
+    for (;;) {
+        pthread_mutex_lock(&sPoolMu);
+        while (sPoolGen == seen) pthread_cond_wait(&sPoolGo, &sPoolMu);
+        seen = sPoolGen;
+        pthread_mutex_unlock(&sPoolMu);
+        render_band(b);
+        pthread_mutex_lock(&sPoolMu);
+        if (--sPoolPending == 0) pthread_cond_signal(&sPoolDone);
+        pthread_mutex_unlock(&sPoolMu);
+    }
+    return 0;
+}
+static void render_bands(void) {
+    static int init;
+    if (!init) {
+        init = 1;
+        long n = sysconf(_SC_NPROCESSORS_ONLN);
+        const char *e = getenv("ACWW_GPU3D_THREADS");
+        if (e) n = atoi(e);
+        sBands = n < 1 ? 1 : n > MAX_BANDS ? MAX_BANDS : (int)n;
+        for (int b = 1; b < sBands; b++)
+            if (pthread_create(&sWorker[b], 0, band_worker, (void *)(intptr_t)b)) { sBands = b; break; }
+    }
+    if (sBands == 1) {
+        render_band(0);
+        return;
+    }
+    pthread_mutex_lock(&sPoolMu);
+    sPoolPending = sBands - 1;
+    sPoolGen++;
+    pthread_cond_broadcast(&sPoolGo);
+    pthread_mutex_unlock(&sPoolMu);
+    render_band(0);
+    pthread_mutex_lock(&sPoolMu);
+    while (sPoolPending) pthread_cond_wait(&sPoolDone, &sPoolMu);
+    pthread_mutex_unlock(&sPoolMu);
+}
+
 void g3_render(void) {
     static int timing = -1;
     struct timespec t0, t1;
@@ -523,11 +587,7 @@ void g3_render(void) {
     if (sWgpu)
         g3w_render(sR, sImgFlat, sPalFlat, sWgpuReadback ? sColor : NULL);
     else {
-        clear_buffers();
-        sPE.p = 0;
-        for (int i = 0; i < sR->npoly; i++) draw_polygon(sR->poly[i], i);
-        fog_pass();
-        aa_pass();
+        render_bands();
     }
     sShown ^= 1;
     {

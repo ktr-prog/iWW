@@ -1,4 +1,5 @@
 #include "nitro/mtx.h"
+#include "host_tick.h"
 typedef unsigned char u8;
 typedef unsigned short u16;
 typedef unsigned int u32;
@@ -343,7 +344,7 @@ void getJntSRTAnmResult_(const ResJntAnm *pJntAnm, u32 dataIdx, fx32 frame, JntA
         return;
     }
     pData = (const u32 *)((const u8 *)pJntAnm + ofs) + 1;
-    if ((frame & 0xfff) && (pJntAnm->flag & 1)) {
+    if ((frame & 0xfff) && ((pJntAnm->flag & 1) || TICK_STEPS() > 1)) {
         interpolate = TRUE;
     } else {
         interpolate = FALSE;
