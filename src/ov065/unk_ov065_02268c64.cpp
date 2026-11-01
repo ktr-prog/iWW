@@ -223,8 +223,8 @@ s32 WM_GetAllowedChannel(void);
 s32 WM_Finish(void);
 s32 WM_SetIndCallback(void *);
 s32 WM_Enable(void *);
-s32 OS_IsTickAvailable(void);
-s32 OS_IsAlarmAvailable(void);
+u16 OS_IsTickAvailable(void);
+u16 OS_IsAlarmAvailable(void);
 void MIi_CpuCopyFast(void *, void *, u32);
 s32 WM_SetDCFData(void *, void *, void *, u32);
 

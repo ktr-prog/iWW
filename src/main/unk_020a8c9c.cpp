@@ -93,7 +93,7 @@ extern "C" {
 }
 
 extern "C" {
-BOOL Input_IsButtonMode(void);
+u8 Input_IsButtonMode(void);
 }
 
 extern "C" {

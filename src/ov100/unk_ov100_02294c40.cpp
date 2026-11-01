@@ -39,7 +39,7 @@ BOOL Clock_GetWeekday();
 void MI_CpuCopy8(void *a, void *b, u32 c);
 BOOL PopupChoice_MoveCursor(void *p, s32 a, void *q, s32 b);
 BOOL PopupChoice_TickDecideDelay(void *p);
-s32 PopupChoice_DecideCancel(void *p, s32 x);
+u8 PopupChoice_DecideCancel(void *p, s32 x);
 void PopupChoice_DecideRow(void *p, s32 a, s32 b);
 void PopupChoice_ForceClose(void *a);
 void PopupChoice_Update(void *a);

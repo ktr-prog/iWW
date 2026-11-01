@@ -17,8 +17,8 @@ extern "C" {
 u32 Random_NextBelow(void *st, u32 n);
 void Random_SetSeed(u32 *seed, u32 v);
 void Clock_GetDateTime(void *p);
-s32 FengShui_GetEastTotal(void);
-s32 FengShui_GetSouthTotal(void);
+u8 FengShui_GetEastTotal(void);
+u8 FengShui_GetSouthTotal(void);
 s32 FX_Div(s32 a, s32 b);
 s32 ItemInfo_GetClass(u16 *p);
 s32 ItemInfo_GetSeason(u16 *p);

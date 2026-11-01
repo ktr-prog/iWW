@@ -25,7 +25,7 @@
 extern "C" {
 u16 *NookPoints_GetValuePtr(void *p);
 s32 NookPoints_GetRank(u32 x);
-s32 NookPoints_GetToNextRank(u16 *p);
+u16 NookPoints_GetToNextRank(u16 *p);
 BOOL TalkRequest_SetTargetDone(void *p);
 BOOL BoxCollider_Unregister(BoxCollider *self);
 BOOL BoxCollider_Register(BoxCollider *self, s32 a, s32 b, s32 c, VecFx32 *pos, s16 angle, VecFx32 *scale);

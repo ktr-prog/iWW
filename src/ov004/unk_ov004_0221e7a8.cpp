@@ -5113,7 +5113,7 @@ extern s16 data_02135f44[];
 extern BlockMap *gSceneBlockMap;
 
 s32 Vec_MagXZ(V3 *v);
-s32 Math_Atan2(s32 a, s32 b);
+s16 Math_Atan2(s32 a, s32 b);
 s32 func_01ffcb0c(s32 a, s32 b);
 void VEC_Add(void *a, void *b, void *c);
 s32 PlayerActor_Decelerate(s32 a, s32 b);

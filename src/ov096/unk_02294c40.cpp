@@ -99,7 +99,7 @@ void FieldAction_Release(s32 a);
 s32 FieldAction_PollDrop(s32 a);
 s32 FieldAction_RequestDrop(s32 a, s32 b);
 s32 FieldAction_PollResult(s32 a);
-s32 Item_MakePaper(s32 a, s32 b);
+u16 Item_MakePaper(s32 a, s32 b);
 u32 Item_GetPaperCount(u16 *p);
 s32 Item_GetPaperIndex(u16 *p);
 u32 Item_FindMoneyBagForAmount(u32 v, s32 a, s32 *out);

@@ -72,7 +72,7 @@ s32 func_01ffcb0c(s32 a, s32 b);
 s32 VEC_Mag(void *v);
 void MTX_Concat43(void *a, void *b, void *out);
 s32 Vec_DistXZ(void *a, void *b);
-s32 Math_Atan2(s32 a, s32 b);
+s16 Math_Atan2(s32 a, s32 b);
 s32 Math_AngleDiffAbs(s32 a, s32 b);
 s32 Vec_Sub(void *out, void *a, void *b);
 s32 Math_ApproachS32Max(void *p, s32 a, s32 b, s32 c);

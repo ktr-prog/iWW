@@ -153,7 +153,7 @@ s32 FX_Sqrt(s32 a);
 }
 
 extern "C" {
-s32 Math_Atan2(s32 a, s32 b);
+s16 Math_Atan2(s32 a, s32 b);
 }
 
 extern "C" {

@@ -110,7 +110,7 @@ extern u16 gPad[];
 extern BgmManager *data_021c1b3c;
 
 void TalkRequestFlags_SetTitleTimeout();
-BOOL Math_CountDownU16(void *p);
+u16 Math_CountDownU16(void *p);
 void TalkRequestFlags_ClearSceneHold();
 void TalkRequestFlags_SetSceneHold();
 s32 TalkRequestFlags_IsTitleTimeout();

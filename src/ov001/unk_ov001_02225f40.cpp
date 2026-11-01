@@ -39,7 +39,7 @@ typedef volatile u32 vu32;
 extern "C" {
 u32 OS_DisableIrqMask(u32 a);
 void OS_EnableIrqMask(u32 a);
-u32 TP_GetLatestIndexInAuto();
+u16 TP_GetLatestIndexInAuto();
 void TP_GetCalibratedPoint(WfcPoint *p, void *e);
 u32 FX_ModS32(u32 a, u32 b);
 void WfcUtil_SetPoint(u32 a, u32 b, WfcPoint *out);

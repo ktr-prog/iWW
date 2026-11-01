@@ -17,7 +17,7 @@ BugNetTarget *data_021ce63c;
 
 
 extern "C" {
-s32 Math_Atan2(s32 a, s32 b);
+s16 Math_Atan2(s32 a, s32 b);
 s32 Math_AngleDiffAbs(s32 a, s32 b);
 void Vec_Sub(VecFx32 *out, VecFx32 *a, VecFx32 *b);
 s32 FX_Div(s32 a, s32 b);

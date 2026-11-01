@@ -262,7 +262,7 @@ s32 strncmp(const void *a, const char *b, s32 n);
 BOOL TownState_IsPerfectStreak15();
 s32 Town_GetEnvironmentRank();
 u8 *TownEval_GetAdvice();
-BOOL Math_CountDownU16(void *p);
+u16 Math_CountDownU16(void *p);
 void MI_CpuCopy8(void *dst, void *src, u32 n);
 BOOL EncodedString_SetRaw(void *dst, const void *src, s32 n);
 

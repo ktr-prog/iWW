@@ -64,7 +64,7 @@ void MI_CpuCopy8(void *src, void *dst, u32 n);
 
 BOOL PopupChoice_MoveCursor(void *p, s32 a, void *q, u32 b);
 BOOL PopupChoice_TickDecideDelay(void *p);
-u32 PopupChoice_DecideCancel(void *p, s32 a);
+u8 PopupChoice_DecideCancel(void *p, s32 a);
 void PopupChoice_DecideRow(void *p, s32 a, s32 b);
 void PopupChoice_ForceClose(void *p);
 void PopupChoice_Update(void *p);

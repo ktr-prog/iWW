@@ -77,7 +77,7 @@ u16 *PendingUnit_GetActivePosOfAid(s32 a);
 BOOL Ground_FindWaterAhead(VecFx32 *out, VecFx32 *pos, s32 dir, u32 dist, u32 s5, s32 s6);
 void Item_FromPlacedForm(void *a, void *b);
 
-u32 PopupChoice_DecideCancel(void *a, s32 b);
+u8 PopupChoice_DecideCancel(void *a, s32 b);
 BOOL PopupChoice_MoveCursor(void *p, s32 a, void *q, s32 b);
 BOOL PopupChoice_TickDecideDelay(void *p);
 void PopupChoice_DecideRow(void *p, s32 a, s32 b);

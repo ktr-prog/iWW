@@ -269,6 +269,14 @@ int host_pocket_action(int state) {
 }
 extern int Scene_HostWarp(u32 id, s32 x, s32 z);
 extern void Actor_HostDump(void);
+extern void Collision_HostNetScan(s32 w, s32 h);
+static void net_scan(void) {
+    static const char *spec;
+    unsigned at;
+    if (!spec) spec = getenv("ACWW_NETSCAN") ? getenv("ACWW_NETSCAN") : "";
+    if (sscanf(spec, "%u", &at) == 1 && at == (unsigned)host_frame() && gSceneBlockMap)
+        Collision_HostNetScan(gSceneBlockMap->width * 16, gSceneBlockMap->height * 16), fflush(stdout);
+}
 static void actor_dump(void) {
     static const char *spec;
     unsigned at;
@@ -607,6 +615,7 @@ void frontend_frame(void) {
         xy = (u16)(0x2000 | (~k & 0x0c00));
     }
     town_dump();
+    net_scan();
     u32 sk = scripted_keys() | goto_keys() | sFishKeys;
     keyinput &= (u16)~(sk & 0x3ff);
     xy &= (u16)~(sk & 0x0c00);

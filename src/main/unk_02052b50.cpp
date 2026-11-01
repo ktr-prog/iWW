@@ -20,7 +20,7 @@ void GX_DisableBankForSubBG();
 void GX_DisableBankForSubOBJ();
 void GX_DisableBankForSubBGExtPltt();
 void GX_DisableBankForSubOBJExtPltt();
-s32 Item_MakeFurniture(s32 a, s32 b);
+u16 Item_MakeFurniture(s32 a, s32 b);
 s32 Item_GetFurnitureIndex(void *p);
 s32 Item_IsFurniture(void *p);
 }

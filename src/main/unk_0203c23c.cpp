@@ -23,7 +23,7 @@ BOOL Item_IsNormalItem(u16 *p);
 BOOL Item_IsFurniture(u16 *p);
 s32 Item_GetFurnitureIndex(u16 *p);
 s32 Item_GetPaperIndex(u16 *p);
-s32 Item_MakeFurniture(s32 a, s32 b);
+u16 Item_MakeFurniture(s32 a, s32 b);
 BOOL Item_TestInfoFlag3(u16 *p);
 }
 

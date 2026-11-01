@@ -20,8 +20,8 @@ extern CommManager *gCommManager;
 BOOL Item_IsFurniture(u16 *p);
 s32 Item_GetFurnitureIndex(u16 *p);
 u32 Scene_GetCurrent();
-u32 Scene_GetMaxPlayers(u32 a);
-u32 Scene_GetMaxCharacters(u32 a);
+u8 Scene_GetMaxPlayers(u32 a);
+u8 Scene_GetMaxCharacters(u32 a);
 void MI_CpuCopy8(void *dst, void *src, u32 n);
 }
 

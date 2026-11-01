@@ -95,7 +95,7 @@ s32 FX_ModS32(u32, s32);
 s32 FX_DivS32(u32, s32);
 s32 DWC_BACKUPlCheckAddress(u8 *addr);
 s32 DWC_BACKUPlCheckIp(u8 *ip, u8 *mask);
-s32 DWCi_BACKUPlConvMaskCidr(u8 *mask);
+u8 DWCi_BACKUPlConvMaskCidr(u8 *mask);
 void MI_CpuFill8(void *dst, u8 v, u32 size);
 void swprintf(u16 *dst, s32 n, const u16 *fmt, ...);
 }

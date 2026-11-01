@@ -27,7 +27,7 @@ BOOL Item_IsFurnitureOrF031(u16 *p);
 BOOL Item_IsNormalItem(u16 *p);
 BOOL Item_IsHoldable(u16 *p);
 s32 Item_GetKind(u16 *p);
-s32 Item_MakeFurniture(s32 a, s32 b);
+u16 Item_MakeFurniture(s32 a, s32 b);
 u32 Scene_GetCurrent();
 BOOL Scene_InNookShop();
 BOOL SceneId_IsNookShop(u32 id);

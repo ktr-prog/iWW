@@ -132,7 +132,7 @@ u8 *Tcp_Read(u32 *, IpSocket *);
 void Tcp_Consume(u32, IpSocket *);
 void Ssl_ProcessRecord(void *, void *);
 s32 Ssl_ReadExact(void *, u32, IpSocket *);
-s32 Ssl_ReadRecord(IpSocket *);
+u8 Ssl_ReadRecord(IpSocket *);
 
 u32 OS_DisableInterrupts(void);
 void OS_RestoreInterrupts(u32);

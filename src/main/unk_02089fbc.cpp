@@ -34,7 +34,7 @@ BOOL TalkRequest_FinishCameraView();
 BOOL TalkRequest_IsCameraViewRunning();
 void TalkRequest_AddCameraView();
 BOOL Input_IsTouchMode();
-BOOL Input_IsButtonMode();
+u8 Input_IsButtonMode();
 BOOL Input_IsAnyKeyTrig();
 BOOL Input_IsTouchTrig();
 void Input_SetButtonMode();

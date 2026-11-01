@@ -160,7 +160,7 @@ s32 Item_GetSnowmanIndex(void *p);
 BOOL Item_IsSnowman(void *p);
 u16 Item_MakeNookShop(u32 a);
 BOOL Item_IsNookShop(u16 *p);
-u32 Item_MakeBuilding(u32 v);
+u16 Item_MakeBuilding(u32 v);
 s32 Item_GetFurnitureIndex(const u16 *p);
 BOOL Item_IsFurniture(u16 *p);
 void Pattern_CopyFields(void *dst, void *src);

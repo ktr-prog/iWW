@@ -43,7 +43,7 @@ void PopupChoice_DecideRow(void *p, s32 a, s32 b);
 void PopupChoice_Update(void *p);
 void PopupChoice_ForceClose(void *p);
 void PopupChoice_Draw(void *p);
-u32 PopupChoice_DecideCancel(void *p, s32 x);
+u8 PopupChoice_DecideCancel(void *p, s32 x);
 void PopupChoice_Open(void *p, u32 v);
 void PopupChoice_Close(void *p, u32 v);
 BOOL PopupChoice_MoveCursor(void *p, u32 a, void *b, u32 c);

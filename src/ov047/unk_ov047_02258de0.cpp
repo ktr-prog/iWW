@@ -96,7 +96,7 @@ void TalkRequest_SetTargetDone(void *self);
 BOOL Item_IsFurniture(u16 *p);
 s32 Item_GetFurnitureIndex(u16 *p);
 s32 Clock_GetTimeOfDay();
-s32 Math_CountDownU16(void *p);
+u16 Math_CountDownU16(void *p);
 s32 strncmp(const char *a, const char *b, u32 n);
 u32 strlen(const char *s);
 }

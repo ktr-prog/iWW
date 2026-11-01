@@ -718,8 +718,8 @@ void Gfx3d_LoadPltt(void *a, u32 b);
 void Gfx3d_LoadTex(void *a, u32 b);
 const char *Item_GetIconModelName(s32 a, s32 b);
 void *NNS_G3dGetTex(void *file);
-s32 func_02106654();
-s32 func_02106670(s32 a, s32 b);
+u8 func_02106654();
+u8 func_02106670(s32 a, s32 b);
 
 }
 }

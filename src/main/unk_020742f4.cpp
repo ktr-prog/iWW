@@ -180,10 +180,10 @@ extern "C" {
 s32 Scene_GetCurrent();
 }
 extern "C" {
-s32 Scene_GetMaxCharacters(s32);
+u8 Scene_GetMaxCharacters(s32);
 }
 extern "C" {
-s32 Scene_GetMaxPlayers(s32);
+u8 Scene_GetMaxPlayers(s32);
 }
 extern "C" {
 }

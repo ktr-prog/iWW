@@ -1553,10 +1553,10 @@ extern "C" {
 u32 FengShui_GetTotal();
 }
 extern "C" {
-s32 FengShui_GetEastTotal();
+u8 FengShui_GetEastTotal();
 }
 extern "C" {
-s32 FengShui_GetSouthTotal();
+u8 FengShui_GetSouthTotal();
 }
 extern "C" {
 u32 ItemInfo_GetFullHeadwearClass1dCount();
@@ -2159,7 +2159,7 @@ extern "C" {
 void func_02054b14(void *a);
 }
 extern "C" {
-s32 SceneLights_GetLightParam(s32 a);
+u8 SceneLights_GetLightParam(s32 a);
 }
 extern "C" {
 }

@@ -58,8 +58,8 @@ extern const u16 sCharaAnimMouthAnims[];
 
 s32 Town_GetMaxOutdoorVillagers(void);
 void *Scene_GetCurrent(void);
-s32 Scene_GetMaxCharacters(void *);
-s32 Scene_GetMaxPlayers(void *);
+u8 Scene_GetMaxCharacters(void *);
+u8 Scene_GetMaxPlayers(void *);
 u32 NpcModelHeap_GetVillagerModelSize(void);
 u32 NpcModelHeap_GetSpNpcModelSize(void);
 void MI_CpuCopy8(const void *, void *, u32);

@@ -229,7 +229,7 @@ struct SegmentCollisionVisitor : CollisionVisitor {
     virtual void visitCylinders(ShapeCylinderList *p);
 };
 
-extern "C" s32 Math_Atan2(s32 x, s32 z);
+extern "C" s16 Math_Atan2(s32 x, s32 z);
 struct CellWallNormal : VecXZ {
     inline CellWallNormal(s32 x, s32 z) {
         ((CollisionVec2 *)(this))->set(x, z);
@@ -258,7 +258,7 @@ struct ShapeCylinderList {
     ShapeCylinder cylinders[16];
 };
 
-extern "C" s32 Math_Atan2(s32 a, s32 b);
+extern "C" s16 Math_Atan2(s32 a, s32 b);
 extern "C" BOOL GroundAttr_IsWater(s32 id, s32 a);
 extern s32 gCollisionVec2Zero[];
 static inline void Unk_02032dc4_Set(Unk_0202f2ac_V3 *p, s32 y, s32 x, s32 z) {
@@ -3206,3 +3206,33 @@ BOOL CollisionCylinderX::clipSegmentSide(VecFx32 *out, VecFx32 *a) {
 
 
 
+
+#ifdef HOST
+extern "C" int printf(const char *, ...);
+extern "C" void Collision_HostNetScan(s32 w, s32 h) {
+    s32 misses = 0;
+    for (s32 z = 0; z < h; z++)
+        for (s32 x = 0; x < w; x++) {
+            for (s32 k = 0; k < 4; k++) {
+                VecFx32 p;
+                p.x = (x << 13) + 0x800 + (k & 1) * 0x1000;
+                p.y = 0;
+                p.z = (z << 13) + 0x800 + (k >> 1) * 0x1000;
+                GroundInfo g(&p, 0, 0);
+                if (g.waterKind) continue;
+                s32 gh = g.getHeight(0);
+                VecFx32 a = p, c = p;
+                a.y = gh + 0x24cd;
+                c.y = gh - 0x400;
+                SegmentHitResult l;
+                CollisionTag_Construct(&l);
+                u8 hit = Collision_TestSegment(&l, &c, &a, 0x1b);
+                CollisionTag_Destruct(&l);
+                if (!hit) {
+                    if (misses++ < 400) printf("netmiss %d %d k%d attr %d h %d\n", x, z, k, g.attr, gh);
+                }
+            }
+        }
+    printf("netscan %d misses\n", misses);
+}
+#endif

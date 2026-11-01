@@ -668,7 +668,7 @@ extern CommManager *gCommManager;
 extern s16 data_02135f44[];
 s32 FX_Div(s32, s32);
 s32 func_01ffcb0c(s32, s32);
-s32 Math_Atan2(s32, s32);
+s16 Math_Atan2(s32, s32);
 void Clock_GetDateTime(void *);
 void DateTime_SubDays(void *, s32);
 }
@@ -681,7 +681,7 @@ extern CommManager* gCommManager;
 extern s16 data_02135f44[];
 s32 func_01ffcb0c(s32 a, s32 b);
 s32 _s32_div_f(s32 a, s32 b);
-s32 Math_Atan2(s32 a, s32 b);
+s16 Math_Atan2(s32 a, s32 b);
 s32 Math_AngleDiffAbs(s32 a, s32 b);
 static inline BOOL Unk_02009624_Check()
 {
@@ -740,7 +740,7 @@ static inline void func_0200bc78_sub(VecFx32Ctor *o, VecFx32Ctor *a, VecFx32Ctor
 extern BlockMap *gSceneBlockMap;
 extern CommManager *gCommManager;
 BOOL Scene_InHouseRoom();
-s32 Math_Atan2(s32, s32);
+s16 Math_Atan2(s32, s32);
 }
 }
 
@@ -785,7 +785,7 @@ namespace nN {
 extern "C" {
 
 s32 Scene_NoPlayerInUnsharedScene();
-s32 Math_Atan2(s32 a, s32 b);
+s16 Math_Atan2(s32 a, s32 b);
 s32 func_01ffcb0c(s32 a, s32 b);
 s32 FX_Div(s32 a, s32 b);
 s32 FX_Sqrt(s32 a);
@@ -814,7 +814,7 @@ extern "C" {
 
 void *NNS_G3dGetTex(void *p);
 s32 func_01ffcb0c(s32 a, s32 b);
-s32 Math_Atan2(s32 a, s32 b);
+s16 Math_Atan2(s32 a, s32 b);
 extern BgmManager *data_021c1b3c;
 extern u8 gTalkMsgIndexEnd;
 }
@@ -825,8 +825,8 @@ extern "C" {
 
 extern CommManager *gCommManager;
 extern s16 data_02135f44[];
-s32 Scene_GetPrevious();
-s32 Math_Atan2(s32 a, s32 b);
+u8 Scene_GetPrevious();
+s16 Math_Atan2(s32 a, s32 b);
 s32 Math_AngleDiffAbs(s32 a, s32 b);
 s32 func_01ffcb0c(s32 a, s32 b);
 static inline BOOL Unk_0200ec54_Bit(u32 f, u32 m)
@@ -869,7 +869,7 @@ extern u32 data_020cb35c;
 extern u32 data_020cb360;
 s32 PlayerActor_RoomInteractAt(void *, s32, s32);
 s32 PlayerActor_RoomUseTool(void *);
-s32 Math_Atan2(s32, s32);
+s16 Math_Atan2(s32, s32);
 s32 Math_AngleDiffAbs(s32, s32);
 void *NNS_G3dGetTex(void *p);
 void *Character_FindInteractionTarget(void *);

@@ -178,13 +178,13 @@ extern void *gCommManager;
 extern u8 gTalkMsgIndexEnd[];
 
 NpcActor *func_02015aac(void *self);
-s32 Math_CountDownU8(void *);
+u8 Math_CountDownU8(void *);
 BOOL Camera_SetMode16At(VecFx32 *v);
 void TalkRequest_SetTargetDone(void *self);
 void TalkRequest_AddPlayerTalk6(void *self, s32 a);
 void Camera_SetModeDefault();
 void Ground_LockExit(s32 a);
-s32 Scene_GetPrevious();
+u8 Scene_GetPrevious();
 s32 Ground_IsOnLockedExit(void *p);
 BOOL TalkRequest_IsTalking(void);
 s32 TalkRequest_AddPlayerTalk7(void *p, s32 a);

@@ -71,7 +71,7 @@ void __cxa_vec_cleanup(void *p, u32 n, u32 sz, void (*d)());
 extern BgmManager *data_021c1b3c;
 s32 Weather_GetPrecipKind(void);
 void Weather_GetLevels(s32 *a, s32 *b);
-s32 Scene_GetPrevious(void);
+u8 Scene_GetPrevious(void);
 s32 Scene_InTownUnk31(void);
 s32 Item_IsFurniture(void *p);
 s32 Item_GetFurnitureIndex(void *p);

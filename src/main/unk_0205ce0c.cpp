@@ -31,8 +31,8 @@ extern CommManager *gCommManager;
 extern const u8 sCharaFaceAnimKinds[];
 
 u32 Scene_GetCurrent();
-u32 Scene_GetMaxPlayers(u32 a);
-u32 Scene_GetMaxCharacters(u32 a);
+u8 Scene_GetMaxPlayers(u32 a);
+u8 Scene_GetMaxCharacters(u32 a);
 void MI_CpuCopy8(const void *src, void *dst, u32 n);
 
 }

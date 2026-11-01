@@ -48,7 +48,7 @@ extern const u8 sExclusiveRoomScenes[4];
 
 
 s32 Scene_GetCurrent();
-s32 Scene_GetPrevious();
+u8 Scene_GetPrevious();
 
 void SceneOccupantTable_Clear(SceneOccupantBits *t);
 void SceneOccupants_Clear(SceneOccupantBits *t);

@@ -221,8 +221,8 @@ void NpcModelHeap_Destroy();
 void NpcModelHeap_Create(void *);
 s32 NpcSpawn_GetSpNpcSlotCount();
 s32 Scene_GetCurrent();
-s32 Scene_GetMaxCharacters(s32);
-s32 Scene_GetMaxPlayers(s32);
+u8 Scene_GetMaxCharacters(s32);
+u8 Scene_GetMaxPlayers(s32);
 void *PlayerActor_GetCharacter(s32 id);
 struct VillagerStateTable *VillagerStates_Get();
 static inline BOOL Unk_02077d58_IsZero(u8 v)
@@ -375,7 +375,7 @@ s32 SceneId_GetVillagerHouse(u32);
 namespace nI {
 extern "C" {
 
-u32 LetterPaper_PickForPersonality(u32 i);
+u8 LetterPaper_PickForPersonality(u32 i);
 void Letter_ComposeVillagerMail(void *, u8 *, void *, u8 *, void *, void *, s32);
 void Letter_ComposeVillagerMailZ(void *, u8 *, u8 *, u8 *, u8 *, void *, u8 *, void *, void *, s32);
 s32 LetterDelivery_QueueOutgoing(void *, s32);

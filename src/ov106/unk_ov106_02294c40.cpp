@@ -56,7 +56,7 @@ extern u16 gPad[];
 u16 Item_MakePaper(u32 a, s32 b);
 s32 PopupChoice_MoveCursor(void *a, s32 b, void *c, u32 d);
 s32 PopupChoice_TickDecideDelay(void *a);
-u32 PopupChoice_DecideCancel(void *p, s32 a);
+u8 PopupChoice_DecideCancel(void *p, s32 a);
 void PopupChoice_DecideRow(void *a, s32 b, s32 c);
 void PopupChoice_ForceClose(void *a);
 void PopupChoice_Update(void *a);

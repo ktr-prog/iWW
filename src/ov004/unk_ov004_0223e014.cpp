@@ -53,7 +53,7 @@ extern const s32 sResidentCursorOffsets[4][2];
 BOOL Camera_ProjectCurvedToScreen(s32 *x, s32 *y, VecFx32 *p);
 void func_02094018(void *p);
 void func_02094030(void *);
-BOOL Math_CountDownU16(void *p);
+u16 Math_CountDownU16(void *p);
 void Clock_GetDateTime(void *p);
 s32 DateTime_Compare(void *a, void *b, s32 n);
 void TalkRequestFlags_ClearSceneHold(void);

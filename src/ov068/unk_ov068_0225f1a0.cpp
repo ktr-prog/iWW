@@ -834,7 +834,7 @@ s32 VillagerStates_GetBirthdayVisitor();
 s32 Villager_GetIndex(void *);
 s32 VillagerStates_GetBirthdayHost();
 s32 VillagerState_GetRole(void *);
-s32 Math_CountDownU16(void *);
+u16 Math_CountDownU16(void *);
 s32 func_01ffcb0c(s32, s32);
 }
 static inline BOOL Unk_ov068_02266320_IsZero(s32 v) {

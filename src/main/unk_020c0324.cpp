@@ -56,7 +56,7 @@ class SpNpcKatie;
 
 extern "C" {
 s32 Scene_GetCurrent(void);
-s32 Scene_GetPrevious(void);
+u8 Scene_GetPrevious(void);
 BOOL Talk_CheckAndSetPlayerFlag(s32 a, s32 b);
 void TalkRequest_SetTargetDone(void *a);
 void TalkRequestFlags_ClearSceneHold(void);
@@ -64,7 +64,7 @@ void TalkRequestFlags_SetSceneHold(void);
 BOOL TownMap_FindBuildingAbovePos(VecFx32 *a, s32 b, s32 c, s32 d);
 void TownMap_IsPosWalkable(VecFx32 *a, s32 b);
 s32 Vec_DistXZ(void *a, void *b);
-BOOL Math_CountDownU16(void *a);
+u16 Math_CountDownU16(void *a);
 void Camera_SetMode19(void);
 extern u16 data_020c6cc8;
 extern u32 data_020c6d1c;

@@ -112,7 +112,7 @@ void Camera_SetMode4();
 u32 strlen(const char *s);
 s32 strncmp(const char *a, const char *b, u32 n);
 void NpcActor_FindFreeUnitNear(VecFx32 *out, NpcActor *self, VecFx32 *v);
-BOOL Scene_GetPrevious();
+u8 Scene_GetPrevious();
 void Ground_LockExit(s32 a);
 }
 

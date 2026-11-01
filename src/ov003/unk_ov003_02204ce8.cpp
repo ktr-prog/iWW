@@ -808,7 +808,7 @@ extern s16 data_02135f44[];
 s32 PlayerActor_DecreaseClamped(s32 a, s32 b, s32 c);
 void CollisionTag_Construct(void *p);
 void CollisionTag_Destruct(void *p);
-s32 Collision_TestSegment(void *p, V3 *a, V3 *b, s32 c);
+u8 Collision_TestSegment(void *p, V3 *a, V3 *b, s32 c);
 void Flower_PlayTrampleFx(void *p);
 s32 Math_AngleDiffAbs(s32 a, s32 b);
 s32 func_01ffcb0c(s32 a, s32 b);
@@ -1089,7 +1089,7 @@ s32 Item_IsFurniture(u16 *p);
 s32 TalkRequest_FinishSceneEntry();
 s32 TownBbs_UpdateDaily();
 s32 Scene_GetCurrent();
-s32 Scene_GetPrevious();
+u8 Scene_GetPrevious();
 s32 SceneId_IsHouseRoom(s32 a);
 
 }

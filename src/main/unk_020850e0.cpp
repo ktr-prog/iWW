@@ -62,7 +62,7 @@ s32 Random_PickSetBit(u32, s32, s32);
 s32 func_01ffcb0c(s32 v1, s32 v2);
 s32 FX_Div(s32 numer, s32 denom);
 s32 Item_GetFishBaseSize(u16 *);
-s32 Item_GetInsectBaseSize(u16 *);
+u16 Item_GetInsectBaseSize(u16 *);
 s32 Event_GetDaysSinceStart(s32);
 s32 Event_GetState(s32, void *, s32);
 }

@@ -281,7 +281,7 @@ extern CommManager *gCommManager;
 extern s16 data_02135f44[];
 s32 FX_Div(s32, s32);
 s32 func_01ffcb0c(s32, s32);
-s32 Math_Atan2(s32, s32);
+s16 Math_Atan2(s32, s32);
 }
 }
 
@@ -291,7 +291,7 @@ extern "C" {
 extern CommManager* gCommManager;
 extern s16 data_02135f44[];
 s32 func_01ffcb0c(s32 a, s32 b);
-s32 Math_Atan2(s32 a, s32 b);
+s16 Math_Atan2(s32 a, s32 b);
 static inline BOOL Unk_02009624_Check()
 {
     if (gFieldSceneKind == 0) {
@@ -346,7 +346,7 @@ static inline void func_0200bc78_sub(VecFx32Ctor *o, VecFx32Ctor *a, VecFx32Ctor
 }
 extern BlockMap *gSceneBlockMap;
 extern CommManager *gCommManager;
-s32 Math_Atan2(s32, s32);
+s16 Math_Atan2(s32, s32);
 }
 }
 
@@ -379,7 +379,7 @@ extern "C" {
 s32 Scene_NoPlayerInUnsharedScene();
 BOOL TouchPick_GetGroundPos(TouchPickResult *obj, VecFx32 *out);
 BOOL Camera_ProjectCurvedToScreen(s32 *a, s32 *b, VecFx32Ctor *p);
-s32 Math_Atan2(s32 a, s32 b);
+s16 Math_Atan2(s32 a, s32 b);
 s32 func_01ffcb0c(s32 a, s32 b);
 s32 FX_Div(s32 a, s32 b);
 s32 FX_Sqrt(s32 a);
@@ -407,7 +407,7 @@ namespace nO {
 extern "C" {
 
 s32 func_01ffcb0c(s32 a, s32 b);
-s32 Math_Atan2(s32 a, s32 b);
+s16 Math_Atan2(s32 a, s32 b);
 extern BgmManager *data_021c1b3c;
 extern u8 gTalkMsgIndexEnd;
 }
@@ -418,7 +418,7 @@ extern "C" {
 
 extern CommManager *gCommManager;
 extern s16 data_02135f44[];
-s32 Math_Atan2(s32 a, s32 b);
+s16 Math_Atan2(s32 a, s32 b);
 s32 func_01ffcb0c(s32 a, s32 b);
 static inline BOOL Unk_0200ec54_Bit(u32 f, u32 m)
 {
@@ -450,7 +450,7 @@ extern "C" {
 
 inline BOOL Unk_0200f9d4_IsOne(u8 v) { return v == 1 ? TRUE : FALSE; }
 inline BOOL Unk_020102a0_IsZero(u8 v) { return v == 0 ? TRUE : FALSE; }
-s32 Math_Atan2(s32, s32);
+s16 Math_Atan2(s32, s32);
 s32 func_01ffcb0c(s32, s32);
 inline BOOL Unk_02010154_In(u16 *p) { BOOL r = FALSE; u16 v = *p; if (*p >= 0x1380 && v <= 0x139f) r = TRUE; return r; }
 }

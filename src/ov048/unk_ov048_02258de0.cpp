@@ -91,7 +91,7 @@ extern CommManager *gCommManager;
 extern u16 data_020c6cc8;
 #define gSaveTownId HOST_LABEL(TownId *, gSaveTownId)
 BOOL EncodedString_SetRaw(void *, const void *, s32);
-BOOL Math_CountDownU16(void *);
+u16 Math_CountDownU16(void *);
 s32 Math_IsInRange(s32, s32, s32);
 void SpNpcKatie_ChangeAct05();
 s32 SpNpcKatie_ResetAct();
@@ -101,7 +101,7 @@ s32 Talk_IsInOwnTown();
 u32 Clock_GetTimeOfDay();
 void * FriendList_GetEntries(void *);
 void Camera_SaveView();
-s32 Math_CountDownU8(void *);
+u8 Math_CountDownU8(void *);
 s32 Camera_SetMode15();
 s32 Camera_SetMode14();
 s32 Camera_IsBlending();

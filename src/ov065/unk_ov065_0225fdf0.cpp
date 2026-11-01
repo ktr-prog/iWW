@@ -541,7 +541,7 @@ void SockCore_PostCommandAsync(void *, void *);
 void SockCore_FreeMsg(void *);
 s32 SockCore_DestroyMsgPool();
 s32 Dns_Resolve(const char *);
-s32 IpSoc_AllocEphemeralPort();
+u16 IpSoc_AllocEphemeralPort();
 void IpSoc_Use(void *);
 void IpSoc_Unuse();
 void IpSoc_TcpShutdown();

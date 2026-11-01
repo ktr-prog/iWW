@@ -42,7 +42,7 @@ extern u16 gPad[];
 
 void PopupChoice_Close(void *p, u32 v);
 void PopupChoice_Open(void *p, u32 v);
-u32 PopupChoice_DecideCancel(void *p, s32 x);
+u8 PopupChoice_DecideCancel(void *p, s32 x);
 BOOL PopupChoice_TickDecideDelay(void *p);
 void PopupChoice_DecideRow(void *p, s32 a, s32 b);
 BOOL PopupChoice_MoveCursor(void *p, s32 a, void *q, s32 b);

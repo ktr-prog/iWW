@@ -427,7 +427,7 @@ namespace nE {
 extern "C" {
 
 u32 Camera_IsBlending(void);
-u32 Camera_GetBlendFramesLeft(void);
+u8 Camera_GetBlendFramesLeft(void);
 void Camera_RetargetFocus(VecFx32 *v);
 void Camera_SetModeDefault(void);
 extern NpcTalkCtrlState sNpcTalkCtrlStates[5];
@@ -466,7 +466,7 @@ void *func_021065dc(void *a);
 void *func_021065f8(void *a, s32 b);
 void NpcActor_JointCalcLayer3Cb(NNSG3dRS *p);
 s32 func_01ffcb0c(s32 a, s32 b);
-s32 Math_Atan2(s32 a, s32 b);
+s16 Math_Atan2(s32 a, s32 b);
 static inline BOOL Unk_02015fe0_R(u16 *p, u32 lo, u32 hi) {
     BOOL r = FALSE;
     if (*p >= lo && *p <= hi) r = TRUE;
@@ -479,7 +479,7 @@ namespace nJ {
 extern "C" {
 
 s32 func_01ffcb0c(s32 a, s32 b);
-s32 Math_Atan2(s32 a, s32 b);
+s16 Math_Atan2(s32 a, s32 b);
 }
 }
 
@@ -537,7 +537,7 @@ extern u8 gFieldSceneKind;
 extern s16 data_02135f44[];
 s32 Vec_Distance(void *a, void *b);
 s32 Vec_NotEqual(void *a, void *b);
-s32 Math_Atan2(s32 a, s32 b);
+s16 Math_Atan2(s32 a, s32 b);
 s32 Math_AngleDiffAbs(s32 a, s32 b);
 s32 Math_StepS32Alt(s32 *p, s32 a, s32 b);
 s32 func_01ffcb0c(s32 a, s32 b);

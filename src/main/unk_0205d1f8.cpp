@@ -23,8 +23,8 @@ extern "C" {
 extern CommManager *gCommManager;
 
 u32 Scene_GetCurrent();
-u32 Scene_GetMaxPlayers(u32 a);
-u32 Scene_GetMaxCharacters(u32 a);
+u8 Scene_GetMaxPlayers(u32 a);
+u8 Scene_GetMaxCharacters(u32 a);
 }
 
 

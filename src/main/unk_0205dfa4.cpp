@@ -93,8 +93,8 @@ void *func_02106670(void *p, s32 a);
 u8 *func_021065dc(u8 *p);
 u8 *func_021065f8(u8 *p, u32 i);
 void *Scene_GetCurrent(void);
-u32 Scene_GetMaxPlayers(void *p);
-u32 Scene_GetMaxCharacters(void *p);
+u8 Scene_GetMaxPlayers(void *p);
+u8 Scene_GetMaxCharacters(void *p);
 u32 ItemInfo_GetHoldableIndex(u16 *p);
 u32 ItemInfo_GetHoldableCount(void);
 

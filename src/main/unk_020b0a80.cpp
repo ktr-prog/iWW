@@ -47,7 +47,7 @@ BOOL SceneId_IsUnk6To8(u32 a);
 BOOL SceneId_IsMuseumRoom(u32 a);
 BOOL GroundSeason_IsSnow(void);
 u32 Ground_GetExitAtPos(void *p);
-u32 GroundAttr_GetFootstepSe(u32 a);
+u16 GroundAttr_GetFootstepSe(u32 a);
 u32 ItemInfo_GetIndoorUnk1(u16 *p);
 extern u8 gFieldSceneKind;
 void MIi_CpuClearFast(u32 value, void *dst, u32 size);

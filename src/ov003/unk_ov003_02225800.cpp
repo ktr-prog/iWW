@@ -425,7 +425,7 @@ void *__cxa_vec_ctor(void *, s32, s32, void *(*)(void *), void *(*)(void *));
 void *__cxa_vec_cleanup(void *, s32, s32, void *(*)(void *));
 void *FxVec3_Construct(void *);
 void *func_02000c8c(void *);
-u32 Item_MakeBuilding(u32 a);
+u16 Item_MakeBuilding(u32 a);
 void *StrBSize_Get(u16 *p);
 BOOL InsectSpawn_FindUnitInBlock(void *a, s32 code, s32 *x, s32 *y, void *obj, s32 flag);
 Actor *PlayerActor_GetActor(u32 n);
