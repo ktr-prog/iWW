@@ -539,6 +539,7 @@ void host_test_post_task(void) {
 }
 
 static int sInputWantsTurn;
+int gHostCanvasRows = 384;
 static u32 sLastTouchDown, sLastKeys;
 int host_input_wants_turn(void) {
     int r = sInputWantsTurn;
@@ -547,11 +548,26 @@ int host_input_wants_turn(void) {
 }
 
 void frontend_frame(void) {
+    {
+        static int env = -1;
+        if (env < 0) env = getenv("ACWW_CANVAS_ROWS") ? atoi(getenv("ACWW_CANVAS_ROWS")) : 0;
+        if (env >= 192 && env <= 640) gHostCanvasRows = env;
+    }
     u16 keyinput = 0x3ff;
     u16 xy = 0x2c00;
     if (sShm) {
-        if (!wdisp_presenting())
-            for (int s = 0; s < 2; s++) memcpy(sShm->pixels + s * 256 * 192, render_screen(s), 256 * 192 * 4);
+        if (!wdisp_presenting()) {
+            extern const uint32_t *gpu2d_canvas(int *rows);
+            int rows = 0;
+            const uint32_t *c = gpu2d_canvas(&rows);
+            if (c && rows >= 192 && rows <= 640) {
+                memcpy(sShm->pixels, c, (size_t)rows * 256 * 4);
+                sShm->rows = (uint32_t)rows;
+            } else {
+                for (int s = 0; s < 2; s++) memcpy(sShm->pixels + s * 256 * 192, render_screen(s), 256 * 192 * 4);
+                sShm->rows = 0;
+            }
+        }
         __atomic_thread_fence(__ATOMIC_SEQ_CST);
         sShm->frame++;
         frontend_backend_frame(sShm);

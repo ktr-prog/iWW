@@ -138,10 +138,18 @@ static void host_screenshot(void) {
         if (sscanf(p, "%u:%511[^;]", &fr, path) == 2 && fr == f) {
             FILE *o = fopen(path, "wb");
             if (o) {
-                fprintf(o, "P6\n256 384\n255\n");
-                for (int s = 0; s < 2; s++) {
-                    const u32 *px = render_screen(s);
-                    for (int i = 0; i < 256 * 192; i++) { u8 rgb[3] = {px[i] >> 16, px[i] >> 8, px[i]}; fwrite(rgb, 1, 3, o); }
+                extern const uint32_t *gpu2d_canvas(int *rows);
+                int rows = 0;
+                const u32 *cv = gpu2d_canvas(&rows);
+                if (cv && rows > 0) {
+                    fprintf(o, "P6\n256 %d\n255\n", rows);
+                    for (int i = 0; i < 256 * rows; i++) { u8 rgb[3] = {cv[i] >> 16, cv[i] >> 8, cv[i]}; fwrite(rgb, 1, 3, o); }
+                } else {
+                    fprintf(o, "P6\n256 384\n255\n");
+                    for (int s = 0; s < 2; s++) {
+                        const u32 *px = render_screen(s);
+                        for (int i = 0; i < 256 * 192; i++) { u8 rgb[3] = {px[i] >> 16, px[i] >> 8, px[i]}; fwrite(rgb, 1, 3, o); }
+                    }
                 }
                 fclose(o);
             }

@@ -18,6 +18,7 @@ uint32_t gpu3d_read32(uint32_t addr);
 void gpu3d_frame(const uint8_t *const bank[9]);
 const uint32_t *gpu3d_lines(void);
 const uint32_t *gpu3d_lines_top(void);
+int gpu3d_top_rows(void);
 void gpu3d_set_tall(int on);
 int gpu3d_use_wgpu(void *device, void *queue, int scale, int readback);
 void *gpu3d_wgpu_picture(void);

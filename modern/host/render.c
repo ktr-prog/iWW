@@ -512,6 +512,7 @@ void render_frame(void) {
         in.oam = gHostOam;
         in.lines3d = lines3d;
         in.lines3dTop = sOwn3d && !sGpuDisplay && lines3d ? gpu3d_lines_top() : NULL;
+        in.topRows = sOwn3d && !sGpuDisplay ? gpu3d_top_rows() : 192;
         in.hblank = sOwn ? render_hblank : 0;
         in.hblankContext = 0;
         in.defer3d = sGpuDisplay;
@@ -525,7 +526,10 @@ void render_frame(void) {
             if (sGpu2dMode == 2 && !sSelftest) render_check_gpu2d();
         }
     }
-    if (sGpu2d && sOwn3d) gpu3d_set_tall(gpu2d_tall_3d_ok() && !(getenv("ACWW_SINGLE") && atoi(getenv("ACWW_SINGLE")) == 0));
+    if (sGpu2d && sOwn3d) {
+        extern int Scene_InTown(void);
+        gpu3d_set_tall(gpu2d_tall_3d_ok() && Scene_InTown() && !(getenv("ACWW_SINGLE") && atoi(getenv("ACWW_SINGLE")) == 0));
+    }
     if (sGpu3d) gpu3d_run_frame();
     if (sCompare && !sSelftest) {
         render_compare("frame", host_frame());

@@ -651,6 +651,10 @@ static void ios_layout(void) {
     if (changed) tc_reset(&sTouch);
     tc_layout(&sLayout, ow, oh, sPt, in, sShowControls);
     sLayout.stick = feature_on(FEAT_CIRCLE_PAD);
+    {
+        extern int gHostCanvasRows;
+        gHostCanvasRows = tc_canvas_rows(&sLayout);
+    }
     if (changed)
         fprintf(stderr, "frontend: window %dx%d px (%.0fx scale), safe area %.0f,%.0f,%.0f,%.0f px, screens %.0f,%.0f %.0fx%.0f, "
                 "buttons %s\n", ow, oh, sPt, in[0], in[1], in[2], in[3], sLayout.screens.x, sLayout.screens.y,
@@ -768,7 +772,10 @@ static void ios_states(void) {
 }
 
 static void ios_show(const uint32_t *overlay, int changed) {
-    SDL_UpdateTexture(sTex, 0, sShm->pixels, 256 * 4);
+    static SDL_Texture *canvasTex, *canvasSharp;
+    static int canvasRows, canvasK;
+    int rows = (int)sShm->rows;
+    if (rows < 192 || rows > 640) rows = 0;
     if (overlay) {
         if (!sOverlayTex) {
             sOverlayTex = SDL_CreateTexture(sRen, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, 256, 384);
@@ -780,25 +787,46 @@ static void ios_show(const uint32_t *overlay, int changed) {
     SDL_SetRenderTarget(sRen, 0);
     SDL_SetRenderDrawColor(sRen, 0, 0, 0, 255);
     SDL_RenderClear(sRen);
-    TcRect sc = sLayout.screens;
+    TcRect sc = rows ? sLayout.fill : sLayout.screens;
+    int h = rows ? rows : 384;
+    SDL_Texture *src = sTex;
+    if (rows) {
+        if (!canvasTex || canvasRows != rows) {
+            if (canvasTex) SDL_DestroyTexture(canvasTex);
+            canvasTex = SDL_CreateTexture(sRen, SDL_PIXELFORMAT_XRGB8888, SDL_TEXTUREACCESS_STREAMING, 256, rows);
+            if (canvasTex) SDL_SetTextureScaleMode(canvasTex, SDL_ScaleModeNearest);
+            canvasRows = rows;
+            canvasK = 0;
+        }
+        src = canvasTex;
+    }
+    if (!src) return;
+    SDL_UpdateTexture(src, 0, sShm->pixels, 256 * 4);
     SDL_FRect dst = {sc.x, sc.y, sc.w, sc.h};
     int k = (int)SDL_floorf(sc.w / 256.0f + 0.01f);
     k = k < 1 ? 1 : k > 8 ? 8 : k;
-    if (k != sSharpK) {
-        if (sSharp) SDL_DestroyTexture(sSharp);
-        sSharp = SDL_CreateTexture(sRen, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET, 256 * k, 384 * k);
-        if (sSharp) SDL_SetTextureScaleMode(sSharp, SDL_ScaleModeLinear);
-        sSharpK = k;
+    SDL_Texture **sharp = rows ? &canvasSharp : &sSharp;
+    int *sharpK = rows ? &canvasK : &sSharpK;
+    if (k != *sharpK || !*sharp) {
+        if (*sharp) SDL_DestroyTexture(*sharp);
+        *sharp = SDL_CreateTexture(sRen, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET, 256 * k, h * k);
+        if (*sharp) SDL_SetTextureScaleMode(*sharp, SDL_ScaleModeLinear);
+        *sharpK = k;
     }
-    if (sSharp && SDL_SetRenderTarget(sRen, sSharp) == 0) {
-        SDL_RenderCopy(sRen, sTex, 0, 0);
-        if (overlay && sOverlayTex) SDL_RenderCopy(sRen, sOverlayTex, 0, 0);
+    if (*sharp && SDL_SetRenderTarget(sRen, *sharp) == 0) {
+        SDL_RenderCopy(sRen, src, 0, 0);
+        if (!rows && overlay && sOverlayTex) SDL_RenderCopy(sRen, sOverlayTex, 0, 0);
         SDL_SetRenderTarget(sRen, 0);
-        SDL_RenderCopyF(sRen, sSharp, 0, &dst);
+        SDL_RenderCopyF(sRen, *sharp, 0, &dst);
     } else {
         SDL_SetRenderTarget(sRen, 0);
-        SDL_RenderCopyF(sRen, sTex, 0, &dst);
-        if (overlay && sOverlayTex) SDL_RenderCopyF(sRen, sOverlayTex, 0, &dst);
+        SDL_RenderCopyF(sRen, src, 0, &dst);
+        if (!rows && overlay && sOverlayTex) SDL_RenderCopyF(sRen, sOverlayTex, 0, &dst);
+    }
+    if (rows && overlay && sOverlayTex) {
+        TcRect s2 = sLayout.screens;
+        SDL_FRect d2 = {s2.x, s2.y, s2.w, s2.h};
+        SDL_RenderCopyF(sRen, sOverlayTex, 0, &d2);
     }
     if (sLayout.controls) ios_draw_controls();
 }
@@ -881,6 +909,7 @@ static void frame_body(void) {
     ios_layout();
     ios_stats();
     ios_states();
+    sTouch.canvas_rows = sShm->rows >= 192 && sShm->rows <= 640 ? (int)sShm->rows : 0;
     sShm->keys = keyboard_keys() | pad_keys() | tc_keys(&sTouch);
     sShm->stick = stick_word();
 #else

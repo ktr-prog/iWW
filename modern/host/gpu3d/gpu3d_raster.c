@@ -7,7 +7,7 @@
 #include "gpu3d_internal.h"
 #include "gpu3d_tex.h"
 
-enum { W = 256, H = 384 };
+enum { W = 256, H = G3_MAX_ROWS };
 static u32 sFrameBuf[2][W * H];
 static int sShown;
 static int sDiag;
@@ -437,14 +437,14 @@ static void clear_buffers(void) {
               (u32)(r->clearAttrHi & 31) << 24;
     u32 depth = (u32)(r->clearDepth & 0x7fff) * 0x200 + ((r->clearDepth & 0x7fff) == 0x7fff ? 0x1ff : 0);
     for (int i = 0; i < W * H; i++) {
-        sColor[i] = (i < W * 192 ? col & 0xffffff : col) | 0x80000000u;
+        sColor[i] = (i < W * sR->yofs ? col & 0xffffff : col) | 0x80000000u;
         sDepth[i] = depth;
         sOpaqueId[i] = (u8)(r->clearAttrHi >> 8 & 63);
         sTransId[i] = 0xff;
         sFlags[i] = c & 0x8000 ? 1 : 0;
         sPoly[i] = -1;
         sCov[i] = 31;
-        sColor2[i] = i < W * 192 ? col & 0xffffff : col;
+        sColor2[i] = i < W * sR->yofs ? col & 0xffffff : col;
         sDepth2[i] = depth;
     }
 }
@@ -455,38 +455,39 @@ static void aa_pass(void) {
         if (sCov[i] < 31) sColor[i] = aa_resolve(sColor[i], sColor2[i], sCov[i]);
 }
 
+static u32 fog_apply(const G3RenderState *r, s32 step, u32 c, u32 depth) {
+    u32 fc = r->fogColor;
+    u32 fr = rgb5_to_6(fc & 31), fgc = rgb5_to_6(fc >> 5 & 31), fb = rgb5_to_6(fc >> 10 & 31), fa = fc >> 16 & 31;
+    s32 z = (s32)(depth >> 9);
+    s32 d;
+    s32 b0 = r->fogOffset + step;
+    if (z < b0 || !step) d = z < b0 ? r->fogTable[0] : r->fogTable[31];
+    else {
+        s32 n = (z - b0) / step;
+        if (n >= 31) d = r->fogTable[31];
+        else {
+            s32 frac = (z - b0) - n * step;
+            d = r->fogTable[n] + (r->fogTable[n + 1] - r->fogTable[n]) * frac / step;
+        }
+    }
+    if (d >= 127) d = 128;
+    u32 a = c >> 24 & 31;
+    a = (fa * d + a * (128 - d)) >> 7;
+    if (r->dispcnt & 0x40) return (c & 0x80ffffffu) | a << 24;
+    u32 cr = (fr * d + (c & 63) * (128 - d)) >> 7, cg = (fgc * d + (c >> 8 & 63) * (128 - d)) >> 7,
+        cb = (fb * d + (c >> 16 & 63) * (128 - d)) >> 7;
+    return cr | cg << 8 | cb << 16 | a << 24 | (c & 0x80000000u);
+}
 static void fog_pass(void) {
     const G3RenderState *r = sR;
     if (!(r->dispcnt & 0x80) || getenv("ACWW_GPU3D_NOFOG")) return;
     int shift = r->dispcnt >> 8 & 15;
     s32 step = shift <= 10 ? 0x400 >> shift : 0;
-    u32 fc = r->fogColor;
-    u32 fr = rgb5_to_6(fc & 31), fgc = rgb5_to_6(fc >> 5 & 31), fb = rgb5_to_6(fc >> 10 & 31), fa = fc >> 16 & 31;
+    int aa = (r->dispcnt & 0x10) != 0;
     for (int i = 0; i < W * H; i++) {
         if (!(sFlags[i] & 1)) continue;
-        s32 z = (s32)(sDepth[i] >> 9);
-        s32 d;
-        s32 b0 = r->fogOffset + step;
-        if (z < b0 || !step) d = z < b0 ? r->fogTable[0] : r->fogTable[31];
-        else {
-            s32 n = (z - b0) / step;
-            if (n >= 31) d = r->fogTable[31];
-            else {
-                s32 frac = (z - b0) - n * step;
-                d = r->fogTable[n] + (r->fogTable[n + 1] - r->fogTable[n]) * frac / step;
-            }
-        }
-        if (d >= 127) d = 128;
-        u32 c = sColor[i];
-        u32 a = c >> 24 & 31;
-        a = (fa * d + a * (128 - d)) >> 7;
-        if (r->dispcnt & 0x40) c = (c & 0xffffff) | a << 24;
-        else {
-            u32 cr = (fr * d + (c & 63) * (128 - d)) >> 7, cg = (fgc * d + (c >> 8 & 63) * (128 - d)) >> 7,
-                cb = (fb * d + (c >> 16 & 63) * (128 - d)) >> 7;
-            c = cr | cg << 8 | cb << 16 | a << 24;
-        }
-        sColor[i] = c;
+        sColor[i] = fog_apply(r, step, sColor[i], sDepth[i]);
+        if (aa && sCov[i] < 31) sColor2[i] = fog_apply(r, step, sColor2[i], sDepth2[i]);
     }
 }
 
@@ -499,7 +500,8 @@ static void timing_report(void) {
                 sRenderNs / sRenderFrames / 1e6, sRenderMax / 1e6, sRenderFrames);
 }
 static int sWgpu, sWgpuReadback;
-static int sTallShown[2];
+static int sTallShown[2], sYofsShown[2];
+int g3_shown_yofs(void) { return sYofsShown[sShown]; }
 int sTallWanted;
 int gpu3d_use_wgpu(void *device, void *queue, int scale, int readback) {
     if (!g3w_init(device, queue, readback ? 1 : scale)) return 0;
@@ -530,9 +532,10 @@ void g3_render(void) {
     sShown ^= 1;
     {
         int any = 0;
-        for (int i = 0; i < sR->npoly && !any; i++) any = sR->poly[i]->ytop < 192;
+        for (int i = 0; i < sR->npoly && !any; i++) any = sR->poly[i]->ytop < sR->yofs;
         if (sTallWanted) any = 1;
         sTallShown[sShown] = any;
+        sYofsShown[sShown] = sR->yofs;
     }
     if (!sWgpu || sWgpuReadback) memcpy(sFrameBuf[sShown], sColor, sizeof sColor);
     if (timing) {
@@ -548,11 +551,11 @@ void g3_render(void) {
 const u32 *g3_frame_lines(void) { return sFrameBuf[sShown]; }
 int g3_tall_supported(void) { return !sWgpu; }
 int g3_frame_tall(void) { return sTallShown[sShown]; }
-int g3_raster_pixel_polygon(int x, int y) { return sPoly[(y + G3_YOFS) * W + x]; }
-u32 g3_raster_depth(int x, int y) { return sDepth[(y + G3_YOFS) * W + x]; }
+int g3_raster_pixel_polygon(int x, int y) { return sPoly[(y + g3_shown_yofs()) * W + x]; }
+u32 g3_raster_depth(int x, int y) { return sDepth[(y + g3_shown_yofs()) * W + x]; }
 void g3_raster_diagnostics(int on) { sDiag = on; }
 int gpu3d_pixel_polygon(int x, int y, Gpu3dPolyInfo *info) {
-    int i = sPoly[(y + G3_YOFS) * W + x];
+    int i = sPoly[(y + g3_shown_yofs()) * W + x];
     if (i < 0 || i >= gG3Render.npoly) return 0;
     const G3Polygon *p = gG3Render.poly[i];
     info->index = i;

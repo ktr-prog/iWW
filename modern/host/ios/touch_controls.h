@@ -14,6 +14,7 @@ typedef struct { float x, y, w, h; } TcRect;
 typedef struct {
     int w, h;
     TcRect screens;
+    TcRect fill;
     int controls;
     TcRect button[TC_COUNT];
     int stick;
@@ -32,7 +33,9 @@ typedef struct {
     int stylus_x, stylus_y;
     unsigned stylus_presses;
     float stick_x, stick_y;
+    int canvas_rows;
 } TcState;
+int tc_canvas_rows(const TcLayout *l);
 
 void tc_reset(TcState *s);
 enum { TC_DOWN, TC_MOVE, TC_UP };

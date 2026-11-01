@@ -33,7 +33,9 @@ u16 *sIrisWipeActiveTable;
 ScreenTransition gScreenTransition;
 HBlankTask sIrisWipeHBlankTask;
 #ifdef HOST
-enum { IRIS_ROWS = 0xc0, IRIS_REACH = 231 };
+enum { IRIS_ROWS = 0x180, IRIS_REACH = 231 };
+extern "C" int gHostCanvasRows;
+extern "C" int gHostIrisRadius;
 #else
 enum { IRIS_ROWS = 0x60, IRIS_REACH = 160 };
 #endif
@@ -84,7 +86,7 @@ extern "C" void IrisWipe_HBlank() {
     u32 line = IO_R(&r[3]);
     if ((s32)line < 0xc0) {
 #ifdef HOST
-        u16 top = sIrisWipeActiveTable[line], bottom = sIrisWipeActiveTable[0xbf - line];
+        u16 top = sIrisWipeActiveTable[line], bottom = sIrisWipeActiveTable[0xc0 + line];
         int aTop = IO_R((volatile u16 *)0x4000304) & 0x8000;
         if (IO_R((volatile u16 *)0x4000004) & 2) {
             IO_W((volatile u16 *)((u8 *)r + 0x40), aTop ? top : bottom);
@@ -104,8 +106,8 @@ extern "C" void IrisWipe_HBlank() {
 extern "C" void IrisWipe_VBlankRegs() {
 #ifdef HOST
     int aTop = IO_R((volatile u16 *)0x4000304) & 0x8000;
-    IO_W((volatile u16 *)0x4000040, sIrisWipeActiveTable[aTop ? 0 : 0xbf]);
-    IO_W((volatile u16 *)0x4001040, sIrisWipeActiveTable[aTop ? 0xbf : 0]);
+    IO_W((volatile u16 *)0x4000040, sIrisWipeActiveTable[aTop ? 0 : 0xc0]);
+    IO_W((volatile u16 *)0x4001040, sIrisWipeActiveTable[aTop ? 0xc0 : 0]);
 #else
     IO_W((volatile u16 *)0x4000040, *sIrisWipeActiveTable);
     IO_W((volatile u16 *)0x4001040, *sIrisWipeActiveTable);
@@ -159,6 +161,9 @@ extern "C" void IrisWipe_Begin() {
 }
 
 extern "C" void IrisWipe_End() {
+#ifdef HOST
+    gHostIrisRadius = -1;
+#endif
     Gfx2d_DisableMainWindows(1);
     Gfx2d_DisableSubWindows(1);
     if (sIrisWipeFlags & 1) {
@@ -177,17 +182,36 @@ extern "C" void IrisWipe_Update() {
     if (sIrisWipeFlags & 2) p = sIrisWipeTableA; else p = sIrisWipeTableB;
     s32 v = s->progress;
     if (v == 0) {
+#ifdef HOST
+        gHostIrisRadius = -1;
+#endif
         volatile u16 c = 0xff;
         MIi_CpuClear16(c, p, sizeof sIrisWipeTableA);
     } else if (v == 0x1000) {
+#ifdef HOST
+        gHostIrisRadius = 0;
+#endif
         volatile u16 c = 0x8080;
     MIi_CpuClear16(c, sIrisWipeTableA, sizeof sIrisWipeTableA);
     MIi_CpuClear16(c, sIrisWipeTableB, sizeof sIrisWipeTableB);
     } else {
+#ifdef HOST
+        s32 rows = gHostCanvasRows < 0xc0 ? 0xc0 : gHostCanvasRows;
+        s32 reach = 0x80 * 0x80 + (rows / 2) * (rows / 2), rr = 1;
+        while (rr * rr < reach) rr++;
+        s32 h = ((0x1000 - v) * rr) >> 12;
+        gHostIrisRadius = h;
+        s32 h2 = (h * h) << 12;
+        for (s32 i = 0; i < IRIS_ROWS; p++, i++) {
+            s32 y = i < 0xc0 ? i + rows - 0x180 : rows - 0xc0 + (i - 0xc0);
+            s32 d2 = 2 * y + 1 - rows;
+            s32 d = (d2 < 0 ? -d2 : d2) / 2;
+#else
         s32 h = ((0x1000 - v) * IRIS_REACH) >> 12;
         s32 h2 = (h * h) << 12;
         for (s32 i = 0; i < IRIS_ROWS; p++, i++) {
             s32 d = IRIS_ROWS - i;
+#endif
             if (d > h) {
                 *p = 0x8080;
             } else {

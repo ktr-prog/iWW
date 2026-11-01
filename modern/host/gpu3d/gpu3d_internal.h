@@ -57,6 +57,7 @@ typedef struct G3RenderState {
     u32 fogColor;
     u16 fogOffset;
     u8 fogTable[32];
+    int yofs;
 } G3RenderState;
 
 extern G3RenderState gG3Render;
@@ -67,7 +68,10 @@ void g3_render(void);
 const u32 *g3_frame_lines(void);
 int g3_tall_supported(void);
 int g3_frame_tall(void);
-#define G3_YOFS (g3_tall_supported() ? 192 : 0)
+extern int gG3Yofs;
+int g3_shown_yofs(void);
+#define G3_YOFS (g3_tall_supported() ? gG3Yofs : 0)
+enum { G3_MAX_ROWS = 640 };
 int g3_raster_pixel_polygon(int x, int y);
 void g3_raster_diagnostics(int on);
 

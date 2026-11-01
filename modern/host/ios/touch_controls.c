@@ -33,6 +33,7 @@ void tc_layout(TcLayout *l, int w, int h, float pt, const float safe[4], int con
     TcRect safeRect = rect(sx, sy, sw, sh);
     if (!controls) {
         l->screens = fit_screens(safeRect);
+        l->fill = rect(0, 0, (float)w, (float)h);
         return;
     }
     const float m = 8 * pt;
@@ -42,6 +43,7 @@ void tc_layout(TcLayout *l, int w, int h, float pt, const float safe[4], int con
         float sch = sh - ctrl, scw = sch / 1.5f;
         if (scw > sw) scw = sw, sch = scw * 1.5f;
         l->screens = rect(sx + (sw - scw) / 2, sy, scw, sch);
+        l->fill = rect(0, 0, (float)w, sy + sch);
         float top = sy + sch, bottom = sy + sh, ch = bottom - top;
         float rh = clampf(ch * 0.17f, 30 * pt, 44 * pt);
         float rowY = top + m * 0.75f;
@@ -75,6 +77,7 @@ void tc_layout(TcLayout *l, int w, int h, float pt, const float safe[4], int con
             side = (sw - scw) / 2;
         }
         l->screens = rect(sx + (sw - scw) / 2, sy + (sh - sch) / 2, scw, sch);
+        l->fill = l->screens;
         TcRect panel[2] = {rect(sx, sy, l->screens.x - sx, sh),
                            rect(l->screens.x + scw, sy, sx + sw - (l->screens.x + scw), sh)};
         for (int s = 0; s < 2; s++) {
@@ -173,10 +176,21 @@ static int dpad_at(const TcLayout *l, float x, float y) {
     return r.w > 0 && x >= r.x - g && x < r.x + r.w + g && y >= r.y - g && y < r.y + r.h + g;
 }
 
+int tc_canvas_rows(const TcLayout *l) {
+    if (l->fill.w <= 0 || l->fill.h <= 0) return 384;
+    int n = (int)floorf(256.0f * l->fill.h / l->fill.w + 0.5f);
+    return n < 192 ? 192 : n > 640 ? 640 : n;
+}
+
 static void stylus_point(TcState *s, const TcLayout *l, float x, float y) {
     TcRect sc = l->screens;
     float half = sc.h / 2;
     int px = (int)floorf((x - sc.x) * 256.0f / sc.w), py = (int)floorf((y - (sc.y + half)) * 192.0f / half);
+    if (s->canvas_rows > 0) {
+        TcRect f = l->fill;
+        px = (int)floorf((x - f.x) * 256.0f / f.w);
+        py = (int)floorf((y - f.y) * (float)s->canvas_rows / f.h) - (s->canvas_rows - 192);
+    }
     s->stylus_x = px < 0 ? 0 : px > 255 ? 255 : px;
     s->stylus_y = py < 0 ? 0 : py > 191 ? 191 : py;
 }
@@ -201,9 +215,11 @@ int tc_pointer(TcState *s, const TcLayout *l, int64_t id, int event, float x, fl
         for (i = 0; i < TC_MAX_POINTERS && s->p[i].used; i++) {}
         if (i == TC_MAX_POINTERS) return 0;
         s->p[i].used = 1, s->p[i].id = id, s->p[i].keys = 0;
-        TcRect sc = l->screens;
-        if (inside(sc, x, y)) {
+        TcRect sc = s->canvas_rows > 0 ? l->fill : l->screens;
+        int onButton = s->canvas_rows > 0 && l->controls && (dpad_at(l, x, y) || button_at(l, x, y) >= 0);
+        if (inside(sc, x, y) && !onButton) {
             int bottom = y >= sc.y + sc.h / 2;
+            if (s->canvas_rows > 0) bottom = y >= sc.y + sc.h * (float)(s->canvas_rows - 192) / (float)s->canvas_rows;
             if (bottom) {
                 for (int j = 0; j < TC_MAX_POINTERS; j++)
                     if (j != i && s->p[j].used && s->p[j].what == WHAT_STYLUS) s->p[j].what = WHAT_NOTHING;

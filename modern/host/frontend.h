@@ -16,8 +16,9 @@ typedef struct {
     uint32_t touch_down;
     uint32_t quit;
     uint32_t stick;
-    uint32_t pad[8];
-    uint32_t pixels[256 * 384];
+    uint32_t rows;
+    uint32_t pad[7];
+    uint32_t pixels[256 * 640];
     uint32_t audio_write;
     uint32_t audio_read;
     int16_t audio[ACWW_AUDIO_FRAMES * 2];

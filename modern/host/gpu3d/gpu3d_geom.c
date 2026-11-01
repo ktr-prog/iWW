@@ -420,23 +420,27 @@ static void screen_position(G3Vertex *v) {
     if (ws == 0) ws = 1;
     s64 nx = ((s64)v->pos[0] + w) >> s, ny = (-(s64)v->pos[1] + w) >> s;
     v->x = (s32)(floor_div(nx * sViewport[4], ws * 2) + sViewport[0]) & 0x1ff;
-    v->y = (s32)(floor_div(ny * sViewport[5], ws * 2) + sViewport[3] + G3_YOFS) & 0x1ff;
+    v->y = (s32)(floor_div(ny * sViewport[5], ws * 2) + sViewport[3] + G3_YOFS) & 0x3ff;
     v->hx = (s32)(floor_div(nx * sViewport[4] * 16, ws * 2) + sViewport[0] * 16) & 0x1fff;
-    v->hy = (s32)(floor_div(ny * sViewport[5] * 16, ws * 2) + (sViewport[3] + G3_YOFS) * 16) & 0x1fff;
+    v->hy = (s32)(floor_div(ny * sViewport[5] * 16, ws * 2) + (sViewport[3] + G3_YOFS) * 16) & 0x3fff;
     v->screenDone = 1;
 }
 
-static int sClipK = 1;
+static int sClipK = 96;
 static int sTall;
+int gG3Yofs = 192;
 void gpu3d_set_tall(int on) {
     extern int sTallWanted;
-    sTall = on && g3_tall_supported();
+    extern int gHostCanvasRows;
+    int rows = gHostCanvasRows < 192 ? 192 : gHostCanvasRows > G3_MAX_ROWS ? G3_MAX_ROWS : gHostCanvasRows;
+    gG3Yofs = rows - 192;
+    sTall = on && g3_tall_supported() && gG3Yofs > 0;
     sTallWanted = sTall;
 }
 static G3Vertex sClipBuf[2][10];
 static s64 plane_d(const s32 *pos, int comp, int sign) {
-    s64 k = comp == 1 && sign > 0 ? sClipK : 1;
-    return k * pos[3] - sign * (s64)pos[comp];
+    s64 k = comp == 1 && sign > 0 ? sClipK : 96;
+    return k * pos[3] / 96 - sign * (s64)pos[comp];
 }
 static void clip_interp(G3Vertex *o, const G3Vertex *in, const G3Vertex *out, int comp, int sign) {
     s64 din = plane_d(in->pos, comp, sign);
@@ -444,7 +448,7 @@ static void clip_interp(G3Vertex *o, const G3Vertex *in, const G3Vertex *out, in
     s64 den = din - dout;
 #define LERP(a, b) ((s32)((b) + (((s64)(a) - (b)) * -dout) / den))
     for (int i = 0; i < 4; i++) o->pos[i] = LERP(in->pos[i], out->pos[i]);
-    o->pos[comp] = (s32)(sign * (comp == 1 && sign > 0 ? sClipK : 1) * (s64)o->pos[3]);
+    o->pos[comp] = (s32)(sign * (comp == 1 && sign > 0 ? sClipK : 96) * (s64)o->pos[3] / 96);
     {
         const s32 *ic = in->color;
         s64 cdin = din, cden = den;
@@ -476,7 +480,7 @@ static void clip_interp(G3Vertex *o, const G3Vertex *in, const G3Vertex *out, in
     o->screenDone = 0;
 }
 static int inside(const G3Vertex *v, int comp, int sign) {
-    return sign > 0 ? (s64)v->pos[comp] <= (comp == 1 ? sClipK : 1) * (s64)v->pos[3] : v->pos[comp] >= -v->pos[3];
+    return sign > 0 ? (s64)v->pos[comp] <= (comp == 1 ? sClipK : 96) * (s64)v->pos[3] / 96 : v->pos[comp] >= -v->pos[3];
 }
 static int clip_plane(G3Vertex *dst, const G3Vertex *src, int n, int comp, int sign) {
     int m = 0;
@@ -560,9 +564,9 @@ static void submit_polygon(void) {
     G3Vertex *cv;
     int clipped;
     sFarHidden = 0;
-    sClipK = sTall && sViewport[0] == 0 && sViewport[3] == 0 && sViewport[4] == 256 && sViewport[5] == 192 ? 3 : 1;
+    sClipK = sTall && sViewport[0] == 0 && sViewport[3] == 0 && sViewport[4] == 256 && sViewport[5] == 192 ? 96 + gG3Yofs : 96;
     int n = clip_polygon(v, nv, &cv, attr >> 12 & 1, &clipped);
-    sClipK = 1;
+    sClipK = 96;
     sPolyOutcome = n == 0 ? (sFarHidden ? 3 : 2) : 0;
     debug_tex_poly(n ? "kept" : "clipped away", v, nv, n);
     sPolyNOut = n;
@@ -681,7 +685,7 @@ static void submit_polygon(void) {
     poly->ybottom = ybot;
     poly->xtop = xtop;
     poly->xbottom = xbot;
-    poly->sortKey = (u32)(ybot << 9 | ytop) | (poly->translucent ? 1u << 20 : 0);
+    poly->sortKey = (u32)(ybot << 10 | ytop) | (poly->translucent ? 1u << 21 : 0);
     if (!(attr & (1u << 13))) {
         int dot1 = 1;
         for (int i = 1; i < n; i++)
@@ -1009,12 +1013,13 @@ static void do_swap(void) {
     r->npoly = sNumPolys;
     r->wbuffer = sFlushParam >> 1 & 1;
     r->manualSort = sFlushParam & 1;
+    r->yofs = G3_YOFS;
     if (r->wbuffer) g3_feature(F_WBUFFER);
     else if (r->npoly) g3_feature(F_ZBUFFER_POLYS);
     if (r->manualSort) g3_feature(F_MANUAL_SORT);
     for (int i = 0; i < sNumPolys; i++) {
         G3Polygon *p = &sPolyRam[sBank][i];
-        if (r->manualSort && p->translucent) p->sortKey = 1u << 20;
+        if (r->manualSort && p->translucent) p->sortKey = 1u << 21;
         r->poly[i] = p;
     }
     qsort(r->poly, (size_t)sNumPolys, sizeof r->poly[0], cmp_poly);
@@ -1146,7 +1151,8 @@ void gpu3d_frame(const uint8_t *const bank[9]) {
     g3_render();
 }
 
-const uint32_t *gpu3d_lines(void) { return g3_frame_lines() + 256 * G3_YOFS; }
+const uint32_t *gpu3d_lines(void) { return g3_frame_lines() + 256 * g3_shown_yofs(); }
+int gpu3d_top_rows(void) { return g3_shown_yofs(); }
 const uint32_t *gpu3d_lines_top(void) { return g3_tall_supported() && g3_frame_tall() ? g3_frame_lines() : 0; }
 
 void gpu3d_state(Gpu3dState *s) {

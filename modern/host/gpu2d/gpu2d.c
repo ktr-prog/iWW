@@ -465,7 +465,8 @@ static void render_line(Engine *e, const Gpu2dFrameInput *in, int line) {
     if (e->num == 1 && !(sPowCnt & 0x200)) {
         gpu2d_feature(e, F_ENGINE_B_OFF);
         if (sSingle) {
-            const u32 *l3 = in->lines3dTop ? in->lines3dTop + line * SCREEN_W : NULL;
+            int r3 = line + in->topRows - SCREEN_H;
+            const u32 *l3 = in->lines3dTop && r3 >= 0 ? in->lines3dTop + r3 * SCREEN_W : NULL;
             for (int x = 0; x < SCREEN_W; x++) {
                 u32 c = l3 ? l3[x] : 0, al = c >> 24 & 31;
                 dst[x] = !al ? 0 : al == 31 ? c & 0x3f3f3f : blend3d(c & 0x3f3f3f, 0, al);
@@ -485,7 +486,8 @@ static void render_line(Engine *e, const Gpu2dFrameInput *in, int line) {
     } else {
         for (int n = 0; n < 4; n++) gpu2d_render_bg_line(e, n, line);
         const u32 *l3 = e->num == 0 && in->lines3d ? in->lines3d + line * SCREEN_W
-                      : e->num == 1 && sSingle && in->lines3dTop ? in->lines3dTop + line * SCREEN_W : NULL;
+                      : e->num == 1 && sSingle && in->lines3dTop && line + in->topRows - SCREEN_H >= 0
+                          ? in->lines3dTop + (line + in->topRows - SCREEN_H) * SCREEN_W : NULL;
         compose_line(e, line, l3, composed);
     }
     obj_mosaic_y(e, line);
@@ -583,16 +585,81 @@ static void gpu_versions(const Gpu2dFrameInput *in) {
 }
 const Gpu2dGpuFrame *gpu2d_gpu_frame(void) { return &sGpuFrame; }
 
-static void single_compose(const Gpu2dFrameInput *in) {
-    (void)in;
+enum { CANVAS_MAX = 640 };
+static u32 sCanvas[SCREEN_W * CANVAS_MAX];
+static int sCanvasRows;
+int gHostIrisRadius = -1;
+const uint32_t *gpu2d_canvas(int *rows) {
+    *rows = sCanvasRows;
+    return sCanvasRows ? sCanvas : NULL;
+}
+static u32 argb(u32 c) {
+    u32 r = c & 0x3f, g = c >> 8 & 0x3f, b = c >> 16 & 0x3f;
+    r = r << 2 | r >> 4; g = g << 2 | g >> 4; b = b << 2 | b >> 4;
+    return 0xff000000u | r << 16 | g << 8 | b;
+}
+static void single_compose(const Gpu2dFrameInput *in, int blank) {
     static u32 ref[SCREEN_W];
     static int haveRef;
-    if (!(reg32(&sEngine[1], REG_DISPCNT) & 0xe000) || !haveRef) {
-        memcpy(ref, sEngine[1].out + (SCREEN_H - 1) * SCREEN_W, sizeof ref);
+    const Engine *a = &sEngine[0], *b = &sEngine[1];
+    int t = in->topRows < 0 ? 0 : in->topRows > CANVAS_MAX - SCREEN_H ? CANVAS_MAX - SCREEN_H : in->topRows;
+    int rows = t + SCREEN_H;
+    u16 mb = reg16(a, REG_MASTER_BRIGHT);
+    u32 f = mb & 0x1f;
+    if (f > 16) f = 16;
+    if (blank) {
+        u32 c = 0;
+        if ((mb >> 14) == 1 && f) c = brighten(c, f, 0);
+        else if ((mb >> 14) == 2 && f) c = darken(c, f, 15);
+        for (int i = 0; i < SCREEN_W * rows; i++) sCanvas[i] = argb(c);
+        sCanvasRows = rows;
+        return;
+    }
+    if (!(reg32(b, REG_DISPCNT) & 0xe000) || !haveRef) {
+        memcpy(ref, b->out + (SCREEN_H - 1) * SCREEN_W, sizeof ref);
         haveRef = 1;
     }
-    for (int i = 0; i < SCREEN_W * SCREEN_H; i++)
-        if (sSkyA[i]) sEngine[0].out[i] = ref[i % SCREEN_W];
+    int iris = gHostIrisRadius >= 0 && (reg32(b, REG_DISPCNT) & 0x2000);
+    u32 skyTop = b->out[0];
+    {
+        int best = 0;
+        for (int x = 0; x < SCREEN_W; x += 4) {
+            int n = 0;
+            for (int k = 0; k < SCREEN_W; k += 4) n += b->out[k] == b->out[x];
+            if (n > best) best = n, skyTop = b->out[x];
+        }
+    }
+    double cx = SCREEN_W / 2.0, cy = rows / 2.0, rr = (double)gHostIrisRadius * gHostIrisRadius;
+    for (int y = 0; y < rows; y++) {
+        u32 *d = sCanvas + y * SCREEN_W;
+        if (y >= t) {
+            const u32 *src = a->out + (y - t) * SCREEN_W;
+            const u8 *sky = sSkyA + (y - t) * SCREEN_W;
+            for (int x = 0; x < SCREEN_W; x++) d[x] = argb(sky[x] ? ref[x] : src[x]);
+            continue;
+        }
+        int by = y - (t - SCREEN_H);
+        if (by >= 0) {
+            for (int x = 0; x < SCREEN_W; x++) d[x] = argb(b->out[by * SCREEN_W + x]);
+            continue;
+        }
+        const u32 *l3 = in->lines3dTop ? in->lines3dTop + y * SCREEN_W : NULL;
+        for (int x = 0; x < SCREEN_W; x++) {
+            u32 o = skyTop;
+            u32 c = l3 && sA3dPrev ? l3[x] : 0, al = c >> 24 & 31;
+            if (al) {
+                o = al == 31 ? c & 0x3f3f3f : blend3d(c & 0x3f3f3f, o, al);
+                if ((mb >> 14) == 1 && f) o = brighten(o, f, 0);
+                else if ((mb >> 14) == 2 && f) o = darken(o, f, 15);
+            }
+            if (iris) {
+                double dx = x + 0.5 - cx, dy = y + 0.5 - cy;
+                if (dx * dx + dy * dy > rr) o = 0;
+            }
+            d[x] = argb(o);
+        }
+    }
+    sCanvasRows = rows;
 }
 
 void gpu2d_render_frame(const Gpu2dFrameInput *in) {
@@ -673,17 +740,8 @@ void gpu2d_render_frame(const Gpu2dFrameInput *in) {
         window_vertical(e, SCREEN_H);
     }
     if (sGpu) sGpuFrame.tables[0][G2T_SCREEN_A] = (sPowCnt & 0x8000) ? 0 : 1;
-    if (sSingleBlank) {
-        const Engine *a = &sEngine[0];
-        u32 c = 0;
-        u16 mb = reg16(a, REG_MASTER_BRIGHT);
-        u32 f = mb & 0x1f;
-        if (f > 16) f = 16;
-        if ((mb >> 14) == 1 && f) c = brighten(c, f, 0);
-        else if ((mb >> 14) == 2 && f) c = darken(c, f, 15);
-        for (int n = 0; n < 2; n++)
-            for (int i = 0; i < SCREEN_W * SCREEN_H; i++) sEngine[n].out[i] = c;
-    } else if (sSingle) single_compose(in);
+    sCanvasRows = 0;
+    if (sSingle) single_compose(in, sSingleBlank);
     for (int n = 0; n < 2; n++) {
         int screen = (sPowCnt & 0x8000) ? n : 1 - n;
         if (sGpu == 1) {
