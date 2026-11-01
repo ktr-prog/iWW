@@ -6406,6 +6406,7 @@ BOOL SkyProc::onCreate() {
 }
 
 BOOL SkyProc::onExecute() {
+    TICK_LEGACY_BEGIN()
     if (sSkyOutdoors != 0) {
         if (!MenuCtrl_IsMenuOnTop()) {
             StarTwinkle_Update(&data_021efc18);
@@ -6416,6 +6417,7 @@ BOOL SkyProc::onExecute() {
     }
     gWeatherManager.updateHourly();
     RainSe_Update(&envSndChannel);
+    TICK_LEGACY_END()
     return TRUE;
 }
 

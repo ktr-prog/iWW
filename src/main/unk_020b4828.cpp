@@ -1423,6 +1423,7 @@ extern "C" BOOL Scene_NoPlayerInUnsharedScene(void) {
 
 
 #ifdef HOST64
+extern "C" int Scene_HostIsOutdoor(void) { return gCurSceneInfo && gCurSceneInfo->isOutdoor == 1; }
 extern "C" int Scene_HostWarp(u32 id, s32 x, s32 z) {
     VecFx32 v;
     v.x = x, v.y = 0, v.z = z;

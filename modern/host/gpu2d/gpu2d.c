@@ -599,6 +599,60 @@ static u32 argb(u32 c) {
     r = r << 2 | r >> 4; g = g << 2 | g >> 4; b = b << 2 | b >> 4;
     return 0xff000000u | r << 16 | g << 8 | b;
 }
+static u32 sExtSky[SCREEN_W * CANVAS_MAX];
+static int sExtRows;
+static void render_ext_sky(const Gpu2dFrameInput *in) {
+    extern int gHostCanvasRows;
+    Engine *b = &sEngine[1];
+    int rows = gHostCanvasRows < SCREEN_H ? SCREEN_H : gHostCanvasRows > CANVAS_MAX ? CANVAS_MAX : gHostCanvasRows;
+    int t = rows - SCREEN_H, ext = t - SCREEN_H;
+    sExtRows = 0;
+    if (ext <= 0 || !(sPowCnt & 0x200) || (reg32(b, REG_DISPCNT) & 0x80) || !(reg32(b, REG_DISPCNT) >> 16 & 1)) return;
+    const u32 *top = in->topRows == t ? in->lines3dTop : NULL;
+    ObjLine *saved = malloc(sizeof *saved);
+    if (!saved) return;
+    *saved = b->obj;
+    memset(&b->obj, 0, sizeof b->obj);
+    u8 dc[4], bc[8];
+    memcpy(dc, b->regs + REG_DISPCNT, 4);
+    memcpy(bc, b->regs + REG_BGCNT, 8);
+    for (int n = 2; n < 4; n++) b->regs[REG_BGCNT + 2 * n + 1] |= 0x20;
+    {
+        u32 d = reg32(b, REG_DISPCNT);
+        int back = -1, bp = -1;
+        for (int n = 0; n < 4; n++) {
+            if (!(d & 0x100u << n)) continue;
+            int p = reg16(b, REG_BGCNT + 2 * n) & 3;
+            if (p >= bp) bp = p, back = n;
+        }
+        extern unsigned Scene_GetCurrent(void);
+        if (Scene_GetCurrent() == 0x2c) {
+            d &= ~0x1000u;
+            d &= ~0x0f00u;
+            if (back >= 0) d |= 0x100u << back;
+        }
+        for (int k = 0; k < 4; k++) b->regs[REG_DISPCNT + k] = (u8)(d >> 8 * k);
+    }
+    static u8 stars[0x400];
+    const u8 *oam = b->oam;
+    memcpy(stars, oam, sizeof stars);
+    for (int i = 0; i < 128; i++) {
+        u8 *o = stars + i * 8;
+        if ((o[1] >> 6) != 0 || (o[3] >> 6) > 1 || (o[1] & 1)) o[0] = 0xc0, o[1] = 0x02;
+    }
+    b->oam = stars;
+    for (int r = 0; r < ext; r++) {
+        for (int n = 0; n < 4; n++) gpu2d_render_bg_line(b, n, r - ext);
+        gpu2d_render_obj_line(b, ((r - ext) % SCREEN_H + SCREEN_H) % SCREEN_H, &b->obj);
+        compose_line(b, 0, top ? top + r * SCREEN_W : NULL, sExtSky + r * SCREEN_W);
+    }
+    memcpy(b->regs + REG_DISPCNT, dc, 4);
+    memcpy(b->regs + REG_BGCNT, bc, 8);
+    b->oam = oam;
+    b->obj = *saved;
+    free(saved);
+    sExtRows = ext;
+}
 static void single_compose(const Gpu2dFrameInput *in, int blank) {
     static u32 ref[SCREEN_W];
     static int haveRef;
@@ -651,6 +705,20 @@ static void single_compose(const Gpu2dFrameInput *in, int blank) {
         int by = y - (t - SCREEN_H);
         if (by >= 0) {
             for (int x = 0; x < SCREEN_W; x++) d[x] = argb(b->out[by * SCREEN_W + x]);
+            continue;
+        }
+        if (y < sExtRows) {
+            const u32 *src = sExtSky + y * SCREEN_W;
+            for (int x = 0; x < SCREEN_W; x++) {
+                u32 o = src[x];
+                if ((mb >> 14) == 1 && f) o = brighten(o, f, 0);
+                else if ((mb >> 14) == 2 && f) o = darken(o, f, 15);
+                if (iris) {
+                    double dx = x + 0.5 - cx, dy = y + 0.5 - cy;
+                    if (dx * dx + dy * dy > rr) o = 0;
+                }
+                d[x] = argb(o);
+            }
             continue;
         }
         const u32 *l3 = top3d ? top3d + y * SCREEN_W : NULL;
@@ -721,8 +789,8 @@ void gpu2d_render_frame(const Gpu2dFrameInput *in) {
     }
     gHostSingleScreen = sSingle;
     {
-        extern int Scene_InTown(void);
-        sOutdoors = Scene_InTown();
+        extern int Scene_HostIsOutdoor(void);
+        sOutdoors = Scene_HostIsOutdoor();
     }
     sA3dPrev = sA3dNow;
     sA3dNow = 0;
@@ -747,6 +815,8 @@ void gpu2d_render_frame(const Gpu2dFrameInput *in) {
         }
         e->refLine = 0;
     }
+    sExtRows = 0;
+    if (sSingle && !sSingleBlank && !sGpu && !sDefer3d) render_ext_sky(in);
     for (int n = 0; n < 2; n++) {
         Engine *e = &sEngine[n];
         for (int line = SCREEN_H + 1; line < FRAME_LINES; line++) window_vertical(e, line);

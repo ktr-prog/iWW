@@ -900,8 +900,8 @@ static void frame_body(void) {
     ios_states();
     sTouch.canvas_rows = sShm->rows >= 192 && sShm->rows <= 640 ? (int)sShm->rows : 0;
     {
-        extern int Scene_InTown(void);
-        sTouch.buttons_off = !Scene_InTown();
+        extern int Scene_InTown(void), MenuCtrl_IsIdle(void), TalkRequest_IsActive(void);
+        sTouch.buttons_off = !Scene_InTown() || !MenuCtrl_IsIdle() || TalkRequest_IsActive();
     }
     sShm->keys = keyboard_keys() | pad_keys() | tc_keys(&sTouch);
     sShm->stick = stick_word();
