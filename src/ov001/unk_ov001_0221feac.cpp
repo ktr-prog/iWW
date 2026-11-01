@@ -1,4 +1,5 @@
 #include "types.h"
+#include "host_tick.h"
 #include "net/WfcRect.h"
 #include "net/WfcObjGroup.h"
 #include "nitro/io_access.h"
@@ -190,7 +191,7 @@ void WfcDialog_AutoCloseTask(WfcTask *task)
 {
     WfcDialogWork *g = sWfcDialog;
     g->result = -1;
-    sWfcDialog->autoCloseTimer = sWfcDialog->autoCloseTimer + 1;
+    sWfcDialog->autoCloseTimer = sWfcDialog->autoCloseTimer + (TICK_STEP_ENDS() ? 1 : 0);
     if (sWfcDialog->autoCloseTimer < 0x78) {
         return;
     }
@@ -267,7 +268,7 @@ void WfcDialog_PressButton(s32 i)
 
 void WfcDialog_CloseDelayTask(WfcTask *task)
 {
-    sWfcDialog->closeTimer++;
+    sWfcDialog->closeTimer += TICK_STEP_ENDS() ? 1 : 0;
     if (sWfcDialog->closeTimer < 8) {
         return;
     }

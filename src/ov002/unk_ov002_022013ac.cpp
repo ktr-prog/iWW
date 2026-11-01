@@ -1,4 +1,5 @@
 #include "types.h"
+#include "host_tick.h"
 #include "host_labels.h"
 #include "Unk_020d8c7c.h"
 #include "text/Unk_02050288.h"
@@ -425,7 +426,7 @@ void PopupChoice_StepSlideOpen(Self *self) {
             }
         }
         if (self->titleRefreshDelay != 0) {
-            self->titleRefreshDelay = self->titleRefreshDelay - 1;
+            self->titleRefreshDelay = self->titleRefreshDelay - (TICK_STEP_ENDS() ? 1 : 0);
             if (self->titleRefreshDelay == 0) {
                 self->title.refreshText(0);
             }

@@ -1,4 +1,5 @@
 #include "uptr.h"
+#include "host_tick.h"
 #include "host_labels.h"
 #include "host_overlay_vars.h"
 #include "types.h"
@@ -237,7 +238,7 @@ void FtrPhone::execTalkAct04() {
         TalkRequest_SetTargetDone(this);
     }
     if (talkDelay != 0) {
-        talkDelay--;
+        talkDelay -= TICK_STEP_ENDS() ? 1 : 0;
     }
 }
 
@@ -282,7 +283,7 @@ void FtrPhone::execTalkAct01() {
         setTalkAct(2);
     }
     if (talkDelay != 0) {
-        talkDelay--;
+        talkDelay -= TICK_STEP_ENDS() ? 1 : 0;
     }
 }
 
@@ -701,7 +702,7 @@ BOOL FtrCarpetSample::onDelete() {
 
 BOOL FtrCarpetSample::updateActive() {
     if (initFrames < 2) {
-        initFrames++;
+        initFrames += TICK_STEP_ENDS() ? 1 : 0;
     }
     return TRUE;
 }
@@ -783,7 +784,7 @@ BOOL FtrWallpaperSample::onDelete() {
 }
 
 BOOL FtrWallpaperSample::updateActive() {
-    if (initFrames < 2) initFrames++;
+    if (initFrames < 2) initFrames += TICK_STEP_ENDS() ? 1 : 0;
     return TRUE;
 }
 
@@ -2198,7 +2199,7 @@ void FtrGyroid::execFtrAct01() {
     updateSync((VecFx32 *)&position);
     if (syncStartFrames != 0) {
         model.stepBlend();
-        syncStartFrames--;
+        syncStartFrames -= TICK_STEP_ENDS() ? 1 : 0;
     }
     if (syncStartFrames == 0) {
         changeAct(2, getActAid());
@@ -3910,7 +3911,7 @@ BOOL FtrBed::enterFtrAct04() {
 
 void FtrBed::execFtrAct03() {
     if (approachTimer < 0x18) {
-        approachTimer++;
+        approachTimer += TICK_STEP_ENDS() ? 1 : 0;
     }
     if (approachTimer == 0x18) {
         changeAct(4, 0xff);
@@ -3946,7 +3947,7 @@ void FtrBed::execFtrAct01() {
                 useMode = 1;
                 if (pushFrames < 7) {
                     r4 = TRUE;
-                    pushFrames++;
+                    pushFrames += TICK_STEP_ENDS() ? 1 : 0;
                 }
                 if (((FtrContact *)(o))->getStepDistance() > 0x200) {
                     if (pushFrames >= 7) {
@@ -4035,7 +4036,7 @@ void FtrBed::execFtrAct00() {
                         if (FtrActor_IsPosClearOfCharacters(&f, 0x800, 0x2000, 0x800, 0)) {
                             if (pushFrames < 7) {
                                 r7 = TRUE;
-                                pushFrames++;
+                                pushFrames += TICK_STEP_ENDS() ? 1 : 0;
                             }
                             if (((FtrContact *)(o))->getStepDistance() > 0x200) {
                                 if (pushFrames >= 7) {
@@ -4453,7 +4454,7 @@ BOOL FtrSeat::updateActive() {
             if (FtrActor_IsPosClearOfCharacters(&pos, 0x800, 0x2000, 0x800, 0)) {
                 if (pushFrames < 7) {
                     hit = TRUE;
-                    pushFrames++;
+                    pushFrames += TICK_STEP_ENDS() ? 1 : 0;
                 }
                 if (((FtrContact *)(r6))->getStepDistance() > 0x200) {
                     if (pushFrames >= 7) {
@@ -5862,7 +5863,7 @@ void FtrBed::onInteractionEvent(u32 a, u8 b) {
 
 void FtrBed::execFtrAct0D() {
     if (leaveTimer < 0x16) {
-        leaveTimer++;
+        leaveTimer += TICK_STEP_ENDS() ? 1 : 0;
     }
     if (leaveTimer == 0x16) {
         ((Character *)this)->detachTalkRequest(static_cast<TalkMsgRequest *>(this));

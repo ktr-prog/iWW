@@ -1,4 +1,5 @@
 #include "types.h"
+#include "host_tick.h"
 #include "host_shared_calls.h"
 #include "Unk_020d8c7c.h"
 #include "net/CommManager.h"
@@ -953,7 +954,7 @@ void LostFoundRecycleMenu::mainAct14() {
 void LostFoundRecycleMenu::mainAct15() {
     LostFoundRecycleMenu *s = this;
     if (s->delayTimer != 0) {
-        s->delayTimer--;
+        s->delayTimer -= TICK_STEP_ENDS() ? 1 : 0;
     } else {
         s->transitionState = 4;
         ::func_ov002_02200a60(s, 1);

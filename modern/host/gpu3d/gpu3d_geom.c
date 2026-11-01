@@ -1,4 +1,3 @@
-#include <stddef.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -113,7 +112,6 @@ static int sMtxModeForCost;
 static int sPolyDone;
 static int sPolyOutcome, sPolyNOut, sPolyClipped, sFarHidden;
 static unsigned sPolySerial;
-static int sSubmitCount;
 int gpu3d_debug_last_polygon(int *nout, int *clipped, unsigned *serial, int *type) { *nout = sPolyNOut; *clipped = sPolyClipped; *serial = sPolySerial; *type = sPolyType | (sStripPolys > 1) << 2; return sPolyOutcome; }
 static void add_cycles(s32 n) {
     sVtxPipe = n < sVtxPipe ? sVtxPipe - n : 0;
@@ -578,41 +576,9 @@ static void poly_screen(G3Polygon *poly, int n) {
     poly->sortKey = (u32)(ybot << 10 | ytop) | (poly->translucent ? 1u << 21 : 0);
 }
 
-int g3_rebuild_polygon(G3Polygon *dst, const G3Polygon *src, const s32 (*pos)[4], G3Vertex *vbuf, int room) {
-    int nv = src->norig;
-    if (nv < 3 || nv > 4) return 0;
-    G3Vertex v[4];
-    for (int k = 0; k < nv; k++) {
-        v[k] = src->orig[k];
-        memcpy(v[k].pos, pos[k], sizeof v[k].pos);
-        v[k].screenDone = 0, v[k].clipped = 0, v[k].farAxis = 0;
-    }
-    u32 vp[6];
-    memcpy(vp, sViewport, sizeof vp);
-    for (int k = 0; k < 6; k++) sViewport[k] = src->vp[k];
-    int yofs = sScreenYofs;
-    sScreenYofs = src->yofs;
-    sClipK = src->clipk;
-    G3Vertex *cv;
-    int clipped;
-    int n = clip_polygon(v, nv, &cv, src->attr >> 12 & 1, &clipped);
-    sClipK = 96;
-    if (n > room) n = 0;
-    if (n) {
-        memcpy(dst, src, offsetof(G3Polygon, orig));
-        for (int i = 0; i < n; i++) vbuf[i] = cv[i], dst->v[i] = &vbuf[i];
-        dst->nv = n;
-        poly_screen(dst, n);
-    }
-    memcpy(sViewport, vp, sizeof vp);
-    sScreenYofs = yofs;
-    return n;
-}
-
 static void submit_polygon(void) {
     sPolyDone = 1;
     sPolySerial++;
-    sSubmitCount++;
     int nv = sPolyType & 1 ? 4 : 3;
     G3Vertex v[4];
     if (sPolyType == 2 && (sStripPolys & 1)) { v[0] = sTemp[1]; v[1] = sTemp[0]; v[2] = sTemp[2]; }
@@ -672,7 +638,6 @@ static void submit_polygon(void) {
     G3Polygon *poly = &sPolyRam[sBank][sNumPolys];
     memset(poly, 0, sizeof *poly);
     poly->index = sNumPolys;
-    poly->sub = sSubmitCount - 1;
     G3Vertex *ram = sVertexRam[sBank];
     if (phantom) {
         int rev = sPolyType == 2 && (sStripPolys & 1);
@@ -732,9 +697,7 @@ static void submit_polygon(void) {
     poly_screen(poly, n);
     poly->norig = phantom ? 0 : nv;
     memcpy(poly->orig, v, sizeof(G3Vertex) * nv);
-    for (int k = 0; k < 6; k++) poly->vp[k] = (s32)sViewport[k];
-    poly->clipk = clipk;
-    poly->yofs = sScreenYofs;
+    poly->yofs = (s16)sScreenYofs;
     if (!(attr & (1u << 13))) {
         int dot1 = 1;
         for (int i = 1; i < n; i++)
@@ -1063,7 +1026,6 @@ static void do_swap(void) {
     r->wbuffer = sFlushParam >> 1 & 1;
     r->manualSort = sFlushParam & 1;
     r->yofs = G3_YOFS;
-    r->serial++;
     if (r->wbuffer) g3_feature(F_WBUFFER);
     else if (r->npoly) g3_feature(F_ZBUFFER_POLYS);
     if (r->manualSort) g3_feature(F_MANUAL_SORT);
@@ -1085,7 +1047,6 @@ static void do_swap(void) {
     r->fogOffset = sRegs[(0x35c - 0x320) / 2] & 0x7fff;
     for (int i = 0; i < 32; i++) r->fogTable[i] = (u8)(sRegs[(0x360 - 0x320) / 2 + i / 2] >> (8 * (i & 1))) & 0x7f;
     sBank ^= 1;
-    sSubmitCount = 0;
     sNumPolys = sNumVerts = sNumOpaque = 0;
     sStripValid = 0;
     sFlushPending = 0;

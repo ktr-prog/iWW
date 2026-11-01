@@ -1,4 +1,5 @@
 #include "uptr.h"
+#include "host_tick.h"
 #include "npc/VillagerState.h"
 #include "types.h"
 #include "actor/ActorProfile.h"
@@ -257,7 +258,7 @@ void HouseOwnerAi::update(HouseOwnerVillager *o) {
         (this->*entry->update)(o);
     }
     if (timer > 0) {
-        timer--;
+        timer -= TICK_STEP_ENDS() ? 1 : 0;
     }
 }
 

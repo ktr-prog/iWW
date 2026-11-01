@@ -1,4 +1,5 @@
 #include "types.h"
+#include "host_tick.h"
 #include "ui/WfcTextRect.h"
 #include "ui/WfcTextKb.h"
 #include "net/WfcRect.h"
@@ -527,7 +528,7 @@ void WfcTextKb_HandleTouchHold() {
                 if (sWfcTextKb->touchKey != i + 0x2f) goto fail;
                 WfcTextKb_SetPressedKey(i + 0x2f);
                 if (i != 3) return;
-                sWfcTextKb->deleteHoldTimer = sWfcTextKb->deleteHoldTimer + 1;
+                sWfcTextKb->deleteHoldTimer = sWfcTextKb->deleteHoldTimer + (TICK_STEP_ENDS() ? 1 : 0);
                 WfcTextKb *gg = sWfcTextKb;
                 if (gg->deleteHoldTimer < 0x28) return;
                 if (gg->deleteEnabled == 0) {

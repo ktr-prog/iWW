@@ -1,4 +1,5 @@
 #include "types.h"
+#include "host_tick.h"
 #include "ui/ScrollKnob.h"
 #include "ui/LabelString.h"
 #include "gfx/BgVramTask.h"
@@ -1047,12 +1048,12 @@ extern "C" s32 DateTimePicker_UpdateListOpen(DateTimePicker *self) {
         self->listState = 1;
         Gfx2d_ShowLayer(self->listLayer);
         Gfx2d_EnableSubWindows(1);
-        self->listAnimTimer = self->listAnimTimer - 1;
+        self->listAnimTimer = self->listAnimTimer - (TICK_STEP_ENDS() ? 1 : 0);
         DateTimePicker_AnimOpenWindow(self);
         break;
     case 1:
         if (self->listAnimTimer != 0) {
-            self->listAnimTimer = self->listAnimTimer - 1;
+            self->listAnimTimer = self->listAnimTimer - (TICK_STEP_ENDS() ? 1 : 0);
             DateTimePicker_AnimOpenWindow(self);
         } else {
             Gfx2d_DisableSubWindows(1);
@@ -1065,7 +1066,7 @@ extern "C" s32 DateTimePicker_UpdateListOpen(DateTimePicker *self) {
         break;
     case 2:
         if (self->listAnimTimer < 3) {
-            self->listAnimTimer = self->listAnimTimer + 1;
+            self->listAnimTimer = self->listAnimTimer + (TICK_STEP_ENDS() ? 1 : 0);
             self->blendListPalette(self->listAnimTimer);
         } else {
             self->listState = 8;
@@ -1152,20 +1153,20 @@ extern "C" s32 DateTimePicker_UpdateListClose(DateTimePicker *self) {
         break;
     case 5:
         if (self->listAnimTimer != 0) {
-            self->listAnimTimer = self->listAnimTimer - 1;
+            self->listAnimTimer = self->listAnimTimer - (TICK_STEP_ENDS() ? 1 : 0);
             self->blendListPalette(self->listAnimTimer);
         } else {
             Snd_PlaySe(0x14);
             self->listState = 6;
             self->listAnimTimer = 3;
             Gfx2d_EnableSubWindows(1);
-            self->listAnimTimer = self->listAnimTimer - 1;
+            self->listAnimTimer = self->listAnimTimer - (TICK_STEP_ENDS() ? 1 : 0);
             DateTimePicker_AnimCloseWindow(self);
         }
         break;
     case 6:
         if (self->listAnimTimer != 0) {
-            self->listAnimTimer = self->listAnimTimer - 1;
+            self->listAnimTimer = self->listAnimTimer - (TICK_STEP_ENDS() ? 1 : 0);
             DateTimePicker_AnimCloseWindow(self);
         } else {
             Gfx2d_HideLayer(self->listLayer);

@@ -1,4 +1,5 @@
 #include "types.h"
+#include "host_tick.h"
 #include "Unk_020d8c7c.h"
 #include "menu/MenuProc.h"
 #include "ui/HandCursor.h"
@@ -438,7 +439,7 @@ void NearbyTownsMenu::updateCursorRelease() {
 
 void NearbyTownsMenu::updateCloseDelay() {
     if (delayTimer != 0) {
-        delayTimer--;
+        delayTimer -= TICK_STEP_ENDS() ? 1 : 0;
     } else {
         hideCursor();
         setPhase(1);

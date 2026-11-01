@@ -1,4 +1,5 @@
 #include "uptr.h"
+#include "host_tick.h"
 #include "host_shared_calls.h"
 #include "types.h"
 #include "Unk_020d8c7c.h"
@@ -748,7 +749,7 @@ void MailboxMenu::mainAct01() {
             }
             if (((TouchPromptBalloon *)&nameBalloon)->isOpenOrOpening()) {
                 if (touchHoldDelay != 0) {
-                    touchHoldDelay--;
+                    touchHoldDelay -= TICK_STEP_ENDS() ? 1 : 0;
                 } else {
                     selectLetter(touchedSlot, 1);
                     setMainState(2);
@@ -775,7 +776,7 @@ void MailboxMenu::mainAct02() {
 void MailboxMenu::mainAct03() {
     if (((TouchPromptBalloon *)&nameBalloon)->isOpenOrOpening()) {
         if (touchHoldDelay != 0) {
-            touchHoldDelay--;
+            touchHoldDelay -= TICK_STEP_ENDS() ? 1 : 0;
         } else {
             selectLetter(touchedSlot, 1);
             setMainState(2);

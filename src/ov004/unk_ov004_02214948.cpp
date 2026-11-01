@@ -1,4 +1,5 @@
 #include "uptr.h"
+#include "host_tick.h"
 #include "types.h"
 #include "gfx/VecFx32.h"
 #include "Unk_020d8c7c.h"
@@ -641,7 +642,7 @@ void BirthdayHostVillager::mainAct00() {
     }
     if (actionCtrl.getAction() == 0) {
         if (walkTimer != 0) {
-            walkTimer--;
+            walkTimer -= TICK_STEP_ENDS() ? 1 : 0;
         }
         if (walkTimer == 0) {
             walkAngle = Room_PickRandomWalkTarget(&walkTarget, &position, rotY);
@@ -713,7 +714,7 @@ BOOL BirthdayHostVillager::setupAct02() {
 
 void BirthdayHostVillager::mainAct02() {
     if (emotionTimer != 0) {
-        emotionTimer--;
+        emotionTimer -= TICK_STEP_ENDS() ? 1 : 0;
     }
     switch (emotionTimer) {
     case 0x14:
@@ -735,7 +736,7 @@ BOOL BirthdayHostVillager::setupAct03() {
 
 void BirthdayHostVillager::mainAct03() {
     if (emotionTimer != 0) {
-        emotionTimer--;
+        emotionTimer -= TICK_STEP_ENDS() ? 1 : 0;
     }
     switch (emotionTimer) {
     case 0x28:
@@ -824,7 +825,7 @@ void BirthdayHostVillager::mainAct08() {
     }
     moveCtrl.setWaypoint(&b);
     if (approachTimer != 0) {
-        approachTimer--;
+        approachTimer -= TICK_STEP_ENDS() ? 1 : 0;
     }
     r4 = Math_AngleXZ(&position, &a);
     r0 = Math_AngleDiffAbs(rotY, r4);

@@ -1,4 +1,5 @@
 #include "ds_div.h"
+#include "host_tick.h"
 #include "host_shared_calls.h"
 #include "types.h"
 #include "Unk_020d8c7c.h"
@@ -364,7 +365,7 @@ BOOL LetterWriteMenu::onDraw() {
     if (testFlags(4)) {
         s32 a = caretX;
         s32 b = caretY - scrollY;
-        caretBlinkTimer = caretBlinkTimer + 1;
+        caretBlinkTimer = caretBlinkTimer + (TICK_STEP_ENDS() ? 1 : 0);
         if ((caretBlinkTimer & 0x10) != 0) {
             Keyboard_DrawCaret(&keyboard, a, b, 3);
         }

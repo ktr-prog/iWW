@@ -1,4 +1,5 @@
 #include "types.h"
+#include "host_tick.h"
 #include "host_labels.h"
 #include "host_overlay_vars.h"
 #include "proto/main/unk_020b4828.h"
@@ -1123,10 +1124,10 @@ extern "C" void AquariumFish_UpdatePitch(E864 *o, s32 lim, s32 b)
         }
         if (o->isLeveling != 0) {
             if (o->pitch != 0) {
-                o->pitchTimer--;
+                o->pitchTimer -= TICK_STEP_ENDS() ? 1 : 0;
             }
         } else {
-            o->pitchTimer++;
+            o->pitchTimer += TICK_STEP_ENDS() ? 1 : 0;
             if (o->state == 5) {
                 o->isLeveling = 1;
             } else {
@@ -1374,8 +1375,8 @@ void AquariumJellyfish::update() {
         AquariumFish_TurnToTarget(o);
     }
     AquariumFish_Bob(o, 8, 0x28, o->subState);
-    o->bobTimer++;
-    o->stateTimer++;
+    o->bobTimer += TICK_STEP_ENDS() ? 1 : 0;
+    o->stateTimer += TICK_STEP_ENDS() ? 1 : 0;
     AquariumJellyfish_UpdatePulse(o);
     AquariumFish_CalcHitCenter(o, &o->hitCenter);
 }
@@ -1460,7 +1461,7 @@ extern "C" void AquariumJellyfish_UpdatePulse(E7d4 *o) {
         AquariumJellyfish_PulseShrink(o);
         break;
     }
-    o->pulseTimer++;
+    o->pulseTimer += TICK_STEP_ENDS() ? 1 : 0;
 }
 
 extern "C" void AquariumJellyfish_BeginPulse(E7d4 *o) {
@@ -1560,7 +1561,7 @@ void AquariumFastFish::update() {
         AquariumFish_UpdateDepthCapped(o);
     }
     AquariumFish_UpdateAnimSpeed(o, 0x333);
-    o->stateTimer++;
+    o->stateTimer += TICK_STEP_ENDS() ? 1 : 0;
     AquariumFish_CheckTouched(o);
 }
 
@@ -1631,7 +1632,7 @@ void AquariumBigFish::update() {
             AquariumFish_UpdatePitch(o, 0x71c, 0x28a);
         }
     }
-    o->stateTimer++;
+    o->stateTimer += TICK_STEP_ENDS() ? 1 : 0;
 }
 
 extern "C" void AquariumBigFish_UpdatePatrol(E72c *o, s32 a, s32 b) {
@@ -1702,7 +1703,7 @@ void AquariumFrog::update() {
         }
         break;
     }
-    o->stateTimer++;
+    o->stateTimer += TICK_STEP_ENDS() ? 1 : 0;
 }
 
 extern "C" void AquariumFrog_StartCroak(E834 *o) {
@@ -1742,7 +1743,7 @@ void AquariumEel::setup() {
 void AquariumEel::update() {
     E804 *e = this;
     (e->*sAquariumEelStates[e->eelState])();
-    e->stateTimer++;
+    e->stateTimer += TICK_STEP_ENDS() ? 1 : 0;
 }
 
 extern "C" void AquariumEel_StateStart(E804 *e) {
@@ -1864,8 +1865,8 @@ void AquariumSeaButterfly::update() {
         AquariumFish_TurnToTarget(e);
     }
     AquariumFish_Bob(e, 8, 0x14, e->subState);
-    e->bobTimer++;
-    e->stateTimer++;
+    e->bobTimer += TICK_STEP_ENDS() ? 1 : 0;
+    e->stateTimer += TICK_STEP_ENDS() ? 1 : 0;
     AquariumFish_CheckTouched(e);
     AquariumFish_CalcHitCenter(e, &e->hitCenter);
 }
@@ -1930,8 +1931,8 @@ void AquariumSeahorse::update() {
         AquariumFish_TurnToTarget(e);
     }
     AquariumFish_Bob(e, 8, 0x51, e->subState);
-    e->bobTimer++;
-    e->stateTimer++;
+    e->bobTimer += TICK_STEP_ENDS() ? 1 : 0;
+    e->stateTimer += TICK_STEP_ENDS() ? 1 : 0;
     AquariumFish_CheckTouched(e);
 }
 
@@ -2007,7 +2008,7 @@ void AquariumPufferFish::update() {
     AquariumFish_KeepInsideX(e);
     AquariumFish_UpdateAvoid(e);
     AquariumFish_TurnAtTankEnds(e);
-    e->stateTimer++;
+    e->stateTimer += TICK_STEP_ENDS() ? 1 : 0;
     if (AquariumFish_CheckTouched(e)) {
         if (e->unk_256 == 0) {
             e->subState = 1;
@@ -2035,7 +2036,7 @@ void AquariumPiranha::update() {
     o->prevPos.x = o->pos.x;
     o->prevPos.y = o->pos.y;
     o->prevPos.z = o->pos.z;
-    o->stateTimer = o->stateTimer + 1;
+    o->stateTimer = o->stateTimer + (TICK_STEP_ENDS() ? 1 : 0);
 }
 
 extern "C" void AquariumPiranha_StateSwim(E75c *o) {
@@ -2055,7 +2056,7 @@ extern "C" void AquariumPiranha_StateSwim(E75c *o) {
         v.y = pv->y;
         v.z = pv->z;
         if (Vec_DistSqXZ(&v, &o->pos) < 0x10000) {
-            o->nearPlayerTimer++;
+            o->nearPlayerTimer += TICK_STEP_ENDS() ? 1 : 0;
             if (o->nearPlayerTimer > 0xa) {
                 if (p->speed != 0) {
                     o->subState = 1;
@@ -2088,7 +2089,7 @@ extern "C" void AquariumPiranha_StateApproach(E75c *o) {
         o->nearPlayerTimer = 0;
     } else {
         AquariumPiranha_BobDepth(o);
-        o->nearPlayerTimer++;
+        o->nearPlayerTimer += TICK_STEP_ENDS() ? 1 : 0;
         if (o->nearPlayerTimer >= 0x46) {
             o->subState = 0;
             o->state = 2;
@@ -2192,7 +2193,7 @@ void AquariumSurfacingFish::update() {
         break;
     }
     AquariumFish_UpdateAnimSpeed(o, 0x333);
-    o->stateTimer = o->stateTimer + 1;
+    o->stateTimer = o->stateTimer + (TICK_STEP_ENDS() ? 1 : 0);
     AquariumFish_CheckTouched(o);
 }
 
@@ -2231,10 +2232,10 @@ extern "C" void AquariumSurfacingFish_UpdateSurface(E714 *o) {
     case 2:
         break;
     case 3:
-        o->pitchTimer = o->pitchTimer + 1;
+        o->pitchTimer = o->pitchTimer + (TICK_STEP_ENDS() ? 1 : 0);
         break;
     case 5:
-        o->pitchTimer = o->pitchTimer - 1;
+        o->pitchTimer = o->pitchTimer - (TICK_STEP_ENDS() ? 1 : 0);
         break;
     case 4:
         if (o->surfaceState == 0) o->stateTimer = 0;
@@ -2333,7 +2334,7 @@ void AquariumHidingFish::update() {
         AquariumHidingFish_UpdateGoby(o);
     }
     AquariumFish_UpdateAnimSpeed(o, 0x666);
-    o->stateTimer++;
+    o->stateTimer += TICK_STEP_ENDS() ? 1 : 0;
 }
 
 extern "C" void AquariumHidingFish_UpdateClownfish(E6fc *o) {
@@ -2377,7 +2378,7 @@ extern "C" void AquariumHidingFish_UpdateClownfish(E6fc *o) {
                 }
             }
         }
-        o->roamTimer++;
+        o->roamTimer += TICK_STEP_ENDS() ? 1 : 0;
     } else {
         AquariumHidingFish_UpdateHide(o);
     }
@@ -2515,7 +2516,7 @@ void AquariumCrawfish::update() {
         }
         break;
     }
-    o->stateTimer++;
+    o->stateTimer += TICK_STEP_ENDS() ? 1 : 0;
 }
 
 extern "C" void AquariumCrawfish_StartWalk(E84c *o) {
@@ -2613,7 +2614,7 @@ void AquariumSquid::update() {
     AquariumFish_KeepInsideX(o);
     AquariumFish_UpdateAvoid(o);
     AquariumFish_TurnAtTankEnds(o);
-    o->stateTimer++;
+    o->stateTimer += TICK_STEP_ENDS() ? 1 : 0;
     if (AquariumFish_CheckTouched(o)) {
         o->unk_256 = 0;
         AquariumFish_PlayAnim(o, 0);
@@ -2742,7 +2743,7 @@ extern "C" void AquariumSwimFish_UpdateSea(E864 *e) {
     }
     AquariumFish_UpdateAnimSpeed(e, 0x333);
     AquariumFish_KeepInsideX(e);
-    e->stateTimer++;
+    e->stateTimer += TICK_STEP_ENDS() ? 1 : 0;
     AquariumFish_CheckTouched(e);
 }
 
@@ -2794,7 +2795,7 @@ extern "C" void AquariumSwimFish_UpdateFreshwater(E864 *e) {
     AquariumFish_TurnToTarget(e);
 skip:
     AquariumFish_UpdateAnimSpeed(e, 0x333);
-    e->stateTimer++;
+    e->stateTimer += TICK_STEP_ENDS() ? 1 : 0;
     AquariumFish_CheckTouched(e);
 }
 

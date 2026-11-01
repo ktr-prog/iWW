@@ -1,4 +1,5 @@
 #include "uptr.h"
+#include "host_tick.h"
 #include "types.h"
 #include "gfx/VecFx32.h"
 
@@ -290,7 +291,7 @@ BOOL SpNpcBrewster::setupAct00() {
 
 BOOL SpNpcBrewster::mainAct00() {
     if (lookAtTimer > 0) {
-        lookAtTimer++;
+        lookAtTimer += TICK_STEP_ENDS() ? 1 : 0;
         if (lookAtTimer > 0x14) {
             lookAt.setTarget(0, 0, 0, &gVec3Zero, 4, data_020c6d1c, 1);
             lookAtTimer = -1;

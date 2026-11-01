@@ -1,4 +1,5 @@
 #include "types.h"
+#include "host_tick.h"
 #include "host_shared_calls.h"
 #include "host_overlay_vars.h"
 #include "gfx/Camera.h"
@@ -723,7 +724,7 @@ void BuildingActor::updateDoorExit() {
             }
         }
         if (exitDelay < 3) {
-            exitDelay++;
+            exitDelay += TICK_STEP_ENDS() ? 1 : 0;
         }
     }
 }
@@ -1194,7 +1195,7 @@ BOOL BuildingActor::enterDoorSlideClose() {
 
 void BuildingActor::execDoorSlideClose() {
     if (doorCloseSeDelay != 0) {
-        doorCloseSeDelay--;
+        doorCloseSeDelay -= TICK_STEP_ENDS() ? 1 : 0;
         if (doorCloseSeDelay == 0) {
             if (Item_IsNookShop(&itemId)) {
                 seEmitter.playSe(0x807);
@@ -1367,7 +1368,7 @@ BOOL BuildingActor::enterEntryWarp() {
 }
 
 void BuildingActor::execEntryWarp() {
-    warpTimer = warpTimer + 1;
+    warpTimer = warpTimer + (TICK_STEP_ENDS() ? 1 : 0);
     getEntranceType();
     u32 lim = 0x14;
     if (getEntranceType() == 1) {

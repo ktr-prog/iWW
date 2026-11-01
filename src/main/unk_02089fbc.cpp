@@ -1,4 +1,5 @@
 #include "uptr.h"
+#include "host_tick.h"
 #include "types.h"
 #include "Unk_020d8c7c.h"
 #include "text/Unk_02050288.h"
@@ -242,7 +243,7 @@ void HudClock::enterHidden() {
 
 void HudClock::updateHidden() {
     if (canShow() != 0) {
-        showDelay = showDelay - 1;
+        showDelay = showDelay - (TICK_STEP_ENDS() ? 1 : 0);
         if (showDelay <= 0) {
             enterAppearing();
         }
@@ -572,7 +573,7 @@ void HudClock::refreshMinute() {
 
 void HudClock::blinkColon() {
     if (colonLabel != 0) {
-        colonTimer = colonTimer - 1;
+        colonTimer = colonTimer - (TICK_STEP_ENDS() ? 1 : 0);
         s32 t = colonTimer;
         if (t <= 0) {
             colonTimer = 0x14;
@@ -976,7 +977,7 @@ void HudCountdown::updateRemaining() {
     BOOL t;
     s32 r;
     if (finishTimer > 0) {
-        finishTimer = finishTimer - 1;
+        finishTimer = finishTimer - (TICK_STEP_ENDS() ? 1 : 0);
     }
     if (durationKind != 0) {
         MI_CpuCopy8(&endTime, &a, sizeof(a));
@@ -1064,7 +1065,7 @@ void HudCountdown::updateSlide() {
     slideSpeed = c4;
     if (t != slideTarget) {
         if (slideDelay >= 0 && b) {
-            slideDelay = slideDelay + 1;
+            slideDelay = slideDelay + (TICK_STEP_ENDS() ? 1 : 0);
             if (slideDelay <= 10) {
                 goto end;
             }

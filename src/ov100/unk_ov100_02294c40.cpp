@@ -1,4 +1,5 @@
 #include "types.h"
+#include "host_tick.h"
 #include "host_labels.h"
 #include "host_shared_calls.h"
 #include "Unk_020d8c7c.h"
@@ -904,7 +905,7 @@ void ShopSellMenu::mainAct14() {
 void ShopSellMenu::mainAct15() {
     S *const s = this;
     if (s->delayTimer != 0) {
-        s->delayTimer--;
+        s->delayTimer -= TICK_STEP_ENDS() ? 1 : 0;
     } else {
         s->transitionState = 4;
         s->setPhase(1);

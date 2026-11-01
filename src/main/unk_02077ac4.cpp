@@ -1,4 +1,5 @@
 #include "ds_div.h"
+#include "host_tick.h"
 #include "host_labels.h"
 #include "town/TownBlockMap.h"
 #include "uptr.h"
@@ -8702,7 +8703,7 @@ extern "C" u32 VillagerState_GetMoodTimer(VillagerState *e) { return e->moodTime
 namespace nB {
 extern "C" void VillagerState_TickMoodTimer(VillagerState *e) {
     if (e->moodTimer != 0) {
-        e->moodTimer = e->moodTimer - 1;
+        e->moodTimer = e->moodTimer - (TICK_STEP_ENDS() ? 1 : 0);
     }
 }
 }

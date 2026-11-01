@@ -1,4 +1,5 @@
 #include "types.h"
+#include "host_tick.h"
 #include "snd/SndMgr.h"
 #include "snd/SndSceneBase.h"
 #include "snd/BgmBeatSync.h"
@@ -700,9 +701,9 @@ extern "C" void SndRamp_Start(SndRamp *r, s16 target, u32 frames) {
 
 extern "C" s16 SndRamp_Step(SndRamp *r) {
     if (r->frames != 0) {
-        r->frames--;
+        r->frames -= TICK_STEP_ENDS() ? 1 : 0;
         if (r->frames != 0) {
-            r->value += r->step;
+            r->value += TICK_PART(r->step);
         } else {
             r->value = r->target << 12;
         }

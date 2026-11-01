@@ -1,4 +1,5 @@
 #include "types.h"
+#include "host_tick.h"
 #include "nitro/gxoam.h"
 #include "ui/WfcTextKb.h"
 #include "net/WfcRect.h"
@@ -369,7 +370,7 @@ void WfcNumPad_HandleTouchHold() {
             if (sWfcNumPad->touchKey != i + 10) goto fail;
             WfcNumPad_SetPressedKey(i + 10);
             if (i != 0) goto end;
-            sWfcNumPad->deleteHoldTimer++;
+            sWfcNumPad->deleteHoldTimer += TICK_STEP_ENDS() ? 1 : 0;
             if (sWfcNumPad->deleteHoldTimer < 0x28) return;
             if (sWfcNumPad->deleteEnabled == 0) {
                 WfcSound_Play(9);

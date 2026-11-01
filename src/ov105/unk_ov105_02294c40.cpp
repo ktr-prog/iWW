@@ -1,4 +1,5 @@
 #include "types.h"
+#include "host_tick.h"
 #include "host_shared_calls.h"
 #include "Unk_020d8c7c.h"
 #include "net/CommManager.h"
@@ -664,7 +665,7 @@ void LetterStorageMenu::transitionAct0C() {
     if (stepSlideOut(0)) {
         Gfx2d_ResetLayer(4);
         if (pageLoadDelay != 0) {
-            pageLoadDelay--;
+            pageLoadDelay -= TICK_STEP_ENDS() ? 1 : 0;
         } else {
             loadPage();
             setTransitionState(0xd);
@@ -871,7 +872,7 @@ void LetterStorageMenu::mainAct01() {
             }
             if (nameBalloon.isOpenOrOpening()) {
                 if (touchHoldDelay != 0) {
-                    touchHoldDelay--;
+                    touchHoldDelay -= TICK_STEP_ENDS() ? 1 : 0;
                 } else {
                     selectLetter(touchedSlot, 1);
                     setMainState(2);
@@ -898,7 +899,7 @@ void LetterStorageMenu::mainAct02() {
 void LetterStorageMenu::mainAct03() {
     if (nameBalloon.isOpenOrOpening()) {
         if (touchHoldDelay != 0) {
-            touchHoldDelay--;
+            touchHoldDelay -= TICK_STEP_ENDS() ? 1 : 0;
         } else {
             selectLetter(touchedSlot, 1);
             setMainState(2);

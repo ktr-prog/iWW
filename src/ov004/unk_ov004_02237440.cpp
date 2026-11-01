@@ -1,4 +1,5 @@
 #include "ds_div.h"
+#include "host_tick.h"
 #include "host_labels.h"
 #include "host_overlay_vars.h"
 #include "uptr.h"
@@ -2983,7 +2984,7 @@ void MuseumInsect::runCicada() {
                 ((AnimFrameCtrl *)(&(AnimFrameCtrl &)*p))->setup(4, 1, 0x1000, 0);
                 cooldown = 0x3c;
             } else if (cooldown != 0) {
-                cooldown = cooldown - 1;
+                cooldown = cooldown - (TICK_STEP_ENDS() ? 1 : 0);
             }
         } else {
             s32 v = p->curFrame >> 12;
@@ -2997,7 +2998,7 @@ void MuseumInsect::runCicada() {
             if (cooldown == 0) {
                 MuseumInsect_PlaySe(this, 0);
             } else {
-                cooldown = cooldown - 1;
+                cooldown = cooldown - (TICK_STEP_ENDS() ? 1 : 0);
             }
         } else {
             cooldown = 0x3c;

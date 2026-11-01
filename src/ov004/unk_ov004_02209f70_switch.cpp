@@ -1,4 +1,5 @@
 #include "types.h"
+#include "host_tick.h"
 #include "room/Unk_ov004_0224882c_Buf.h"
 #include "gfx/Mtx43.h"
 #include "actor/ActorListNode.h"
@@ -61,7 +62,7 @@ BOOL FtrSingingInsect::updateActive() {
         switch (singPhase) {
         case 0:
             if (restTimer != 0) {
-                restTimer--;
+                restTimer -= TICK_STEP_ENDS() ? 1 : 0;
             }
             if (restTimer == 0) {
                 singPhase = 1;
@@ -74,7 +75,7 @@ BOOL FtrSingingInsect::updateActive() {
             }
             break;
         case 1: {
-            singFrames++;
+            singFrames += TICK_STEP_ENDS() ? 1 : 0;
             u32 r = FtrActor_StepAnims(this);
             if (prevAnimDone != 0 && r != 0) {
                 prevAnimDone = 0;
@@ -97,7 +98,7 @@ BOOL FtrSingingInsect::updateActive() {
         switch (singPhase) {
         case 0:
             if (restTimer != 0) {
-                restTimer--;
+                restTimer -= TICK_STEP_ENDS() ? 1 : 0;
             }
             if (restTimer == 0) {
                 singPhase = 1;

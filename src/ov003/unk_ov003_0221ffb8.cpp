@@ -1,4 +1,5 @@
 #include "ds_div.h"
+#include "host_tick.h"
 #include "host_overlay_vars.h"
 #include "gfx/Model.h"
 #include "proto/main/unk_0202fa70.h"
@@ -995,7 +996,7 @@ extern "C" void FishShadow_ThinkFree(Obj_f9 *o)
         }
         break;
     }
-    o->stateTimer = o->stateTimer + 1;
+    o->stateTimer = o->stateTimer + (TICK_STEP_ENDS() ? 1 : 0);
     if (o->biteState != 7 && o->moveState != 5) {
         if (FishShadow_TryNoticeBobber(o) != 0) {
             o->stateTimer = 0;
@@ -1068,7 +1069,7 @@ extern "C" void FishShadow_MoveCruise(Obj_f9 *o)
 {
     FieldFish_MoveXZ(&o->position, 0x19a, o->rotY);
     FishShadow_SetAnimSpeed(o, 0x20);
-    o->cruiseTimer--;
+    o->cruiseTimer -= TICK_STEP_ENDS() ? 1 : 0;
     if (o->cruiseTimer == 0) {
         o->stateTimer = 0;
         o->moveState = 3;
@@ -1156,7 +1157,7 @@ extern "C" void FishShadow_ThinkBobber(Obj_f8 *self)
     if ((self->*sFishBiteStates[self->biteState].f)() == 0) {
         FishShadow_FleeFromPlayer(self);
     }
-    self->stateTimer = self->stateTimer + 1;
+    self->stateTimer = self->stateTimer + (TICK_STEP_ENDS() ? 1 : 0);
 }
 
 
@@ -1223,7 +1224,7 @@ extern "C" s32 FishShadow_BiteApproach(Obj_f8 *self)
             self->rotY = FishAngleXZ(&self->position, q);
         }
     }
-    self->biteStepTimer = self->biteStepTimer + 1;
+    self->biteStepTimer = self->biteStepTimer + (TICK_STEP_ENDS() ? 1 : 0);
     return 1;
 }
 
@@ -1281,7 +1282,7 @@ extern "C" s32 FishShadow_BiteInspect(Obj_f8 *self)
     }
     }
     FishShadow_SetAnimSpeed(self, 0x18);
-    self->biteStepTimer = self->biteStepTimer + 1;
+    self->biteStepTimer = self->biteStepTimer + (TICK_STEP_ENDS() ? 1 : 0);
     return 1;
 }
 
@@ -1385,7 +1386,7 @@ extern "C" s32 FishShadow_BiteNibble(Obj_f8 *self)
             self->rotY = FishAngleXZ(&self->position, q);
         }
     }
-    self->biteStepTimer = self->biteStepTimer + 1;
+    self->biteStepTimer = self->biteStepTimer + (TICK_STEP_ENDS() ? 1 : 0);
     return 1;
 }
 
@@ -2025,7 +2026,7 @@ extern "C" BOOL FieldFish_IsCastSplashActive()
 extern "C" void FieldFish_TickCastSplash()
 {
     if (sFishCastSplashTimer != 0) {
-        sFishCastSplashTimer--;
+        sFishCastSplashTimer -= TICK_STEP_ENDS() ? 1 : 0;
     }
 }
 

@@ -1,4 +1,5 @@
 #include "gfx/Model.h"
+#include "host_tick.h"
 #include "host_labels.h"
 #include "host_shared_calls.h"
 #include "host_overlay_vars.h"
@@ -1879,7 +1880,7 @@ void FieldVillager::updateStareTimer() {
     using namespace ns_02265d34;
     if (drawEnabled != 0 && updateEnabled != 0 && look.drawFn != 0 && ((NpcTalkCtrl *)(&talkCtrl))->isBusy() == 0 && getPlayerMemory() != 0) {
         if (isPlayerFacing()) {
-            pushFrames++;
+            pushFrames += TICK_STEP_ENDS() ? 1 : 0;
             if ((s32)pushFrames >= 100) {
                 pushFrames = 100;
             }
@@ -2227,41 +2228,41 @@ void FieldVillagerAi_Update(FieldVillagerAi *self, FieldVillager *o) {
         (self->*(self->stateEntry->exec))(o);
     }
     if (self->stateTimer > 0) {
-        self->stateTimer--;
+        self->stateTimer -= TICK_STEP_ENDS() ? 1 : 0;
     }
     if (self->routeTimeout > 0) {
         self->routeTimeout--;
     }
     if (self->routeStepTimer > 0) {
-        self->routeStepTimer--;
+        self->routeStepTimer -= TICK_STEP_ENDS() ? 1 : 0;
     }
     if (self->lookStopTimer > 0) {
-        self->lookStopTimer--;
+        self->lookStopTimer -= TICK_STEP_ENDS() ? 1 : 0;
     }
     if (self->lookStopCooldown > 0) {
-        self->lookStopCooldown--;
+        self->lookStopCooldown -= TICK_STEP_ENDS() ? 1 : 0;
     }
     if (self->cooldown > 0) {
-        self->cooldown--;
+        self->cooldown -= TICK_STEP_ENDS() ? 1 : 0;
     }
     if (self->hitResetTimer != 0) {
-        self->hitResetTimer--;
+        self->hitResetTimer -= TICK_STEP_ENDS() ? 1 : 0;
     }
     if (o->talkCtrl.isBusy() == 0) {
         if (self->seekPlayerCooldown > 0) {
-            self->seekPlayerCooldown--;
+            self->seekPlayerCooldown -= TICK_STEP_ENDS() ? 1 : 0;
         } else if (self->talkUrgeTimer > 0) {
-            self->talkUrgeTimer--;
+            self->talkUrgeTimer -= TICK_STEP_ENDS() ? 1 : 0;
         }
         if (self->activityTimer > 0) {
-            self->activityTimer--;
+            self->activityTimer -= TICK_STEP_ENDS() ? 1 : 0;
         }
         if (self->heldItemCheckTimer > 0) {
-            self->heldItemCheckTimer--;
+            self->heldItemCheckTimer -= TICK_STEP_ENDS() ? 1 : 0;
         }
     }
     if (self->pitfallTimer > 0) {
-        self->pitfallTimer--;
+        self->pitfallTimer -= TICK_STEP_ENDS() ? 1 : 0;
     }
 }
 }
@@ -5847,7 +5848,7 @@ void FieldVillagerFxTimer::update(FieldVillager *o) {
     using namespace ns_0225f1a0;
     VecFx32 buf;
     if (fleaEffectTimer > 0) {
-        fleaEffectTimer = fleaEffectTimer - 1;
+        fleaEffectTimer = fleaEffectTimer - (TICK_STEP_ENDS() ? 1 : 0);
     }
     if (holdCount != 0) {
         holdCount = holdCount - 1;

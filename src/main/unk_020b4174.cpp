@@ -1,4 +1,5 @@
 #include "types.h"
+#include "host_tick.h"
 #include "host_labels.h"
 #include "sys/ProcProfile.h"
 #include "Unk_020d8c7c.h"
@@ -111,7 +112,7 @@ BOOL BootLogoScene::onExecute() {
         break;
     case 1:
         if (fadeTimer != 0) {
-            fadeTimer = fadeTimer - 1;
+            fadeTimer = fadeTimer - (TICK_STEP_ENDS() ? 1 : 0);
             Gfx2d_SetBrightness(-fadeTimer);
         } else {
             logoState = 2;
@@ -133,7 +134,7 @@ BOOL BootLogoScene::onExecute() {
     }
     case 3:
         if (fadeTimer != 0) {
-            fadeTimer = fadeTimer - 1;
+            fadeTimer = fadeTimer - (TICK_STEP_ENDS() ? 1 : 0);
             Gfx2d_SetBrightness(fadeTimer - 0x10);
         } else {
             Gfx2d_SetMainPlanes(0);

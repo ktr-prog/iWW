@@ -1,4 +1,5 @@
 #include "types.h"
+#include "host_tick.h"
 #include "host_shared_calls.h"
 #include "Unk_020d8c7c.h"
 #include "net/CommManager.h"
@@ -1294,7 +1295,7 @@ void PocketsFullMenu::onChoiceReleaseFish() {
 
 void PocketsFullMenu::mainAct11() {
     if (*(volatile u8 *)&waitTimer != 0) {
-        waitTimer = waitTimer - 1;
+        waitTimer = waitTimer - (TICK_STEP_ENDS() ? 1 : 0);
     } else {
         u8 k = getLocalPlayerIndex();
         s32 t = getSlotItem(selectedSlot);

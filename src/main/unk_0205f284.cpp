@@ -1,4 +1,5 @@
 #include "uptr.h"
+#include "host_tick.h"
 
 #include "types.h"
 #include "gfx/VecFx32.h"
@@ -540,7 +541,7 @@ void FishBobber::setState(s32 state)
 void FishBobber::update()
 {
     sFishBobberPool.pollTexUpload(slot);
-    stateTimer++;
+    stateTimer += TICK_STEP_ENDS() ? 1 : 0;
     justLanded = 0;
     if (curState >= 10) {
         setState(0);

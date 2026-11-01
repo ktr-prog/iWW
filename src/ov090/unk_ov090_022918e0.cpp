@@ -1,4 +1,5 @@
 #include "types.h"
+#include "host_tick.h"
 #include "Unk_020d8c7c.h"
 #include "text/Unk_02050288.h"
 #include "sys/PrioListNode.h"
@@ -158,7 +159,7 @@ BOOL MenuTabBar::execMain() {
         }
     }
     if (sTabSwitchCooldown != 0) {
-        sTabSwitchCooldown = sTabSwitchCooldown - 1;
+        sTabSwitchCooldown = sTabSwitchCooldown - (TICK_STEP_ENDS() ? 1 : 0);
     }
     (this->*tbl[mainState])();
     if (tabsShown != 0) {

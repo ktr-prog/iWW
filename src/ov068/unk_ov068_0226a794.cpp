@@ -1,4 +1,5 @@
 #include "types.h"
+#include "host_tick.h"
 #include "host_shared_calls.h"
 #include "gfx/VecFx32.h"
 #include "actor/ActorProfile.h"
@@ -550,7 +551,7 @@ void KappnTaxi::execTaxiWarpTownHall() {
     VecFx32 v;
     s16 sv;
     if (warpDelayTimer != 0) {
-        warpDelayTimer = warpDelayTimer - 1;
+        warpDelayTimer = warpDelayTimer - (TICK_STEP_ENDS() ? 1 : 0);
     }
     if (warpDelayTimer == 0) {
         BuildingActor *q = (BuildingActor *)Shared_BuildingList_FindByItem(0x5000);
@@ -603,7 +604,7 @@ void KappnTaxi::execTaxiPlayerExitTownHall() {
                 }
             }
             if (exitWalkDelay != 0) {
-                exitWalkDelay = exitWalkDelay - 1;
+                exitWalkDelay = exitWalkDelay - (TICK_STEP_ENDS() ? 1 : 0);
             }
         }
     }
@@ -659,7 +660,7 @@ void KappnTaxi::execTaxiPlayerGetIn() {
     }
     if (getInTimer != 0) {
         PlayerActor_SetHeadTilt(0, 0, 4);
-        getInTimer = getInTimer - 1;
+        getInTimer = getInTimer - (TICK_STEP_ENDS() ? 1 : 0);
     }
     model.stepAnim();
 }
@@ -693,7 +694,7 @@ void KappnTaxi::execTaxiLeaveEnd() {
         gSaveData.resetPlayer(PlayerData_GetCurrentIndex());
     }
     if (sKappnTaxiLeaveTimer >= 0) {
-        sKappnTaxiLeaveTimer = sKappnTaxiLeaveTimer - 1;
+        sKappnTaxiLeaveTimer = sKappnTaxiLeaveTimer - (TICK_STEP_ENDS() ? 1 : 0);
     }
 }
 

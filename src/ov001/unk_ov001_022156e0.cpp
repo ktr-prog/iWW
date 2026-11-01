@@ -1,4 +1,5 @@
 #include "types.h"
+#include "host_tick.h"
 #include "net/WfcConfigSlot.h"
 #include "nitro/gxoam.h"
 #include "nitro/io_access.h"
@@ -370,7 +371,7 @@ extern "C" void WfcManualSetup_SetAutoDns(u32 a) {
 
 extern "C" void WfcManualSetup_HandleScrollBar() {
     if (sWfcManualSetup->scrollTask != 0) return;
-    if (sWfcManualSetup->dragRedrawDelay != 0) sWfcManualSetup->dragRedrawDelay--;
+    if (sWfcManualSetup->dragRedrawDelay != 0) sWfcManualSetup->dragRedrawDelay -= TICK_STEP_ENDS() ? 1 : 0;
     switch (WfcScrollBar_GetEvent()) {
     case 0:
         break;

@@ -1,4 +1,5 @@
 #include "ds_div.h"
+#include "host_tick.h"
 #include "host_mem.h"
 #include "host_shared_calls.h"
 #include "gfx/HBlankTask.h"
@@ -3199,7 +3200,7 @@ extern "C" BOOL SkyShot_HasMaxHits() {
 }
 
 void SkyShotSequence::actShotFlight() {
-    timer--;
+    timer -= TICK_STEP_ENDS() ? 1 : 0;
     if (timer <= 0) {
         endWatch(playerSlot);
         reset();
@@ -3213,7 +3214,7 @@ void SkyShotSequence::actBalloonHit() {
 void SkyShotSequence::actBalloonDrop() {
     relaxHead(0x190, 0x190);
     if (timer > 0) {
-        timer--;
+        timer -= TICK_STEP_ENDS() ? 1 : 0;
         if (timer == 0) {
             if (FieldItemFx_StartBalloonDrop(goldenBalloon != 0 ? 1 : 0, ((targetX + 0x800) >> 12) - 0x80) == 0) {
                 balloonDropEnded = 1;
@@ -3240,7 +3241,7 @@ void SkyShotSequence::actUfoHit() {
 
 void SkyShotSequence::actUfoFall() {
     relaxHead(0x50, 0);
-    timer--;
+    timer -= TICK_STEP_ENDS() ? 1 : 0;
     if (timer <= 0) {
         VecFx32 v;
         Camera_StartShake(0xa3d);
@@ -3253,7 +3254,7 @@ void SkyShotSequence::actUfoFall() {
 
 void SkyShotSequence::actUfoCrashed() {
     relaxHead(0x190, 0x190);
-    timer--;
+    timer -= TICK_STEP_ENDS() ? 1 : 0;
     if (timer <= 0) {
         Shared_PlayerActor_LocalEndWatch();
         Camera_RestorePrevMode();
@@ -3276,7 +3277,7 @@ void SkyShotSequence::actPeteHit() {
 void SkyShotSequence::actPeteFall() {
     relaxHead(0x50, 0);
     if (timer > 0) {
-        timer--;
+        timer -= TICK_STEP_ENDS() ? 1 : 0;
     } else {
         VecFx32 v;
         Camera_StartShake(0x5c3);
@@ -3289,7 +3290,7 @@ void SkyShotSequence::actPeteFall() {
 
 void SkyShotSequence::actPeteFallen() {
     relaxHead(0x190, 0x190);
-    timer--;
+    timer -= TICK_STEP_ENDS() ? 1 : 0;
     if (timer <= 0) {
         void* p = PlayerActor_GetBodyPos(playerSlot);
         if (p) {
@@ -3811,7 +3812,7 @@ void SkySprites::spawnInitialPrecip() {
 
 void SkySprites::updateLightning() {
     if (thunderTimer <= 0) thunderTimer = 0x32;
-    thunderTimer--;
+    thunderTimer -= TICK_STEP_ENDS() ? 1 : 0;
     if (thunderTimer <= 0) {
         if (Random_GlobalBelow(8) == 0) {
             spawn(8, 0x3b, NULL, 0);
@@ -3823,7 +3824,7 @@ void SkySprites::updateLightning() {
 
 void SkySprites::updateThunderFlash() {
     if (thunderTimer <= 0) thunderTimer = 0x32;
-    thunderTimer--;
+    thunderTimer -= TICK_STEP_ENDS() ? 1 : 0;
     if (thunderTimer <= 0) {
         SceneLights_StartFlash(0);
         thunderTimer = Random_GlobalBelow(200) + 10;
@@ -3997,7 +3998,7 @@ void SkySprites::updateShootingStar() {
     }
     if (a && c && d) {
         if (shootingStarDelay > 0) {
-            shootingStarDelay--;
+            shootingStarDelay -= TICK_STEP_ENDS() ? 1 : 0;
             if (shootingStarDelay == 0) {
                 spawn(3, 0x1e, 0, 0);
             }
@@ -4889,7 +4890,7 @@ void SkySprites::rollLaunchInterval(s32 *out) {
 }
 
 void SkySprites::tickBigLaunch() {
-    fireworksBigTimer = fireworksBigTimer - 1;
+    fireworksBigTimer = fireworksBigTimer - (TICK_STEP_ENDS() ? 1 : 0);
     if (fireworksBigTimer <= 0) {
         s32 r = Random_GlobalBelow(4);
         if (canLaunchBig(r)) {
@@ -4900,7 +4901,7 @@ void SkySprites::tickBigLaunch() {
 }
 
 void SkySprites::tickLowBigLaunch() {
-    fireworksBigTimer = fireworksBigTimer - 1;
+    fireworksBigTimer = fireworksBigTimer - (TICK_STEP_ENDS() ? 1 : 0);
     if (fireworksBigTimer <= 0) {
         s32 r = Random_GlobalBelow(4);
         if (canLaunchBig(r)) {
@@ -6008,7 +6009,7 @@ void WeatherManager::transitionTimedBegin()
 
 void WeatherManager::transitionTimedBlend()
 {
-    transitionTimer++;
+    transitionTimer += TICK_STEP_ENDS() ? 1 : 0;
     if (transitionTimer >= 0x2a8) {
         setLevels(targetLevel, targetLevel);
         transitionStep = 3;
@@ -6025,7 +6026,7 @@ void WeatherManager::transitionTimedFinish()
 
 void WeatherManager::transitionTimedWait()
 {
-    transitionTimer++;
+    transitionTimer += TICK_STEP_ENDS() ? 1 : 0;
     if (transitionTimer >= 0x2a8) {
         if (requestedLevel == level) {
             transitionStep = 0;
@@ -6153,7 +6154,7 @@ extern "C" void Sky_UpdateLineTables()
         }
     }
     s32 *gp = &gWeatherManager.cloudScroll;
-    s32 c = b; b = *gp; b += 0x60; b += c;
+    s32 c = b; b = *gp; b += TICK_PART(0x60); b += c;
     if (b >= 0x10000) b -= 0x10000;
     *gp = b;
     if (sSkyLineTablesReady == 0) {

@@ -1,4 +1,5 @@
 #include "ds_div.h"
+#include "host_tick.h"
 #include "host_labels.h"
 #include "uptr.h"
 #include "types.h"
@@ -7734,7 +7735,7 @@ namespace nB {
 extern "C" void MoneyRock_Update(MoneyRockState *self) {
     if (gCommManager->isOnline() == 0) {
         if (self->timer > 0) {
-            self->timer--;
+            self->timer -= TICK_STEP_ENDS() ? 1 : 0;
         }
         if (self->timer == 0) {
             u16 v = *(u16 *)self;

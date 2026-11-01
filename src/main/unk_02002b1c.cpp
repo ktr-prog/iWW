@@ -1,5 +1,6 @@
 #include "uptr.h"
 #include "types.h"
+#include "host_tick.h"
 #include "gfx/VecFx32.h"
 #include "Unk_020d8c7c.h"
 #include "gfx/ToonTable.h"
@@ -179,7 +180,9 @@ void Actor::setCullParams(s32 a, s32 b, s32 c) {
 }
 
 void Actor::applyVelocity(ActorCollider *v) {
-    VEC_Add(&position, &velocity, &position);
+    position.x += TICK_PART(velocity.x);
+    position.y += TICK_PART(velocity.y);
+    position.z += TICK_PART(velocity.z);
     if (v) {
         position.x = position.x + v->pushX;
         position.z = position.z + v->pushZ;
@@ -189,7 +192,7 @@ void Actor::applyVelocity(ActorCollider *v) {
 void Actor::calcVelocity() {
     if (speed == 0) {
         s32 v = maxFallSpeed;
-        s32 w = velocity.y + gravity;
+        s32 w = velocity.y + TICK_PART(gravity);
         if (w >= v) v = w;
         velocity.x = 0;
         velocity.y = v;
@@ -197,7 +200,7 @@ void Actor::calcVelocity() {
     } else {
         s32 r = func_01ffcb0c(speed, data_02135f44[((u16)moveAngleY >> 4) * 2 + 1]);
         s32 v = maxFallSpeed;
-        s32 w = velocity.y + gravity;
+        s32 w = velocity.y + TICK_PART(gravity);
         if (w >= v) v = w;
         velocity.x = func_01ffcb0c(speed, data_02135f44[((u16)moveAngleY >> 4) * 2]);
         velocity.y = v;

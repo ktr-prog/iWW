@@ -1,4 +1,5 @@
 #include "ds_div.h"
+#include "host_tick.h"
 #include "host_overlay_vars.h"
 #include "uptr.h"
 #include "proto/ov003/unk_ov003_022187fc.h"
@@ -1778,7 +1779,7 @@ extern "C" void Insect_FlutterFlight(Rec *self) {
 namespace s13 {
 extern "C" BOOL Insect_TickTimer(Rec *self) {
     if (self->waitTimer > 0) {
-        self->waitTimer--;
+        self->waitTimer -= TICK_STEP_ENDS() ? 1 : 0;
     } else {
         return TRUE;
     }
@@ -2543,7 +2544,7 @@ extern "C" void Pondskater_Update(Rec *o) {
         if (o->auxTimer <= 0) {
             *st = 3;
         } else {
-            o->auxTimer = o->auxTimer - 1;
+            o->auxTimer = o->auxTimer - (TICK_STEP_ENDS() ? 1 : 0);
         }
         break;
     }
@@ -4000,7 +4001,7 @@ extern "C" void TreeBug_CheckAlarm(Rec *o, s16 *p) {
                     ((AnimFrameCtrl *)(&(AnimFrameCtrl &)o->model))->setup(4, 1, 0x1000, 0);
                     o->cooldownTimer = 0x3c;
                 } else if (o->cooldownTimer != 0) {
-                    o->cooldownTimer--;
+                    o->cooldownTimer -= TICK_STEP_ENDS() ? 1 : 0;
                 }
             } else {
                 s32 m = (s32)(*(u32 *)&o->model.curFrame) >> 12;
@@ -4119,7 +4120,7 @@ extern "C" void Crawler_Watch(Rec *o, s16 *p) {
                 ((AnimFrameCtrl *)(&(AnimFrameCtrl &)o->model))->setup(9, 1, 0x1000, (((u32)o->model.curFrame << 4) >> 16));
                 o->cooldownTimer = 0x3c;
             } else if (o->cooldownTimer != 0) {
-                o->cooldownTimer--;
+                o->cooldownTimer -= TICK_STEP_ENDS() ? 1 : 0;
             } else if (d < o->disturbRadius) {
                 u32 m = (((u32)o->model.curFrame << 4) >> 16);
                 if (m == 0) {
@@ -4150,7 +4151,7 @@ extern "C" void Crawler_Watch(Rec *o, s16 *p) {
                 } else if ((u16)t == 1) {
                     ((AnimModel *)(&o->model))->setFrame(2);
                 } else if (o->cooldownTimer != 0) {
-                    o->cooldownTimer--;
+                    o->cooldownTimer -= TICK_STEP_ENDS() ? 1 : 0;
                 }
             }
         }
@@ -5565,7 +5566,7 @@ extern "C" void Insect_UpdateSpawning(InsectManager *self) {
         if (sInsectSpawnTimer % 20 == 0) {
             FieldInsect_PurgeStale();
         }
-        sInsectSpawnTimer++;
+        sInsectSpawnTimer += TICK_STEP_ENDS() ? 1 : 0;
         u32 c = sInsectSpawnTimer;
         if (c == 0x3c) {
             Insect_TrySpawnRandom(self, 1, 0, -1);
@@ -6931,7 +6932,7 @@ extern "C" void FieldInsect_PurgeStale()
 {
     Insect *e;
     s32 i;
-    sFieldInsectPurgeTimer++;
+    sFieldInsectPurgeTimer += TICK_STEP_ENDS() ? 1 : 0;
     if (sFieldInsectPurgeTimer > 0x78) {
         e = sFieldInsects;
         sFieldInsectPurgeTimer = 0;

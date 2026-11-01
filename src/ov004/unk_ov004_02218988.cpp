@@ -1,4 +1,5 @@
 #include "types.h"
+#include "host_tick.h"
 #include "npc/VillagerState.h"
 #include "gfx/VecFx32.h"
 #include "actor/ActorProfile.h"
@@ -1061,7 +1062,7 @@ BOOL FleaMarketBuyerVillager::checkLeave() {
     }
     {
         if (leaveTimer != 0) {
-            leaveTimer = leaveTimer - 1;
+            leaveTimer = leaveTimer - (TICK_STEP_ENDS() ? 1 : 0);
             if (leaveTimer == 1) {
                 visitStage = 3;
                 TalkRequest_AddPlayerTalk6(this, 0);
@@ -1075,7 +1076,7 @@ BOOL FleaMarketBuyerVillager::checkLeave() {
     s32 n = DateTime_DiffMinutes(&startTime.dt, &z.dt);
     {
         if (doorWaitFrames != 0) {
-            doorWaitFrames = doorWaitFrames + 1;
+            doorWaitFrames = doorWaitFrames + (TICK_STEP_ENDS() ? 1 : 0);
         }
     }
     if (n >= 0x3c || doorWaitFrames > 0x258) {

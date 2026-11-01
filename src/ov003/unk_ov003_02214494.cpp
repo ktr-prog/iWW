@@ -1,4 +1,5 @@
 #include "types.h"
+#include "host_tick.h"
 #include "host_labels.h"
 #include "gfx/VecFx32.h"
 #include "field/Unk_ov003_02214494_Views.h"
@@ -351,7 +352,7 @@ BOOL ReddTent::enterTentWarp() {
 
 void ReddTent::execTentWarp() {
     if (PlayerActor_IsStowFinished()) {
-        warpFrames++;
+        warpFrames += TICK_STEP_ENDS() ? 1 : 0;
     }
     u32 lim;
     if (getEntranceType() == 2) {

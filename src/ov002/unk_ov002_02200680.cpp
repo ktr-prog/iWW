@@ -1,4 +1,5 @@
 #include "types.h"
+#include "host_tick.h"
 #include "Unk_020d8c7c.h"
 #include "text/Unk_02050288.h"
 #include "talk/MsgStringBase.h"
@@ -74,7 +75,7 @@ TouchPromptBalloon::~TouchPromptBalloon() {}
 s32 TouchPromptBalloon::updatePrompt() {
     s32 r = 0;
     if (autoCloseTimer != 0) {
-        autoCloseTimer = autoCloseTimer - 1;
+        autoCloseTimer = autoCloseTimer - (TICK_STEP_ENDS() ? 1 : 0);
         if (autoCloseTimer == 0) {
             if (promptState == 3) {
                 hide(r);

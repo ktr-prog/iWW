@@ -1,4 +1,5 @@
 #include "uptr.h"
+#include "host_tick.h"
 #include "types.h"
 #include "menu/MenuProc.h"
 #include "sys/ListNode.h"
@@ -824,7 +825,7 @@ extern "C" void MenuCtrl_ResetForceClose(void) {
 extern "C" void MenuCtrl_TickForceClose(void) {
     if (MenuCtrl_HasFlags(0x80)) {
         if (sForceCloseDelay != 0) {
-            sForceCloseDelay--;
+            sForceCloseDelay -= TICK_STEP_ENDS() ? 1 : 0;
         }
     }
 }

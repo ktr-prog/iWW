@@ -1,4 +1,5 @@
 #include "nitro/fs.h"
+#include "host_tick.h"
 #include "types.h"
 #include "menu/TitleBlinkText.h"
 #include "nitro/io_access.h"
@@ -225,7 +226,7 @@ void TitleBlinkText::updateDelay() {
     if (variant != requestedVariant) {
         setIdle();
     } else {
-        showDelay = showDelay - 1;
+        showDelay = showDelay - (TICK_STEP_ENDS() ? 1 : 0);
         if (showDelay > 0) {
         } else {
             show();

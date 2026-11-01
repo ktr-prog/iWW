@@ -1,4 +1,5 @@
 #include "types.h"
+#include "host_tick.h"
 #include "host_shared_calls.h"
 #include "Unk_020d8c7c.h"
 #include "net/CommManager.h"
@@ -340,7 +341,7 @@ BOOL BbsWriteMenu::onDraw() {
         if (BbsWriteMenu_HasFlags((S *)this, 0x40)) {
             s32 a = caretX;
             s32 b = caretY - (scrollY + 8);
-            caretBlinkTimer = caretBlinkTimer + 1;
+            caretBlinkTimer = caretBlinkTimer + (TICK_STEP_ENDS() ? 1 : 0);
             if ((caretBlinkTimer & 0x10) != 0) {
                 Keyboard_DrawCaret(&keyboard, a, b, 2);
             }

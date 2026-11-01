@@ -1,4 +1,5 @@
 #include "ds_div.h"
+#include "host_tick.h"
 #include "host_labels.h"
 #include "host_overlay_vars.h"
 #include "types.h"
@@ -1901,7 +1902,7 @@ void PatternEditorMenu::stopButtonFlash() {
 
 void PatternEditorMenu::updateButtonFlash() {
     if (flashTimer != 0) {
-        flashTimer = flashTimer - 1;
+        flashTimer = flashTimer - (TICK_STEP_ENDS() ? 1 : 0);
         if (flashTimer == 0) {
             stopButtonFlash();
         }
@@ -2332,7 +2333,7 @@ void PatternEditorMenu::updateStylusStroke() {
             hoverTimer = 0;
         }
     } else if (r == hoverButton) {
-        hoverTimer = hoverTimer + 1;
+        hoverTimer = hoverTimer + (TICK_STEP_ENDS() ? 1 : 0);
         if (hoverTimer >= 0x14) {
             if (testFlags(0x80000)) {
                 clearFlags(0x80000);

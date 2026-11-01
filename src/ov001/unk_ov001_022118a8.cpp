@@ -1,4 +1,5 @@
 #include "types.h"
+#include "host_tick.h"
 #include "ui/WfcApList.h"
 #include "nitro/io_access.h"
 #include "proto/ov001/unk_ov001_02207904.h"
@@ -105,7 +106,7 @@ void WfcAossDone_Exit() {
 }
 
 void WfcAossDone_WaitTimer() {
-    sWfcAossDoneTimer = sWfcAossDoneTimer + 1;
+    sWfcAossDoneTimer = sWfcAossDoneTimer + (TICK_STEP_ENDS() ? 1 : 0);
     if (sWfcAossDoneTimer < 0x78) return;
     WfcUtil_SetScene(WfcAossDone_FadeOut);
 }

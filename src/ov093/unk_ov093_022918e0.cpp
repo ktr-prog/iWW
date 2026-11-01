@@ -1,4 +1,5 @@
 #include "types.h"
+#include "host_tick.h"
 #include "talk/MsgString.h"
 #include "menu/StaffRoll.h"
 #include "nitro/io_access.h"
@@ -75,7 +76,7 @@ void StaffRoll::update()
                     c = 0x48 - c;
                 }
             }
-            logoTimer++;
+            logoTimer += TICK_STEP_ENDS() ? 1 : 0;
             Gfx2d_SetMainAlphaBlend(2, 0x21, c);
         } else {
             hide();

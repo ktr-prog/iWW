@@ -1,4 +1,5 @@
 #include "types.h"
+#include "host_tick.h"
 #include "host_shared_calls.h"
 #include "Unk_020d8c7c.h"
 #include "ui/CursorMotion.h"
@@ -457,7 +458,7 @@ void PocketItemSelectMenu::mainAct01() {
     } else {
         if (isSlotDisabled(touchedSlot) == 0 && nameBalloon.isOpenOrOpening()) {
             if (*(volatile u8 *)&touchHoldDelay != 0) {
-                touchHoldDelay = touchHoldDelay - 1;
+                touchHoldDelay = touchHoldDelay - (TICK_STEP_ENDS() ? 1 : 0);
             } else {
                 selectPocket(touchedSlot, 1);
                 setMainState(2);
@@ -477,7 +478,7 @@ void PocketItemSelectMenu::mainAct02() {
 void PocketItemSelectMenu::mainAct03() {
     if (nameBalloon.isOpenOrOpening()) {
         if (*(volatile u8 *)&touchHoldDelay != 0) {
-            touchHoldDelay = touchHoldDelay - 1;
+            touchHoldDelay = touchHoldDelay - (TICK_STEP_ENDS() ? 1 : 0);
         } else {
             selectPocket(touchedSlot, 1);
             setMainState(2);

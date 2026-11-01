@@ -1,4 +1,5 @@
 #include "types.h"
+#include "host_tick.h"
 #include "gfx/VecFx32.h"
 #include "actor/Actor.h"
 #include "field/Snowball.h"
@@ -57,15 +58,15 @@ void Snowball::applySnowballMotion() {
     if ((collisionState.prevFlags & 1) != 0) {
         velocity.y = 0;
     } else {
-        velocity.y = velocity.y + 0x6d;
+        velocity.y = velocity.y + TICK_PART(0x6d);
         if (velocity.y > 0x200) {
             velocity.y = 0x200;
         }
     }
-    position.y = position.y - velocity.y;
+    position.y = position.y - TICK_PART(velocity.y);
     if (snowballFlags.e == 0 && snowballFlags.i == 0) {
-        position.x = position.x + rollVelX;
-        position.z = position.z + rollVelZ;
+        position.x = position.x + TICK_PART(rollVelX);
+        position.z = position.z + TICK_PART(rollVelZ);
     }
 }
 
@@ -278,15 +279,15 @@ void Snowball::execSnowballFall() {
     s32 t = radius;
     t = t + (t >> 1);
     Math_ApproachS32Max(&collisionRadius, t, 0xcc, t);
-    position.x += rollVelX;
-    position.z += rollVelZ;
+    position.x += TICK_PART(rollVelX);
+    position.z += TICK_PART(rollVelZ);
     if (fallFrames < 0xc) {
-        velocity.y = velocity.y + 1;
-        position.y -= 0x100;
-        fallFrames = fallFrames + 1;
+        velocity.y = velocity.y + TICK_PART(1);
+        position.y -= TICK_PART(0x100);
+        fallFrames = fallFrames + (TICK_STEP_ENDS() ? 1 : 0);
     } else {
-        velocity.y = velocity.y + (FX_Div(0, 0x2710000) + 0xe9);
-        position.y = position.y - velocity.y;
+        velocity.y = velocity.y + TICK_PART((FX_Div(0, 0x2710000) + 0xe9));
+        position.y = position.y - TICK_PART(velocity.y);
     }
     if (collisionState.flags & 2) {
         GroundInfo ground;
@@ -324,8 +325,8 @@ void Snowball::execSnowballSink() {
     t = t + (t >> 1);
     Math_ApproachS32Max(&collisionRadius, t, 0x200, t);
     ground.initAtPos(&position, 0, 0);
-    position.x += ground.flowDir >> 5;
-    position.z += ground.flowDirZ >> 5;
+    position.x += TICK_PART(ground.flowDir >> 5);
+    position.z += TICK_PART(ground.flowDirZ >> 5);
     radius = func_01ffcb0c(radius, 0xfd7);
     drawOffset.y = func_01ffcb0c(0x100, data_02135f44[((u16)wobblePhase >> 4) * 2]);
     wobblePhase = (s16)wobblePhase + 0x400;
@@ -374,8 +375,8 @@ void Snowball::execSnowballHole() {
     Vec_Sub(&v, &holePos, &position);
     Vec_SafeNormalize(&v);
     Vec_Scale(&v, 0x80);
-    position.x += v.x;
-    position.z += v.z;
+    position.x += TICK_PART(v.x);
+    position.z += TICK_PART(v.z);
     applySnowballMotion();
     s32 d = Vec_DistXZ(&position, &holePos);
     s32 lim = 0;
@@ -409,8 +410,8 @@ s32 Snowball_execSnowball05_thr;
 u8 Snowball_execSnowball05_thr_init;
 void Snowball::execSnowball05() {
     rollVelZ += FX_Div(0, 0x3e8000) + 0x158;
-    position.x += rollVelX;
-    position.z += rollVelZ;
+    position.x += TICK_PART(rollVelX);
+    position.z += TICK_PART(rollVelZ);
     s32 d = position.z - targetPos.z;
     if (d < 0) {
         d = -d;
@@ -443,8 +444,8 @@ s32 Snowball::enterSnowballSplash() {
 void Snowball::execSnowballSplash() {
     GroundInfo ground;
     ground.initAtPos(&position, 0, 0);
-    position.x += ground.flowDir >> 5;
-    position.z += ground.flowDirZ >> 5;
+    position.x += TICK_PART(ground.flowDir >> 5);
+    position.z += TICK_PART(ground.flowDirZ >> 5);
     radius = func_01ffcb0c(radius, 0xf85);
     drawOffset.y = func_01ffcb0c(0x100, data_02135f44[((u16)wobblePhase >> 4) * 2]);
     wobblePhase = (s16)wobblePhase + 0x400;
@@ -453,7 +454,7 @@ void Snowball::execSnowballSplash() {
         ProcBase_RequestDelete(this);
     }
     s32 lim = ground.waterSurfaceY - radius - 0x200;
-    position.y -= 0x400;
+    position.y -= TICK_PART(0x400);
     if (position.y < lim) {
         position.y = lim;
     }
@@ -477,9 +478,9 @@ s32 Snowball::enterSnowballToSnowman() {
 
 void Snowball::execSnowballToSnowman() {
     collisionRadius = radius;
-    position.x += stepX;
+    position.x += TICK_PART(stepX);
     position.y = 0;
-    position.z += stepZ;
+    position.z += TICK_PART(stepZ);
     if (stepCount++ >= 0x10) {
         position.x = targetPos.x;
         position.y = targetPos.y;
@@ -526,10 +527,10 @@ s32 Snowball::enterSnowballStack() {
 
 void Snowball::execSnowballStack() {
     collisionRadius = radius;
-    position.x += stepX;
-    position.z += stepZ;
-    velocity.y += FX_Div(0, 0x2710000) + 0xdf;
-    position.y -= velocity.y;
+    position.x += TICK_PART(stepX);
+    position.z += TICK_PART(stepZ);
+    velocity.y += TICK_PART(FX_Div(0, 0x2710000) + 0xdf);
+    position.y -= TICK_PART(velocity.y);
     if (velocity.y >= 0) {
         s32 t = targetPos.y - 0x200;
         if (position.y < t) {
@@ -553,9 +554,9 @@ BOOL Snowball::enterSnowballSettle() {
 
 void Snowball::execSnowballSettle() {
     collisionRadius = radius;
-    position.x += stepX;
-    position.z += stepZ;
-    position.y += velocity.y;
+    position.x += TICK_PART(stepX);
+    position.z += TICK_PART(stepZ);
+    position.y += TICK_PART(velocity.y);
     if (position.y > targetPos.y) {
         position.y = targetPos.y;
     }
@@ -583,9 +584,9 @@ void Snowball::execSnowballCrumble() {
     a = data_02135f44[((u16)wobblePhase >> 4) * 2 + 1];
     drawOffset.x = -func_01ffcb0c(0x100, a);
     drawOffset.z = func_01ffcb0c(0x100, a);
-    wobblePhase = wobblePhase + 0x3800;
+    wobblePhase = wobblePhase + TICK_PART(0x3800);
     if (crumbleTimer != 0) {
-        crumbleTimer--;
+        crumbleTimer -= TICK_STEP_ENDS() ? 1 : 0;
     }
     if (crumbleTimer == 0) {
         spawnSnowballBreak();
@@ -610,9 +611,9 @@ void Snowball::execSnowballCrumble2() {
     a = data_02135f44[((u16)wobblePhase >> 4) * 2 + 1];
     drawOffset.x = func_01ffcb0c(0x100, a);
     drawOffset.z = -func_01ffcb0c(0x100, a);
-    wobblePhase = wobblePhase + 0x5000;
+    wobblePhase = wobblePhase + TICK_PART(0x5000);
     if (crumbleTimer != 0) {
-        crumbleTimer--;
+        crumbleTimer -= TICK_STEP_ENDS() ? 1 : 0;
     }
     if (crumbleTimer == 0) {
         spawnSnowballBreak();

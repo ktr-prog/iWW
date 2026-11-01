@@ -1,4 +1,5 @@
 #include "types.h"
+#include "host_tick.h"
 #include "host_labels.h"
 #include "host_shared_calls.h"
 #include "npc/VillagerId.h"
@@ -669,7 +670,7 @@ BOOL HouseVisitVillager::enterVisitCall() {
 
 void HouseVisitVillager::execVisitCall() {
     if (callTimer > 0) {
-        callTimer = callTimer - 1;
+        callTimer = callTimer - (TICK_STEP_ENDS() ? 1 : 0);
     }
     if (callTimer == 0) {
         talkCtrl.requestTalk(0, 1);
@@ -712,7 +713,7 @@ void HouseVisitVillager::execVisitWalkIn() {
         }
     }
     if (walkInTimer != 0) {
-        walkInTimer = walkInTimer - 1;
+        walkInTimer = walkInTimer - (TICK_STEP_ENDS() ? 1 : 0);
     }
 }
 
@@ -745,11 +746,11 @@ void HouseVisitVillager::execVisitStay() {
                 wantsToLeave = 1;
                 return;
             } else if (leaveTalkDelay != 0) {
-                leaveTalkDelay = leaveTalkDelay - 1;
+                leaveTalkDelay = leaveTalkDelay - (TICK_STEP_ENDS() ? 1 : 0);
             }
         }
         if (stayTimer > 0) {
-            stayTimer = stayTimer - 1;
+            stayTimer = stayTimer - (TICK_STEP_ENDS() ? 1 : 0);
         }
     }
     VecFx32 *p = (VecFx32 *)PlayerActor_GetBodyPos(4);
@@ -787,11 +788,11 @@ void HouseVisitVillager::execVisitWander() {
                     return;
                 }
                 if (leaveTalkDelay > 0) {
-                    leaveTalkDelay--;
+                    leaveTalkDelay -= TICK_STEP_ENDS() ? 1 : 0;
                 }
             }
             if (stayTimer > 0) {
-                stayTimer--;
+                stayTimer -= TICK_STEP_ENDS() ? 1 : 0;
             }
         }
     }
@@ -821,7 +822,7 @@ void HouseVisitVillager::execVisitWander() {
     }
     if (actionCtrl.getAction() == 0) {
         if (wanderTimer != 0) {
-            wanderTimer--;
+            wanderTimer -= TICK_STEP_ENDS() ? 1 : 0;
         }
         if (wanderTimer == 0) {
             wanderAngle = Shared_Room_PickRandomWalkTarget(&walkTarget, &position, rotY);

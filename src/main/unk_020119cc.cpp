@@ -2,6 +2,7 @@
 #include "host_labels.h"
 #include "proto/main/unk_0202fa70.h"
 #include "types.h"
+#include "host_tick.h"
 #include "gfx/VecFx32.h"
 #include "game/Unk_0201acf8.h"
 #include "actor/BlinkTimer.h"
@@ -1628,7 +1629,7 @@ void NpcMoveCtrl::updateTurn(Character *scene) {
     if (getMoveMode() == 4) {
         scene->moveAngleY = targetAngle;
     } else {
-        stepAngle(&scene->moveAngleY, targetAngle, turnSpeed, turnMode);
+        stepAngle(&scene->moveAngleY, targetAngle, (s16)TICK_PART(turnSpeed), turnMode);
         scene->rotY = scene->moveAngleY;
     }
 }

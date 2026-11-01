@@ -1,6 +1,7 @@
 #include "uptr.h"
 #include "host_labels.h"
 #include "types.h"
+#include "host_tick.h"
 #include "sys/new.h"
 #include "text/Unk_02050288.h"
 #include "talk/MsgStringBase.h"
@@ -737,6 +738,10 @@ BOOL TalkParser::stepSpeed() {
         while (!steppersIdle()) {
             stepSteppers();
         }
+        goto end;
+    }
+    if (!TICK_STEP_ENDS()) {
+        r = FALSE;
         goto end;
     }
     BOOL t;
@@ -1957,7 +1962,7 @@ void TalkFrame::updateBusyIcon()
 {
     busyIcon.setPos(scrollX + 0x59, scrollY + 0x4b);
     busyIcon.callUpdate();
-    if (busyIconTimer > 0) busyIconTimer--;
+    if (busyIconTimer > 0) busyIconTimer -= TICK_STEP_ENDS() ? 1 : 0;
 }
 void TalkFrame::drawBusyIcon() { busyIcon.callDraw(); }
 extern "C" u8 Talk_ColorTagToTextColor(u32 x)
@@ -2648,7 +2653,7 @@ void TalkWindowState::startAutoAdvance(s32 frames) {
 BOOL TalkWindowState::tickAutoAdvance() {
     BOOL r = FALSE;
     if (autoAdvanceTimer > 0) {
-        autoAdvanceTimer--;
+        autoAdvanceTimer -= TICK_STEP_ENDS() ? 1 : 0;
         if (autoAdvanceTimer == 0) {
             r = TRUE;
         }

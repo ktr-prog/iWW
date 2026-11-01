@@ -1,4 +1,5 @@
 #include "town/TownBlockCell.h"
+#include "host_tick.h"
 #include "host_labels.h"
 #include "host_shared_calls.h"
 #include "sys/NNSFndArchive.h"
@@ -656,7 +657,7 @@ void LightLevel::update()
     if (isFlickering == 1) {
         if (flickerDelay != 0) {
             level = 0;
-            flickerDelay--;
+            flickerDelay -= TICK_STEP_ENDS() ? 1 : 0;
         }
         if (flickerDelay == 0) {
             if (flickerIndex < 0xb) {

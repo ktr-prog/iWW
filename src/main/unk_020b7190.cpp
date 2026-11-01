@@ -1,4 +1,5 @@
 #include "types.h"
+#include "host_tick.h"
 #include "talk/MsgStringBase.h"
 #include "gfx/SpriteAnim.h"
 #include "ui/UiWidget.h"
@@ -422,7 +423,7 @@ void FieldInfoBalloon::updateItemName() {
 void FieldInfoBalloon::enterTimerMsg() { state = 2; }
 
 void FieldInfoBalloon::updateTimerMsg() {
-    if (msgFrames > 0) msgFrames--;
+    if (msgFrames > 0) msgFrames -= TICK_STEP_ENDS() ? 1 : 0;
     if (((LabelBalloon *)(&balloon))->getState() == 0) {
         enterIdle();
     } else if (hasNetMsg() != 0 || hasTimerMsg() == 0 || timerMsgRestarted != 0) {
@@ -436,7 +437,7 @@ void FieldInfoBalloon::enterNetMsg() {
 }
 
 void FieldInfoBalloon::updateNetMsg() {
-    if (msgFrames > 0) msgFrames--;
+    if (msgFrames > 0) msgFrames -= TICK_STEP_ENDS() ? 1 : 0;
     if (((LabelBalloon *)(&balloon))->getState() == 0) {
         enterIdle();
     } else if (hasNetMsg() == 0) {

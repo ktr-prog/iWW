@@ -3,6 +3,7 @@
 #include "host_shared_calls.h"
 #include "proto/main/unk_0202fa70.h"
 #include "types.h"
+#include "host_tick.h"
 #include "gfx/VecFx32.h"
 #include "actor/ActorProfile.h"
 #include "net/CommManager.h"
@@ -1705,6 +1706,9 @@ extern "C" void PlayerActor_CheckSceneExit(s32 a) {
 
 namespace nT {
 extern "C" void PlayerActor_ApproachValue(s32 *p, s32 target, s32 rate, s32 maxstep, s32 minstep) {
+    rate = TICK_RATE(rate);
+    maxstep = TICK_DIV(maxstep);
+    minstep = TICK_DIV(minstep);
     s32 cur = *p;
     if (cur == target) return;
     s32 d = target - cur;
@@ -1735,6 +1739,9 @@ extern "C" void PlayerActor_ApproachCoord(s32 *p, s32 target) {
 
 namespace nT {
 extern "C" s32 PlayerActor_ApproachAngle(s16 *p, s32 target, s32 rate, s32 maxstep, s32 minstep) {
+    rate = TICK_RATE(rate);
+    maxstep = TICK_DIV(maxstep);
+    minstep = TICK_DIV(minstep);
     s32 cur = *p;
     s32 d, t, c;
     if (cur == target) {
@@ -1782,7 +1789,7 @@ extern "C" s32 PlayerActor_TurnAngleSlow(s16 *p, s32 target) {
 
 namespace nT {
 extern "C" s32 PlayerActor_Accelerate(s32 a, s32 b) {
-    s32 v = a + 0x93;
+    s32 v = a + TICK_PART(0x93);
     if (v > b) v = b;
     return v;
 }
@@ -1790,7 +1797,7 @@ extern "C" s32 PlayerActor_Accelerate(s32 a, s32 b) {
 
 namespace nT {
 extern "C" s32 PlayerActor_DecreaseClamped(s32 a, s32 b, s32 c) {
-    s32 v = a - c;
+    s32 v = a - TICK_PART(c);
     if (v < b) v = b;
     return v;
 }

@@ -1,4 +1,5 @@
 #include "types.h"
+#include "host_tick.h"
 #include "snd/Melody.h"
 #include "save/SaveData.h"
 #include "proto/main/unk_020039ec.h"
@@ -96,7 +97,7 @@ void Melody_Init(void) {
 
 void Melody_Update(void) {
     if (sMelodyTimer != 0) {
-        sMelodyTimer--;
+        sMelodyTimer -= TICK_STEP_ENDS() ? 1 : 0;
     }
     data_020ddf8c = (s32)Snd_MelodyUpdate(&gMelodyPlayer);
 }

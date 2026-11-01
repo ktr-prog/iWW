@@ -1,4 +1,5 @@
 #include "types.h"
+#include "host_tick.h"
 #include "menu/InventoryGridTypes.h"
 #include "menu/InventoryBg.h"
 #include "player/PlayerData.h"
@@ -247,7 +248,7 @@ void InventoryBg_StartBlink(InventoryBg *p, u32 v)
 BOOL InventoryBg_UpdateBlink(InventoryBg *p)
 {
     if (p->blinkTimer != 0) {
-        p->blinkTimer = p->blinkTimer - 1;
+        p->blinkTimer = p->blinkTimer - (TICK_STEP_ENDS() ? 1 : 0);
         switch (p->blinkTimer % 5) {
         case 3:
             InventoryBg_SetHighlight(p, p->blinkHighlight);
@@ -348,7 +349,7 @@ void InventoryBg_UpdateBells(InventoryBg *p)
 {
     s32 t = InventoryBg_GetTotalBells();
     if (p->bellRollTimer != 0) {
-        p->bellRollTimer = p->bellRollTimer - 1;
+        p->bellRollTimer = p->bellRollTimer - (TICK_STEP_ENDS() ? 1 : 0);
         if (p->bellRollTimer == 0) {
             p->shownBells = t;
             InventoryBg_SetBellsPanelMode(p, 0);

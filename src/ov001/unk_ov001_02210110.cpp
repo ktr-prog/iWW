@@ -1,4 +1,5 @@
 #include "types.h"
+#include "host_tick.h"
 #include "nitro/io_access.h"
 #include "proto/ov001/unk_ov001_02207b3c.h"
 #include "proto/ov001/unk_ov001_02208244.h"
@@ -84,7 +85,7 @@ void WfcTransferCancelled_Exit() {
 }
 
 void WfcTransferCancelled_WaitTimer() {
-    sWfcTransferCancelledTimer = sWfcTransferCancelledTimer + 1;
+    sWfcTransferCancelledTimer = sWfcTransferCancelledTimer + (TICK_STEP_ENDS() ? 1 : 0);
     if (sWfcTransferCancelledTimer < 0x78) return;
     WfcUtil_SetScene(WfcTransferCancelled_FadeOut);
 }

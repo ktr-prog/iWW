@@ -1,5 +1,4 @@
 
-#include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -511,120 +510,6 @@ int gpu3d_use_wgpu(void *device, void *queue, int scale, int readback) {
     return 1;
 }
 void *gpu3d_wgpu_picture(void) { return g3w_picture(); }
-typedef struct {
-    u32 key;
-    int nv, behind;
-    s32 pos[4][4];
-    s32 px[4], py[4];
-} SmoothPoly;
-enum { SMOOTH_MAX = 16384, SMOOTH_VERTS = MAX_POLYGONS * 6 };
-static SmoothPoly sSnapA[SMOOTH_MAX], sSnapB[SMOOTH_MAX];
-static SmoothPoly *sPrevSnap = sSnapA, *sCurSnap = sSnapB;
-static int sPrevN, sCurN, sSmoothK, sSmoothPeriod = 2, sSmoothOn = -1;
-static u32 sSmoothSerial;
-static G3Polygon sSmoothPoly[MAX_POLYGONS];
-static G3Vertex sSmoothVert[SMOOTH_VERTS];
-static const G3Polygon *sSmoothList[MAX_POLYGONS];
-
-static u32 smooth_key(const G3Polygon *p) {
-    return p->attr * 2654435761u ^ p->texparam * 40503u ^ p->texpal * 977u ^ (u32)p->norig ^ (u32)p->vp[4] << 20 ^
-           (u32)p->vp[5] << 11;
-}
-static void snapshot(const G3RenderState *r, SmoothPoly *out, int *n) {
-    int m = 0;
-    for (int i = 0; i < r->npoly; i++)
-        if (r->poly[i]->sub >= 0 && r->poly[i]->sub < SMOOTH_MAX && r->poly[i]->sub + 1 > m) m = r->poly[i]->sub + 1;
-    for (int i = 0; i < m; i++) out[i].nv = -1;
-    for (int i = 0; i < r->npoly; i++) {
-        const G3Polygon *p = r->poly[i];
-        if (p->sub < 0 || p->sub >= SMOOTH_MAX || p->nv < 3 || p->norig < 3) continue;
-        SmoothPoly *s = &out[p->sub];
-        s->key = smooth_key(p), s->nv = p->norig, s->behind = 0;
-        for (int k = 0; k < p->norig; k++) {
-            memcpy(s->pos[k], p->orig[k].pos, sizeof s->pos[k]);
-            s64 w = p->orig[k].pos[3];
-            if (w < 16) { s->behind = 1; s->px[k] = s->py[k] = 0; continue; }
-            s64 x = (s64)p->orig[k].pos[0] * 128 / w, y = (s64)p->orig[k].pos[1] * 96 / w;
-            s->px[k] = (s32)(x > 8192 ? 8192 : x < -8192 ? -8192 : x);
-            s->py[k] = (s32)(y > 8192 ? 8192 : y < -8192 ? -8192 : y);
-        }
-    }
-    *n = m;
-}
-static const SmoothPoly *smooth_match(const SmoothPoly *c, int sub) {
-    const SmoothPoly *pp = 0;
-    s64 best = -1;
-    if (c->behind) {
-        if (sub < sPrevN && sPrevSnap[sub].nv == c->nv && sPrevSnap[sub].key == c->key) return &sPrevSnap[sub];
-        return 0;
-    }
-    s32 x0 = 0x7fffffff, x1 = -0x7fffffff, y0 = 0x7fffffff, y1 = -0x7fffffff;
-    for (int k = 0; k < c->nv; k++) {
-        if (c->px[k] < x0) x0 = c->px[k];
-        if (c->px[k] > x1) x1 = c->px[k];
-        if (c->py[k] < y0) y0 = c->py[k];
-        if (c->py[k] > y1) y1 = c->py[k];
-    }
-    s32 size = x1 - x0 > y1 - y0 ? x1 - x0 : y1 - y0;
-    s32 move = 48 + size / 2;
-    s64 tol = (s64)size * size / 64;
-    if (tol < 36) tol = 36;
-    tol *= c->nv;
-    int lo = sub - 64 < 0 ? 0 : sub - 64, hi = sub + 64 > sPrevN ? sPrevN : sub + 64;
-    for (int cand = lo; cand < hi; cand++) {
-        const SmoothPoly *q = &sPrevSnap[cand];
-        if (q->nv != c->nv || q->key != c->key || q->behind) continue;
-        s32 mx = 0, my = 0;
-        for (int k = 0; k < c->nv; k++) mx += c->px[k] - q->px[k], my += c->py[k] - q->py[k];
-        mx /= c->nv, my /= c->nv;
-        if (mx > move || mx < -move || my > move || my < -move) continue;
-        s64 dev = 0;
-        for (int k = 0; k < c->nv; k++) {
-            s32 ex = c->px[k] - q->px[k] - mx, ey = c->py[k] - q->py[k] - my;
-            dev += (s64)ex * ex + (s64)ey * ey;
-        }
-        if (dev > tol) continue;
-        s64 cost = dev * 4 + (s64)mx * mx + (s64)my * my + 4 * (cand > sub ? cand - sub : sub - cand);
-        if (best < 0 || cost < best) best = cost, pp = q;
-    }
-    return pp;
-}
-static const G3Polygon *const *smooth_list(const G3RenderState *r) {
-    if (sSmoothOn < 0) sSmoothOn = !getenv("ACWW_SMOOTH") || atoi(getenv("ACWW_SMOOTH")) != 0;
-    if (r->serial != sSmoothSerial) {
-        if (sSmoothSerial) sSmoothPeriod = sSmoothK < 1 ? 1 : sSmoothK > 4 ? 4 : sSmoothK;
-        sSmoothSerial = r->serial;
-        SmoothPoly *t = sPrevSnap;
-        sPrevSnap = sCurSnap, sCurSnap = t;
-        sPrevN = sCurN;
-        snapshot(r, sCurSnap, &sCurN);
-        sSmoothK = 0;
-    }
-    sSmoothK++;
-    if (!sSmoothOn || sSmoothPeriod <= 1 || sSmoothK >= sSmoothPeriod || !sPrevN) return (const G3Polygon *const *)r->poly;
-    s64 t = sSmoothK * 65536 / sSmoothPeriod;
-    int n = 0, nv = 0;
-    for (int i = 0; i < r->npoly; i++) {
-        const G3Polygon *src = r->poly[i];
-        sSmoothList[i] = src;
-        int sub = src->sub;
-        if (sub < 0 || sub >= sCurN || src->nv < 3) continue;
-        const SmoothPoly *c = &sCurSnap[sub];
-        if (c->nv < 3 || n >= MAX_POLYGONS) continue;
-        const SmoothPoly *pp = smooth_match(c, sub);
-        if (!pp) continue;
-        s32 pos[4][4];
-        for (int k = 0; k < c->nv; k++)
-            for (int j = 0; j < 4; j++) pos[k][j] = pp->pos[k][j] + (s32)(((s64)c->pos[k][j] - pp->pos[k][j]) * t >> 16);
-        G3Polygon *q = &sSmoothPoly[n];
-        int got = g3_rebuild_polygon(q, src, (const s32 (*)[4])pos, &sSmoothVert[nv], SMOOTH_VERTS - nv);
-        if (!got) continue;
-        n++, nv += got;
-        sSmoothList[i] = q;
-    }
-    return sSmoothList;
-}
-
 void g3_render(void) {
     static int timing = -1;
     struct timespec t0, t1;
@@ -640,8 +525,7 @@ void g3_render(void) {
     else {
         clear_buffers();
         sPE.p = 0;
-        const G3Polygon *const *list = smooth_list(sR);
-        for (int i = 0; i < sR->npoly; i++) draw_polygon(list[i], i);
+        for (int i = 0; i < sR->npoly; i++) draw_polygon(sR->poly[i], i);
         fog_pass();
         aa_pass();
     }

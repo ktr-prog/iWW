@@ -1,4 +1,5 @@
 #include "types.h"
+#include "host_tick.h"
 #include "nitro/gxoam.h"
 #include "menu/Keyboard.h"
 #include "player/PlayerData.h"
@@ -1072,7 +1073,7 @@ void Keyboard_MarkScreenDirty(Keyboard *s)
 s32 Keyboard_UpdatePressedKey(Keyboard *s)
 {
     if (s->pressTimer != 0) {
-        s->pressTimer--;
+        s->pressTimer -= TICK_STEP_ENDS() ? 1 : 0;
 #ifndef HOST
         if (s->pressTimer >= 4) {
             return 1;
@@ -1094,10 +1095,10 @@ void Keyboard_StartKeyRepeat(Keyboard *s)
 BOOL Keyboard_TickKeyRepeat(Keyboard *s)
 {
     if (s->pressTimer > 1) {
-        s->pressTimer--;
+        s->pressTimer -= TICK_STEP_ENDS() ? 1 : 0;
     }
     if (s->keyRepeatTimer != 0) {
-        s->keyRepeatTimer--;
+        s->keyRepeatTimer -= TICK_STEP_ENDS() ? 1 : 0;
     } else {
         s->keyRepeatTimer = 1;
         return TRUE;

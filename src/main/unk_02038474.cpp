@@ -1,4 +1,5 @@
 #include "uptr.h"
+#include "host_tick.h"
 #include "types.h"
 #include "Unk_020d8c7c.h"
 #include "text/Unk_02050288.h"
@@ -295,7 +296,7 @@ const s32 data_020c8cbc = 0x20000;
 
 void ChatBalloon::update() {
     if (cooldown > 0) {
-        cooldown--;
+        cooldown -= TICK_STEP_ENDS() ? 1 : 0;
     }
     static Unk_020d9194_Fn tbl[4] = {&ChatBalloon::execHidden, &ChatBalloon::execOpen,
                                      &ChatBalloon::execShow, &ChatBalloon::execClose};
@@ -428,11 +429,11 @@ void ChatBalloon::execOpen() {
         c = DebugVar_GetStub() - 2;
     }
     if (stateTimer > a) {
-        popOffsetY += b;
+        popOffsetY += TICK_PART(b);
     } else {
-        popOffsetY += c;
+        popOffsetY += TICK_PART(c);
     }
-    stateTimer--;
+    stateTimer -= TICK_STEP_ENDS() ? 1 : 0;
     if (stateTimer <= 0) {
         popOffsetY = 0;
         enterShow();
@@ -459,7 +460,7 @@ void ChatBalloon::execShow() {
         t = DebugVar_GetStub() + 6;
     }
     Math_StepS32(&stackY, stackTargetY, t);
-    stateTimer--;
+    stateTimer -= TICK_STEP_ENDS() ? 1 : 0;
     if (stateTimer <= 0) {
         request = 0;
     }
@@ -487,8 +488,8 @@ void ChatBalloon::execClose() {
     } else {
         t = DebugVar_GetStub() - 0xb;
     }
-    popOffsetY += t;
-    stateTimer--;
+    popOffsetY += TICK_PART(t);
+    stateTimer -= TICK_STEP_ENDS() ? 1 : 0;
     if (stateTimer <= 0) {
         destroyNameLabel();
         destroyTextLabel();
@@ -959,7 +960,7 @@ void ChatQuickMsgInput::shutdown() {}
 
 void ChatQuickMsgInput::update() {
     if (sChatQuickMsgCooldown > 0) {
-        sChatQuickMsgCooldown--;
+        sChatQuickMsgCooldown -= TICK_STEP_ENDS() ? 1 : 0;
     }
     ChatQuickMsg_CheckButtons(this);
 }

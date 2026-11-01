@@ -1,4 +1,5 @@
 #include "types.h"
+#include "host_tick.h"
 #include "host_shared_calls.h"
 #include "Unk_020d8c7c.h"
 #include "gfx/StarTwinkle.h"
@@ -734,7 +735,7 @@ void StargazingMenu::updateNameLabelAnim() {
     case 2:
         if (centerConstellation == -1) {
             if (nameLabelHoldTimer != 0) {
-                nameLabelHoldTimer = nameLabelHoldTimer - 1;
+                nameLabelHoldTimer = nameLabelHoldTimer - (TICK_STEP_ENDS() ? 1 : 0);
             } else {
                 hideNameLabel();
             }

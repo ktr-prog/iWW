@@ -1,4 +1,5 @@
 #include "types.h"
+#include "host_tick.h"
 #include "host_labels.h"
 #include "net/CommManager.h"
 #include "net/NetSessionParts.h"
@@ -1492,7 +1493,7 @@ BOOL SceneBase::preExecute() {
     }
     if (sSceneFadeInDelay != 0) {
         if (Unk_020a42c4_IsZero(gScreenTransition.state) != 0) {
-            sSceneFadeInDelay = sSceneFadeInDelay - 1;
+            sSceneFadeInDelay = sSceneFadeInDelay - (TICK_STEP_ENDS() ? 1 : 0);
             if (sSceneFadeInDelay == 0) {
                 if (ScreenTransition_StartFadeIn(sSceneFadeInType, 0xf, 0) == 0) {
                     sSceneFadeInDelay = 1;

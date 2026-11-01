@@ -1,4 +1,5 @@
 #include "types.h"
+#include "host_tick.h"
 #include "nitro/io_access.h"
 #include "proto/ov001/unk_ov001_02207904.h"
 #include "proto/ov001/unk_ov001_02208244.h"
@@ -101,7 +102,7 @@ void WfcTestSuccess_Exit() {
 void WfcTestSuccess_CountDown() {
     u32 x;
     s32 r;
-    sWfcTestSuccessTimer++;
+    sWfcTestSuccessTimer += TICK_STEP_ENDS() ? 1 : 0;
     if (sWfcTestSuccessTimer < 0xb4) return;
     WfcUtil_GetEditParams(0, &x);
     r = WfcUtil_GetStartMode();

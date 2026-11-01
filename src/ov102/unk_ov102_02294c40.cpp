@@ -1,4 +1,5 @@
 #include "types.h"
+#include "host_tick.h"
 #include "host_shared_calls.h"
 #include "Unk_020d8c7c.h"
 #include "net/CommManager.h"
@@ -463,7 +464,7 @@ void ChestMenu::transitionAct08() {
     if (stepSlideOut(0)) {
         Gfx2d_ResetLayer(4);
         if (delayTimer != 0) {
-            delayTimer--;
+            delayTimer -= TICK_STEP_ENDS() ? 1 : 0;
         } else {
             showPage();
             setTransitionState(9);
@@ -835,7 +836,7 @@ void ChestMenu::mainAct0E() {
 
 void ChestMenu::mainAct0F() {
     if (delayTimer != 0) {
-        delayTimer--;
+        delayTimer -= TICK_STEP_ENDS() ? 1 : 0;
     } else {
         transitionState = 4;
         setPhase(1);

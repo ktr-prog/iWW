@@ -1,4 +1,5 @@
 #include "types.h"
+#include "host_tick.h"
 #include "host_shared_calls.h"
 #include "Unk_020d8c7c.h"
 #include "net/CommManager.h"
@@ -385,7 +386,7 @@ void FriendCodeMenu::preStateUpdate() {
     releaseLabels();
     bottomButtons.freeTexts();
     if (highlightTimer != 0) {
-        highlightTimer = highlightTimer - 1;
+        highlightTimer = highlightTimer - (TICK_STEP_ENDS() ? 1 : 0);
         if (highlightTimer == 0) {
             if (repeatTimer != 0) {
                 highlightTimer = 1;
@@ -394,7 +395,7 @@ void FriendCodeMenu::preStateUpdate() {
             }
         }
     }
-    caretBlinkTimer = caretBlinkTimer + 1;
+    caretBlinkTimer = caretBlinkTimer + (TICK_STEP_ENDS() ? 1 : 0);
 }
 
 void FriendCodeMenu::postStateUpdate() { flushScreens(); }
@@ -1196,7 +1197,7 @@ void FriendCodeMenu::stopKeyRepeat() { repeatTimer = 0; }
 
 BOOL FriendCodeMenu::tickKeyRepeat() {
     if (repeatTimer != 0) {
-        repeatTimer = repeatTimer - 1;
+        repeatTimer = repeatTimer - (TICK_STEP_ENDS() ? 1 : 0);
         if (repeatTimer == 0) {
             repeatTimer = 2;
             return TRUE;

@@ -1,4 +1,5 @@
 #include "uptr.h"
+#include "host_tick.h"
 #include "types.h"
 #include "gfx/VecFx32.h"
 #include "game/GroundInfo.h"
@@ -1406,7 +1407,7 @@ BOOL BgmSceneFade::hasExitSilence() {
 
 void BgmSceneFade::update() {
     if (fadeDelay > 0) {
-        fadeDelay--;
+        fadeDelay -= TICK_STEP_ENDS() ? 1 : 0;
         if (fadeDelay <= 0) {
             s32 v = 1;
             if (IsZero(gFieldSceneKind) && Scene_InTown()) {
@@ -1427,7 +1428,7 @@ void BgmSceneFade::update() {
         }
     }
     if (releaseTimer > 0) {
-        releaseTimer--;
+        releaseTimer -= TICK_STEP_ENDS() ? 1 : 0;
         if (releaseTimer <= 0) Bgm_ReleasePriority(7);
     }
 }

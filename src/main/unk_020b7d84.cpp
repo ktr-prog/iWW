@@ -1,4 +1,5 @@
 #include "types.h"
+#include "host_tick.h"
 #include "host_mem.h"
 #include "proto/autoload_2/unk_020e7fd4.h"
 #include "proto/main/unk_020039ec.h"
@@ -48,7 +49,7 @@ extern "C" void Touch_Update(void) {
             gTouchHoldFrames = 0;
         }
         if (gTouchHoldFrames < 0xc8) {
-            gTouchHoldFrames++;
+            gTouchHoldFrames += TICK_STEP_ENDS() ? 1 : 0;
         }
         u8 v = gTouchX;
         gTouchCurX = v;
@@ -60,7 +61,7 @@ extern "C" void Touch_Update(void) {
             sTouchReleaseFrames = 0;
         }
         if (sTouchReleaseFrames < 0xc8) {
-            sTouchReleaseFrames++;
+            sTouchReleaseFrames += TICK_STEP_ENDS() ? 1 : 0;
         }
     }
 }

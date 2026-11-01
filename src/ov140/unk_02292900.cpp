@@ -1,4 +1,5 @@
 #include "types.h"
+#include "host_tick.h"
 #include "Unk_020d8c7c.h"
 #include "menu/MenuProc.h"
 #include "ui/HandCursor.h"
@@ -561,7 +562,7 @@ void DistantTownsMenu::updateCursorRelease() {
 
 void DistantTownsMenu::updateCloseDelay() {
     if (delayTimer != 0) {
-        delayTimer = delayTimer - 1;
+        delayTimer = delayTimer - (TICK_STEP_ENDS() ? 1 : 0);
     } else {
         hideCursor();
         setPhase(1);
@@ -570,7 +571,7 @@ void DistantTownsMenu::updateCloseDelay() {
 
 void DistantTownsMenu::updatePageFadeOut() {
     if (delayTimer > 1) {
-        delayTimer = delayTimer - 1;
+        delayTimer = delayTimer - (TICK_STEP_ENDS() ? 1 : 0);
         fadeRows(delayTimer);
     } else {
         fadeRows(0);
@@ -583,7 +584,7 @@ void DistantTownsMenu::updatePageFadeIn() {
     u32 t = delayTimer;
     if (t < 5) {
         fadeRows(t);
-        delayTimer++;
+        delayTimer += TICK_STEP_ENDS() ? 1 : 0;
     } else {
         fadeRows(5);
         moreButtonPal = 8;

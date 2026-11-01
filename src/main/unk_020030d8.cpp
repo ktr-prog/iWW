@@ -1,4 +1,5 @@
 #include "types.h"
+#include "host_tick.h"
 #include "gfx/Camera.h"
 #include "gfx/VecFx32.h"
 #include "snd/TvSound.h"
@@ -200,7 +201,7 @@ void HudLinkIcon::trackMenuTransition() {
     BOOL a = MenuCtrl_IsTransitionActive() ? TRUE : FALSE;
     s32 b = MenuCtrl_GetTransitionProgressOrFull();
     if (holdTimer > 0) {
-        holdTimer--;
+        holdTimer -= TICK_STEP_ENDS() ? 1 : 0;
     }
     if (transitionActive != 0) {
         if (lastTransitionProgress == 0x1000 && b < 0x1000) {
@@ -344,7 +345,7 @@ void HudUnkSlideIcon::trackMenuTransition() {
     BOOL a = MenuCtrl_IsTransitionActive() ? TRUE : FALSE;
     s32 b = MenuCtrl_GetTransitionProgressOrFull();
     if (holdTimer > 0) {
-        holdTimer--;
+        holdTimer -= TICK_STEP_ENDS() ? 1 : 0;
         if (holdTimer == 0) {
             unfreezeRequest = 1;
         }
@@ -391,7 +392,7 @@ void HudUnkSlideIcon::updateSlide() {
         slideOffset = sHudIconSlideOffsets[slideStep];
     }
     if (showTimer > 0) {
-        showTimer--;
+        showTimer -= TICK_STEP_ENDS() ? 1 : 0;
     }
     anim.update();
 }

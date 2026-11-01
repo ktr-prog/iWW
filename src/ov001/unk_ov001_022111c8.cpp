@@ -1,4 +1,5 @@
 #include "types.h"
+#include "host_tick.h"
 #include "host_mem.h"
 #include "nitro/io_access.h"
 #include "net/WfcLoadFunc.h"
@@ -200,7 +201,7 @@ void WfcAossSetup_WaitAfterSuccess() {
     WfcAossSetup_HandleInput();
     WfcAossSetup_Idle();
     WfcAossSetup_HandleResult();
-    sWfcAossSetupTimer = sWfcAossSetupTimer + 1;
+    sWfcAossSetupTimer = sWfcAossSetupTimer + (TICK_STEP_ENDS() ? 1 : 0);
     if (sWfcAossSetupTimer < 0x438) return;
     WfcSound_Stop();
     WfcUtil_SetScene(WfcAossSetup_StartExit);

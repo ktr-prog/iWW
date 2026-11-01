@@ -1,4 +1,5 @@
 #include "ds_div.h"
+#include "host_tick.h"
 #include "types.h"
 #include "Unk_020d8c7c.h"
 #include "text/Unk_02050288.h"
@@ -353,15 +354,15 @@ BOOL CursorMotion::update() {
         return TRUE;
     }
     if (framesLeft != 0) {
-        framesLeft--;
+        framesLeft -= TICK_STEP_ENDS() ? 1 : 0;
         switch (mode) {
         case 2:
-            posX += stepX;
-            posY += stepY;
+            posX += TICK_PART(stepX);
+            posY += TICK_PART(stepY);
             break;
         case 3:
-            posX += stepX;
-            posY += stepY;
+            posX += TICK_PART(stepX);
+            posY += TICK_PART(stepY);
             if (framesLeft > 1) {
                 stepX >>= 1;
                 stepY >>= 1;

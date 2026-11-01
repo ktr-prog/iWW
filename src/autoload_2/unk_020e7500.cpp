@@ -1,6 +1,7 @@
 #include "ds_div.h"
 #include "host_mem.h"
 #include "types.h"
+#include "host_tick.h"
 #include "sys/TreeNode.h"
 #include "gfx/VecFx32.h"
 #include "sys/ListNode.h"
@@ -106,6 +107,9 @@ extern "C" s32 Math_ApproachVec(VecFx32 *p, VecFx32 *target, s32 ratio, s32 max,
     s32 len;
     s32 step;
 
+    ratio = TICK_RATE(ratio);
+    max = TICK_DIV(max);
+    min = TICK_DIV(min);
     if (p->x == target->x && p->z == target->z) return 0;
     Vec_Sub(&d, target, p);
     len = VEC_Mag(&d);
@@ -133,6 +137,9 @@ extern "C" s32 Math_ApproachVecXZ(VecFx32 *p, VecFx32 *target, s32 ratio, s32 ma
     s32 len;
     s32 step;
 
+    ratio = TICK_RATE(ratio);
+    max = TICK_DIV(max);
+    min = TICK_DIV(min);
     if (p->x == target->x && p->z == target->z) return 0;
     Vec_Sub(&d, target, p);
     len = Vec_MagXZ(&d);
@@ -332,6 +339,9 @@ extern "C" BOOL List_PushFront(List *list, ListNode *node) {
 extern "C" s32 Math_ApproachS32(s32 *p, s32 target, s32 ratio, s32 max, s32 min) {
     s32 cur = *p;
     s32 d;
+    ratio = TICK_RATE(ratio);
+    max = TICK_DIV(max);
+    min = TICK_DIV(min);
     if (cur != target) {
         d = FX_Mul(target - cur, ratio);
         if (d >= min || d <= -min) {
@@ -357,6 +367,8 @@ extern "C" s32 Math_ApproachS32(s32 *p, s32 target, s32 ratio, s32 max, s32 min)
 
 extern "C" void Math_ApproachS32Max(s32 *p, s32 target, s32 ratio, s32 max) {
     s32 d;
+    ratio = TICK_RATE(ratio);
+    max = TICK_DIV(max);
     if (*p == target) return;
     d = FX_Mul(target - *p, ratio);
     if (d > max) {
@@ -391,6 +403,14 @@ extern "C" BOOL Math_IsInRange(s32 v, s32 a, s32 b) {
 }
 
 extern "C" void Math_ApproachS16Div(s16 *p, s16 target, s16 div, s16 max) {
+#ifdef HOST
+    if (TICK_STEPS() > 1 && div > 0) {
+        s16 d0 = (s16)FX_Mul((s16)(target - *p), TICK_RATE(0x1000 / div));
+        s16 m0 = (s16)TICK_DIV(max);
+        *p += d0 > m0 ? m0 : d0 < -m0 ? -m0 : d0;
+        return;
+    }
+#endif
     s16 d = DS_DIV((s16)(target - *p), div);
     if (d > max) {
         *p += max;
@@ -404,6 +424,7 @@ extern "C" void Math_ApproachS16Div(s16 *p, s16 target, s16 div, s16 max) {
 }
 
 extern "C" BOOL Math_StepU8(u8 *p, s16 target, s16 step) {
+    step = (s16)TICK_PART(step);
     if (step != 0) {
         s16 v;
         if (*p > target) step = -step;
@@ -420,6 +441,7 @@ extern "C" BOOL Math_StepU8(u8 *p, s16 target, s16 step) {
 }
 
 extern "C" BOOL Math_StepS16(s16 *p, s16 target, s16 step) {
+    step = (s16)TICK_PART(step);
     if (step != 0) {
         if (*p > target) step = -step;
         *p += step;
@@ -434,6 +456,7 @@ extern "C" BOOL Math_StepS16(s16 *p, s16 target, s16 step) {
 }
 
 extern "C" BOOL Math_StepS32(s32 *p, s32 target, s32 step) {
+    step = TICK_PART(step);
     if (step != 0) {
         if (*p > target) step = -step;
         *p += step;
@@ -448,6 +471,7 @@ extern "C" BOOL Math_StepS32(s32 *p, s32 target, s32 step) {
 }
 
 extern "C" BOOL Math_StepS32Alt(s32 *p, s32 target, s32 step) {
+    step = TICK_PART(step);
     if (step != 0) {
         if (*p > target) step = -step;
         *p += step;
@@ -462,6 +486,7 @@ extern "C" BOOL Math_StepS32Alt(s32 *p, s32 target, s32 step) {
 }
 
 extern "C" BOOL Math_StepAngle(s16 *p, s16 target, s16 step) {
+    step = (s16)TICK_PART(step);
     if (step != 0) {
         if ((s16)(*p - target) > 0) step = -step;
         *p += step;
@@ -476,12 +501,12 @@ extern "C" BOOL Math_StepAngle(s16 *p, s16 target, s16 step) {
 }
 
 extern "C" u8 Math_CountDownU8(u8 *p) {
-    if (*p != 0) (*p)--;
+    if (*p != 0 && TICK_STEP_ENDS()) (*p)--;
     return *p;
 }
 
 extern "C" u16 Math_CountDownU16(u16 *p) {
-    if (*p != 0) (*p)--;
+    if (*p != 0 && TICK_STEP_ENDS()) (*p)--;
     return *p;
 }
 

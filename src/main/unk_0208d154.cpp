@@ -1,4 +1,5 @@
 #include "types.h"
+#include "host_tick.h"
 #include "text/Unk_02050288.h"
 #include "ui/NameLabelBalloonView.h"
 #include "gfx/SpriteAnim.h"
@@ -97,11 +98,11 @@ void NameLabelBalloon::enterAppearing() {
 
 void NameLabelBalloon::updateAppearing() {
     if (stateTimer > 2) {
-        slideY -= 6;
+        slideY -= TICK_PART(6);
     } else {
-        slideY += 2;
+        slideY += TICK_PART(2);
     }
-    stateTimer = stateTimer - 1;
+    stateTimer = stateTimer - (TICK_STEP_ENDS() ? 1 : 0);
     if (stateTimer <= 0) {
         slideY = 0;
         enterShown();
@@ -126,8 +127,8 @@ void NameLabelBalloon::enterHiding() {
 }
 
 void NameLabelBalloon::updateHiding() {
-    slideY += 11;
-    stateTimer = stateTimer - 1;
+    slideY += TICK_PART(11);
+    stateTimer = stateTimer - (TICK_STEP_ENDS() ? 1 : 0);
     if (stateTimer <= 0) {
         ((NameLabelBalloonView *)this)->freeLabel();
         enterHidden();

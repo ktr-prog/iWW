@@ -1,4 +1,5 @@
 #include "nitro/fs.h"
+#include "host_tick.h"
 #include "uptr.h"
 #include "types.h"
 #include "talk/MsgCallStack.h"
@@ -1270,7 +1271,7 @@ BOOL ChoiceListCursor::updateKeys() {
     s32 cur = list->getCancelIndex();
     u16 pressed, held;
     if (confirmDelay > 0) {
-        confirmDelay--;
+        confirmDelay -= TICK_STEP_ENDS() ? 1 : 0;
         if (confirmDelay <= 0) {
             result = TRUE;
             Input_Unlock();
@@ -1319,7 +1320,7 @@ BOOL ChoiceListCursor::updateKeys() {
         repeatDir = heldUp ? -1 : 1;
     } else if ((state > 0 && heldDown) || (state < 0 && heldUp)) {
         if (repeatTimer > 0) {
-            repeatTimer--;
+            repeatTimer -= TICK_STEP_ENDS() ? 1 : 0;
             if (repeatTimer <= 0) {
                 moved = TRUE;
                 repeatTimer = 3;

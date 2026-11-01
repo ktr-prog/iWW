@@ -1,4 +1,5 @@
 #include "types.h"
+#include "host_tick.h"
 #include "gfx/VecFx32.h"
 #include "game/StarSkyView.h"
 #include "game/ConstellationRecord.h"
@@ -248,7 +249,7 @@ extern "C" void StarSky_StartBounce(StarSkyView *s, s32 d)
 extern "C" BOOL StarSky_UpdateBounce(StarSkyView *s)
 {
     if (s->bounceTimer != 0) {
-        s->bounceTimer--;
+        s->bounceTimer -= TICK_STEP_ENDS() ? 1 : 0;
         StarSky_ScrollByDir(s, s->bounceDir, data_ov127_02292abc[s->bounceTimer], 0);
     }
     if (s->bounceTimer == 0) {

@@ -2,6 +2,7 @@
 #include "host_labels.h"
 #include "host_shared_calls.h"
 #include "types.h"
+#include "host_tick.h"
 #include "gfx/VecFx32.h"
 #include "Unk_020d8c7c.h"
 #include "gfx/Unk_0203bd10_Dtcm.h"
@@ -621,7 +622,7 @@ void Camera::updateBlend()
         b = getBlendEnd();
         c = getBlendEaseIn();
         d = getBlendEaseOut();
-        a = Math_EaseRampProgress(blendTime, a, b, c, d);
+        a = TICK_RATE(Math_EaseRampProgress(blendTime, a, b, c, d));
         Vec_Sub(&t1, (V3 *)&targetFocus.x, (V3 *)&currentFocus);
         Vec_Scale(&t1, a);
         Vec_Add(&o1, (V3 *)&currentFocus, &t1);
@@ -638,7 +639,7 @@ void Camera::updateBlend()
         current += func_01ffcb0c(target.h0 - current, a);
         currentDistance += func_01ffcb0c(target.w0 - currentDistance, a);
         closeUpFactor += func_01ffcb0c(closeUpFactorTarget - closeUpFactor, a);
-        blendTime += 0x1000;
+        blendTime += TICK_PART(0x1000);
     } else {
         currentFocus = targetFocus.x;
         currentFocusY = targetFocus.y;

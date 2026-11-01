@@ -1,4 +1,5 @@
 #include "uptr.h"
+#include "host_tick.h"
 #include "host_shared_calls.h"
 #include "types.h"
 #include "Unk_020d8c7c.h"
@@ -623,7 +624,7 @@ void PocketMenu::mainAct01() {
     if (testFlags(0x10000) != 0) goto stop;
     if (m_23c0.isOpenOrOpening() == 0) goto stop;
     if (optionsOpenDelay != 0) {
-        optionsOpenDelay = optionsOpenDelay - 1;
+        optionsOpenDelay = optionsOpenDelay - (TICK_STEP_ENDS() ? 1 : 0);
     } else {
         openTargetOptions(touchedTarget, 1);
         setMainState(2);
@@ -650,7 +651,7 @@ void PocketMenu::mainAct02() {
 void PocketMenu::mainAct03() {
     if (m_23c0.isOpenOrOpening()) {
         if (optionsOpenDelay != 0) {
-            optionsOpenDelay = optionsOpenDelay - 1;
+            optionsOpenDelay = optionsOpenDelay - (TICK_STEP_ENDS() ? 1 : 0);
         } else {
             openTargetOptions(touchedTarget, 1);
             setMainState(2);
@@ -1369,7 +1370,7 @@ void PocketMenu::mainAct32()
 {
     if (removeBlinkTimer != 0) {
         s32 r;
-        removeBlinkTimer = removeBlinkTimer - 1;
+        removeBlinkTimer = removeBlinkTimer - (TICK_STEP_ENDS() ? 1 : 0);
         r = removeBlinkTimer % 5;
         if (r != 0) {
             if (r == 3) {

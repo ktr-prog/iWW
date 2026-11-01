@@ -1,4 +1,5 @@
 #include "types.h"
+#include "host_tick.h"
 #include "text/Unk_02050288.h"
 #include "talk/MsgStringBase.h"
 #include "gfx/SpriteAnim.h"
@@ -191,7 +192,7 @@ void LabelBalloon::updateOpening() {
             } else {
                 d = -6;
             }
-            popOffsetY += d;
+            popOffsetY += TICK_PART(d);
         } else {
             popOffsetX -= 1;
             s32 d;
@@ -200,10 +201,10 @@ void LabelBalloon::updateOpening() {
             } else {
                 d = 1;
             }
-            popOffsetY += d;
+            popOffsetY += TICK_PART(d);
         }
     }
-    animTimer--;
+    animTimer -= TICK_STEP_ENDS() ? 1 : 0;
     if (animTimer <= 0) {
         popOffsetX = 0;
         popOffsetY = 0;
@@ -238,9 +239,9 @@ void LabelBalloon::updateClosing() {
         } else {
             d = 11;
         }
-        popOffsetY += d;
+        popOffsetY += TICK_PART(d);
     }
-    animTimer--;
+    animTimer -= TICK_STEP_ENDS() ? 1 : 0;
     if (animTimer <= 0) {
         freeLabels();
         enterClosed();

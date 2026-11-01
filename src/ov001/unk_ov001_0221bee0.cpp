@@ -1,4 +1,5 @@
 #include "types.h"
+#include "host_tick.h"
 #include "nitro/io_access.h"
 #include "proto/ov001/unk_ov001_02208244.h"
 #include "proto/ov001/unk_ov001_02208388.h"
@@ -83,7 +84,7 @@ extern "C" void WfcUsbDone_Exit() {
 }
 
 extern "C" void WfcUsbDone_CountDown() {
-    sWfcUsbDoneTimer++;
+    sWfcUsbDoneTimer += TICK_STEP_ENDS() ? 1 : 0;
     if (sWfcUsbDoneTimer < 0x78) return;
     WfcUtil_SetScene(WfcUsbDone_FadeOut);
 }

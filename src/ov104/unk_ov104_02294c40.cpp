@@ -1,4 +1,5 @@
 #include "types.h"
+#include "host_tick.h"
 #include "host_labels.h"
 #include "host_shared_calls.h"
 #include "Unk_020d8c7c.h"
@@ -719,7 +720,7 @@ void PostOfficeMenu::mainAct01() {
             }
             if (nameBalloon.isOpenOrOpening()) {
                 if (touchHoldDelay != 0) {
-                    touchHoldDelay = touchHoldDelay - 1;
+                    touchHoldDelay = touchHoldDelay - (TICK_STEP_ENDS() ? 1 : 0);
                 } else {
                     PostOfficeMenu_SelectLetter(this, touchedSlot, 1);
                     setMainState(2);
@@ -746,7 +747,7 @@ void PostOfficeMenu::mainAct02() {
 void PostOfficeMenu::mainAct03() {
     if (nameBalloon.isOpenOrOpening()) {
         if (touchHoldDelay != 0) {
-            touchHoldDelay = touchHoldDelay - 1;
+            touchHoldDelay = touchHoldDelay - (TICK_STEP_ENDS() ? 1 : 0);
         } else {
             PostOfficeMenu_SelectLetter(this, touchedSlot, 1);
             setMainState(2);

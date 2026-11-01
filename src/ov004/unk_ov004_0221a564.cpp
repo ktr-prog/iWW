@@ -1,4 +1,5 @@
 #include "types.h"
+#include "host_tick.h"
 #include "host_labels.h"
 #include "gfx/VecFx32.h"
 #include "actor/ActorProfile.h"
@@ -566,7 +567,7 @@ void SickVillager::mainAct00() {
     }
     if (((NpcActionCtrl *)(&actionCtrl))->getAction() == 0) {
         if (walkTimer != 0) {
-            walkTimer--;
+            walkTimer -= TICK_STEP_ENDS() ? 1 : 0;
         }
         if (walkTimer == 0) {
             walkAngle = Room_PickRandomWalkTarget(&walkTarget, &position, rotY);
@@ -648,7 +649,7 @@ void SickVillager::mainAct01() {
         break;
     }
     if (emotionTimer != 0) {
-        emotionTimer--;
+        emotionTimer -= TICK_STEP_ENDS() ? 1 : 0;
     }
 }
 

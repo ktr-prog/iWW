@@ -1,4 +1,5 @@
 #include "uptr.h"
+#include "host_tick.h"
 #include "host_labels.h"
 #include "types.h"
 #include "gfx/VecFx32.h"
@@ -562,7 +563,7 @@ void CommCautionWindow::execDelay() {
     if (errorPending == 0) {
         enterWatch();
     } else {
-        timer = timer - 1;
+        timer = timer - (TICK_STEP_ENDS() ? 1 : 0);
         if (timer <= 0) {
             enterPrepare();
         }
@@ -613,7 +614,7 @@ void CommCautionWindow::execCountdown() {
     if (errorPending == 0) {
         enterWatch();
     } else {
-        timer = timer - 1;
+        timer = timer - (TICK_STEP_ENDS() ? 1 : 0);
         if (timer <= -0x14) {
             enterShutdown();
         }
@@ -651,7 +652,7 @@ void CommCautionWindow::execEnded() {
         uploadLine(lineIndex);
         lineIndex = lineIndex + 1;
     }
-    timer = timer - 1;
+    timer = timer - (TICK_STEP_ENDS() ? 1 : 0);
     if (timer <= 0) {
         BOOL b, a;
         if (gTouchHeld != 0 && gTouchChanged != 0) {
@@ -673,7 +674,7 @@ void CommCautionWindow::enterReset() {
 }
 
 void CommCautionWindow::execReset() {
-    timer = timer - 1;
+    timer = timer - (TICK_STEP_ENDS() ? 1 : 0);
     if (timer <= 0) {
         OS_ResetSystem(0);
     }

@@ -38,12 +38,15 @@ extern "C" void MenuScreen_WipeHBlank(void) {
 #ifdef HOST
 extern "C" int host_input_wants_turn(void);
 #define HOST_INPUT_WANTS_TURN() host_input_wants_turn()
+extern "C" BOOL HostTick_Native(void);
+#define VBLANKS_PER_TICK (HostTick_Native() ? 1 : gVBlanksPerFrame)
 #else
+#define VBLANKS_PER_TICK gVBlanksPerFrame
 #define HOST_INPUT_WANTS_TURN() 0
 #endif
 extern "C" void Main_VBlankCallback(void) {
     sVBlankCount++;
-    if (sVBlankCount >= gVBlanksPerFrame || (gMainWaitingFrame != 0 && HOST_INPUT_WANTS_TURN())) {
+    if (sVBlankCount >= VBLANKS_PER_TICK || (gMainWaitingFrame != 0 && HOST_INPUT_WANTS_TURN())) {
         if (gMainWaitingFrame != 0) {
             OS_WakeupThread(&gFrameWaitQueue);
             sVBlankCount = 0;

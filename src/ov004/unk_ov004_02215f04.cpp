@@ -1,4 +1,5 @@
 #include "uptr.h"
+#include "host_tick.h"
 #include "host_labels.h"
 #include "types.h"
 #include "npc/VillagerId.h"
@@ -396,7 +397,7 @@ void BirthdayGuestVillager::mainAct00() {
         d = data_020c8cbc;
     }
     if (chatCooldown != 0) {
-        chatCooldown--;
+        chatCooldown -= TICK_STEP_ENDS() ? 1 : 0;
     }
     if (collider.isHit != 0) {
         if (actionCtrl.getAction() == 1) {
@@ -412,7 +413,7 @@ void BirthdayGuestVillager::mainAct00() {
     }
     if (actionCtrl.getAction() == 0) {
         if (walkTimer != 0) {
-            walkTimer--;
+            walkTimer -= TICK_STEP_ENDS() ? 1 : 0;
         }
         if (walkTimer == 0) {
             walkAngle = Room_PickRandomWalkTarget(&walkTarget, &position, rotY);
@@ -549,7 +550,7 @@ BOOL BirthdayGuestVillager::setupAct02() {
 
 void BirthdayGuestVillager::mainAct02() {
     if (emotionTimer != 0) {
-        emotionTimer--;
+        emotionTimer -= TICK_STEP_ENDS() ? 1 : 0;
     }
     switch (emotionTimer) {
     case 1:
@@ -579,7 +580,7 @@ BOOL BirthdayGuestVillager::setupAct03() {
 
 void BirthdayGuestVillager::mainAct03() {
     if (emotionTimer != 0) {
-        emotionTimer--;
+        emotionTimer -= TICK_STEP_ENDS() ? 1 : 0;
     }
     switch (emotionTimer) {
     case 1:

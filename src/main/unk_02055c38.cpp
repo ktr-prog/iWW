@@ -1,5 +1,6 @@
 #include "uptr.h"
 #include "types.h"
+#include "host_tick.h"
 #include "gfx/VecFx32.h"
 #include "gfx/AnimFrameCtrl.h"
 #include "gfx/G3dResAccess.h"
@@ -631,8 +632,9 @@ void AnimFrameCtrl::step() {
     prevFrame = cur;
     u8 m = playMode;
     s32 v;
+    s32 inc = TICK_PART(frameStep);
     if (m & 2) {
-        s32 sp = frameStep;
+        s32 sp = inc;
         if (cur >= sp) {
             v = cur - sp;
         } else if ((m & 1) == 0) {
@@ -641,7 +643,7 @@ void AnimFrameCtrl::step() {
             v = 0;
         }
     } else {
-        v = cur + frameStep;
+        v = cur + inc;
         if (v >= (s32)numFrames) {
             if ((m & 1) == 0) {
                 v = v - numFrames;

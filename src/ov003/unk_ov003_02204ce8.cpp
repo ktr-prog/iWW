@@ -1,4 +1,5 @@
 #include "ds_div.h"
+#include "host_tick.h"
 #include "uptr.h"
 #include "types.h"
 #include "sys/StackPad.h"
@@ -9043,7 +9044,7 @@ extern "C" void PlayerActor_Act66CheckEnd(Obj *o) {
         }
     }
     if (r->waitFrames < 2) {
-        r->waitFrames++;
+        r->waitFrames += TICK_STEP_ENDS() ? 1 : 0;
     } else {
         if (g->isLocalSlot(o->sessionSlot) == 0) {
             o->actionPriority = ((Unk_02007694 *)(void *)(o))->getActionDonePriority(o->action);
@@ -9337,7 +9338,7 @@ extern "C" void PlayerActor_MainTreeShake(Obj *o) {
     if (r->shakeFrames > 5) {
         Tree_KeepShaking(o->sessionSlot, &p.a);
     } else {
-        r->shakeFrames++;
+        r->shakeFrames += TICK_STEP_ENDS() ? 1 : 0;
         if (r->shakeFrames == 5) {
             Tree_RequestShake(o->sessionSlot, FieldUnitPos(p.a, p.b), 2);
         }

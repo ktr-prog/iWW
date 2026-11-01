@@ -1,4 +1,5 @@
 #include "uptr.h"
+#include "host_tick.h"
 #include "host_labels.h"
 #include "proto/main/unk_0202fa70.h"
 #include "types.h"
@@ -741,7 +742,7 @@ void HouseRoach::updateCrawl() {
         }
         if (o != 0 && res == 0) {
             VecFx32 *q = &o->position;
-            stateTimer = stateTimer - 1;
+            stateTimer = stateTimer - (TICK_STEP_ENDS() ? 1 : 0);
             speed = zero;
             if (stateTimer <= 0) {
                 roachState = 1;
@@ -795,7 +796,7 @@ BOOL HouseRoach::move() {
                         t = -t;
                     }
                     if (t < 0x2aaa) {
-                        jumpTimer = jumpTimer + 1;
+                        jumpTimer = jumpTimer + (TICK_STEP_ENDS() ? 1 : 0);
                         isJumping = 1;
                         hit = 1;
                         speed = jumpSpeed;
@@ -816,7 +817,7 @@ BOOL HouseRoach::move() {
             isJumping = 0;
             model.setFrame(0);
         } else {
-            jumpTimer = jumpTimer + 1;
+            jumpTimer = jumpTimer + (TICK_STEP_ENDS() ? 1 : 0);
             model.stepAnim();
         }
     } else {

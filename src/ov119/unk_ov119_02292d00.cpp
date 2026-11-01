@@ -1,4 +1,5 @@
 #include "ds_div.h"
+#include "host_tick.h"
 #include "host_shared_calls.h"
 #include "uptr.h"
 #include "talk/EncodedString8B.h"
@@ -1731,7 +1732,7 @@ void FriendRosterTab::clearRowMarks() {
 }
 
 void FriendRosterTab::updateRowMarkBlink() {
-    rowMarkBlinkTimer = rowMarkBlinkTimer + 1;
+    rowMarkBlinkTimer = rowMarkBlinkTimer + (TICK_STEP_ENDS() ? 1 : 0);
     u8 c = rowMarkBlinkTimer;
     if (c == 10) {
         drawRowMarks();

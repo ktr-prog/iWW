@@ -1,4 +1,5 @@
 #include "ds_div.h"
+#include "host_tick.h"
 #include "host_overlay_vars.h"
 #include "snd/SndSeEmitter.h"
 #include "sys/ProcProfile.h"
@@ -6176,7 +6177,7 @@ extern "C" void FieldItemFx_UpdateBeeHiveDrop(FieldItemFx *self)
         }
         break;
     case 2:
-        self->timer = self->timer - 1;
+        self->timer = self->timer - (TICK_STEP_ENDS() ? 1 : 0);
         if (self->timer < 0) {
             Insect_SpawnBeeSwarm((VecFx32Ctor *)&self->pos);
             self->timer = 30;
@@ -6184,7 +6185,7 @@ extern "C" void FieldItemFx_UpdateBeeHiveDrop(FieldItemFx *self)
         }
         break;
     case 3:
-        self->timer = self->timer - 1;
+        self->timer = self->timer - (TICK_STEP_ENDS() ? 1 : 0);
         if (self->timer < 0) {
             self->step = 4;
         }
@@ -6401,7 +6402,7 @@ extern "C" void FieldItemFx_UpdateBalloonDrop(FieldItemFx *self)
                 Sky_PlayBalloonDropSe(1);
             }
         } else {
-            self->timer = self->timer - 1;
+            self->timer = self->timer - (TICK_STEP_ENDS() ? 1 : 0);
             if (self->timer < 0) {
                 Sky_EndBalloonDrop();
                 PlayerActor_LocalRequestAct77From(&self->pos);

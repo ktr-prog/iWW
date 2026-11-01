@@ -1,4 +1,5 @@
 #include "types.h"
+#include "host_tick.h"
 #include "host_shared_calls.h"
 #include "net/CommManager.h"
 #include "Unk_020d8c7c.h"
@@ -855,7 +856,7 @@ void ChatMenu_DrawKeyboard(S *s) {
         t = 6;
     }
     Keyboard_DrawSendKey(&s->keyboard, 0x80, r4, t, s->sendKeyAnim);
-    s->caretBlinkTimer = s->caretBlinkTimer + 1;
+    s->caretBlinkTimer = s->caretBlinkTimer + (TICK_STEP_ENDS() ? 1 : 0);
     if (s->sendAnimFrame == 0 && (s->caretBlinkTimer & 0x10) != 0) {
         Keyboard_DrawCaret(&s->keyboard, s->caretX + 0x18, r4 - 0x38, 2);
     }

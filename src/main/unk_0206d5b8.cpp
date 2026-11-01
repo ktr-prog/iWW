@@ -210,6 +210,8 @@ extern "C" void Main_WaitFrame(void) {
 }
 
 #ifdef HOST
+extern "C" BOOL HostTick_StepEnds(void);
+extern "C" u32 gHostTick;
 extern "C" void host_touch_read(int held);
 extern "C" u8 gTouchHeld;
 #endif
@@ -234,7 +236,12 @@ extern "C" void Main_PostTaskUpdate(u32 r) {
     }
     Comm_Update(r);
     Gfx_PostTaskUpdate();
+#ifdef HOST
+    if (HostTick_StepEnds()) gFrameCounter++;
+    gHostTick++;
+#else
     gFrameCounter++;
+#endif
     IO_W((volatile u32 *)0x4000540, 3);
 }
 

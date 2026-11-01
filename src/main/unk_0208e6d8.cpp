@@ -1,4 +1,5 @@
 #include "uptr.h"
+#include "host_tick.h"
 extern void *const gSpriteSeqTable5b0c[71];
 #include "types.h"
 #include "Unk_020d8c7c.h"
@@ -304,7 +305,7 @@ void TransitionCommIcon::enterHidden() {
 
 void TransitionCommIcon::updateHidden() {
     if (showDelay > 0) {
-        showDelay--;
+        showDelay -= TICK_STEP_ENDS() ? 1 : 0;
         if (showDelay <= 0) {
             enterShown();
         }
@@ -344,7 +345,7 @@ void TransitionCommIcon::updateShown() {
         }
     }
     if (hideDelay > 0) {
-        hideDelay--;
+        hideDelay -= TICK_STEP_ENDS() ? 1 : 0;
         if (hideDelay <= 0) {
             Gfx2d_DisableMainWindows(4);
             enterHidden();

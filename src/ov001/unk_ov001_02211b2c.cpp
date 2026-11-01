@@ -1,4 +1,5 @@
 #include "types.h"
+#include "host_tick.h"
 #include "nitro/gxoam.h"
 #include "ui/WfcApList.h"
 #include "ui/WfcTextEdit.h"
@@ -262,7 +263,7 @@ void WfcApList_HandleInput() {
 
 void WfcApList_HandleScrollBar() {
     if (sWfcApList->scrollTask != 0) return;
-    if (sWfcApList->dragRedrawDelay != 0) sWfcApList->dragRedrawDelay--;
+    if (sWfcApList->dragRedrawDelay != 0) sWfcApList->dragRedrawDelay -= TICK_STEP_ENDS() ? 1 : 0;
     switch (WfcScrollBar_GetEvent()) {
     case 0:
         break;

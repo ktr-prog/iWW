@@ -1,4 +1,5 @@
 #include "types.h"
+#include "host_tick.h"
 #include "ui/LabelString.h"
 #include "gfx/BgVramTask.h"
 #include "menu/NumberPad.h"
@@ -258,7 +259,7 @@ void NumberPad::update() {
     screenTasks[0].cancel();
     screenTasks[1].cancel();
     if (highlightTimer != 0) {
-        highlightTimer = highlightTimer - 1;
+        highlightTimer = highlightTimer - (TICK_STEP_ENDS() ? 1 : 0);
         if (*(volatile u8 *)&highlightTimer == 0) {
             if (repeatTimer != 0) {
                 highlightTimer = 1;
@@ -309,7 +310,7 @@ extern "C" void NumberPad_StopKeyRepeat(NumberPad *s) {
 
 extern "C" BOOL NumberPad_TickKeyRepeat(NumberPad *s) {
     if (s->repeatTimer != 0) {
-        s->repeatTimer--;
+        s->repeatTimer -= TICK_STEP_ENDS() ? 1 : 0;
         if (s->repeatTimer == 0) {
             s->repeatTimer = 2;
             NumberPad_ApplyKey(s);

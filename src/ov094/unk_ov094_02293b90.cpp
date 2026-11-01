@@ -1,4 +1,5 @@
 #include "types.h"
+#include "host_tick.h"
 #include "menu/InventoryGridTypes.h"
 #include "menu/LetterGrid.h"
 #include "item/LetterView.h"
@@ -50,7 +51,7 @@ void LetterGrid::init(s32 x) {
 
 void LetterGrid::updateCursorLift() {
     if (cursorLiftTimer != 0) {
-        cursorLiftTimer--;
+        cursorLiftTimer -= TICK_STEP_ENDS() ? 1 : 0;
     }
 }
 
@@ -526,7 +527,7 @@ void LetterGrid_ResetScale(LetterGrid *o)
 BOOL LetterGrid_UpdatePopAnim(LetterGrid *o)
 {
     if (o->popTimer != 0) {
-        o->popTimer--;
+        o->popTimer -= TICK_STEP_ENDS() ? 1 : 0;
         o->heldScale = LetterGrid_GetPopScale(o);
         return FALSE;
     }

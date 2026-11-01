@@ -1,4 +1,5 @@
 #include "types.h"
+#include "host_tick.h"
 #include "net/WfcObjGroup.h"
 #include "net/WfcRect.h"
 #include "proto/ov001/unk_ov001_02207b3c.h"
@@ -122,7 +123,7 @@ extern "C" void WfcButtonBar_SlideInTask(void *task, void *work) {
 
 extern "C" void WfcButtonBar_SettleTask(void *task, void *work) {
     sWfcButtonBar->result = -1;
-    sWfcButtonBar->timer++;
+    sWfcButtonBar->timer += TICK_STEP_ENDS() ? 1 : 0;
     if (sWfcButtonBar->timer < 4) {
         return;
     }
@@ -192,7 +193,7 @@ extern "C" void WfcButtonBar_DestroyTask(void *task, void *work) {
 
 extern "C" void WfcButtonBar_PressAnimTask(void *task, void *work) {
     WfcButtonBar *g = sWfcButtonBar;
-    g->timer++;
+    g->timer += TICK_STEP_ENDS() ? 1 : 0;
     if (sWfcButtonBar->timer < 0x10) {
         return;
     }

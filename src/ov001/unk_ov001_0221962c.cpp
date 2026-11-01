@@ -1,4 +1,5 @@
 #include "types.h"
+#include "host_tick.h"
 #include "nitro/io_access.h"
 #include "net/WfcApScanEntry.h"
 #include "net/WfcConfigSlot.h"
@@ -94,7 +95,7 @@ extern "C" void WfcApSearch_Update() {
 extern "C" void WfcApSearch_CheckResults() {
     WfcApScanEntry *buf;
     s32 n, i;
-    sWfcApSearchTimer = sWfcApSearchTimer + 1;
+    sWfcApSearchTimer = sWfcApSearchTimer + (TICK_STEP_ENDS() ? 1 : 0);
     if (sWfcApSearchTimer < 0x12c) return;
     WfcSound_Stop();
     n = WfcApScan_GetResults(&buf);

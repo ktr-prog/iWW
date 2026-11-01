@@ -1,4 +1,5 @@
 #include "ds_div.h"
+#include "host_tick.h"
 #include "types.h"
 #include "gfx/VecFx32.h"
 #include "Unk_020d8c7c.h"
@@ -491,7 +492,7 @@ void ThunderSe::tick()
 {
     u32 x;
     if (seIndex == 0) {
-        delayTimer--;
+        delayTimer -= TICK_STEP_ENDS() ? 1 : 0;
         if (delayTimer < 0) {
             if (Scene_InTown() || Scene_InTownUnk31()) {
                 x = sThunderSeIdsAlt[seIndex];
