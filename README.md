@@ -1,18 +1,20 @@
-<center><img width="113" height="113" alt="image" src="https://github.com/user-attachments/assets/5798d322-5e07-4532-b091-635b2b3b91cb" />
 
-  iWW </center>
+<img width="113" height="113" alt="image" src="https://github.com/user-attachments/assets/5798d322-5e07-4532-b091-635b2b3b91cb"  />
+
+iWW
 
 Screenshots:
 
-<img width="148" height="226" alt="image" src="https://github.com/user-attachments/assets/e05d04a5-000b-487c-801a-085e81da4d12" />
+<img width="148" height="226" alt="image" src="https://github.com/user-attachments/assets/f9145cad-a5fc-4cb9-a1b6-e98a3a13e469" />
 <img width="148" height="226" alt="image" src="https://github.com/user-attachments/assets/4c35663b-e38a-4830-83dc-e00151ee42e2" />
 <img width="148" height="226" alt="image" src="https://github.com/user-attachments/assets/60b5d1b0-c757-4e62-9cc6-0961cf06fbaf" />
 
+(WIP)
 
 Features:
 
 - No screen borders
-- (WIP) solo screen view
+- (WIP) single screen view
 - Accepts EU and US .sav files
 - Seamless transition between touchscreen and button input
 - Improved touch input delay
