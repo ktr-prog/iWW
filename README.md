@@ -2,6 +2,13 @@
 
   iWW </center>
 
+Screenshots:
+
+<img width="148" height="226" alt="image" src="https://github.com/user-attachments/assets/e05d04a5-000b-487c-801a-085e81da4d12" />
+<img width="148" height="226" alt="image" src="https://github.com/user-attachments/assets/4c35663b-e38a-4830-83dc-e00151ee42e2" />
+<img width="148" height="226" alt="image" src="https://github.com/user-attachments/assets/60b5d1b0-c757-4e62-9cc6-0961cf06fbaf" />
+
+
 Features:
 
 - No screen borders
