@@ -725,9 +725,6 @@ void TalkParser::stepSteppers() {
 BOOL TalkParser::stepSpeed() {
     BOOL r = TRUE;
     BOOL f = r;
-#ifdef HOST
-    s32 *pend = 0;
-#endif
     if (printMode != 1 && printVars.instant == 0) f = FALSE;
     if (printVars.holdStep != 0) {
         r = FALSE;
@@ -743,34 +740,10 @@ BOOL TalkParser::stepSpeed() {
         }
         goto end;
     }
-#ifdef HOST
-    if (TICK_STEPS() > 1) {
-        static const void *owner[8];
-        static s32 queued[8], gap[8];
-        s32 i;
-        for (i = 0; i < 8 && owner[i] != this; i++) {}
-        if (i == 8) {
-            for (i = 0; i < 8 && owner[i]; i++) {}
-            if (i == 8) i = 0;
-            owner[i] = this, queued[i] = 0, gap[i] = 0;
-        }
-        pend = &queued[i];
-        if (gap[i] > 0) gap[i]--;
-        if (*pend > 0 && gap[i] == 0) {
-            if (!steppersIdle()) stepSteppers();
-            (*pend)--;
-            gap[i] = 1;
-        }
-        if (steppersIdle()) *pend = 0;
-        if (!TICK_STEP_ENDS()) {
-            r = *pend > 0 || !steppersIdle() ? FALSE : TRUE;
-            goto end;
-        }
+    if (!TICK_STEP_ENDS()) {
+        r = FALSE;
+        goto end;
     }
-#define TALK_STEP() (pend ? (void)(++*pend) : stepSteppers())
-#else
-#define TALK_STEP() stepSteppers()
-#endif
     BOOL t;
     if (printMode != 2 && printVars.fastForwardLock == 0 && printVars.fastForward != 0) {
         t = TRUE;
@@ -797,7 +770,7 @@ BOOL TalkParser::stepSpeed() {
         goto end;
     }
     while (!steppersIdle()) {
-        TALK_STEP();
+        stepSteppers();
         printVars.charCount = printVars.charCount + 1;
         if (printVars.charCount >= n) {
             printVars.charCount = 0;

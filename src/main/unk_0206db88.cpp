@@ -294,6 +294,11 @@ extern "C" BOOL MenuScreen_StepAct00() { return FALSE; }
 extern "C" BOOL MenuScreen_StepNop() { return TRUE; }
 
 extern "C" BOOL MenuScreen_StepAct01() {
+#ifdef HOST
+    sMenuScreenState.v = 3;
+    MenuScreen_SetupSubBg();
+    return TRUE;
+#endif
     if (MenuScreen_LoadBackground(1)) {
         sMenuScreenState.v = 2;
         Gfx2d_ShowLayer(1);
@@ -316,7 +321,11 @@ extern "C" BOOL MenuScreen_StepAct02() {
 }
 
 extern "C" BOOL MenuScreen_StepAct03() {
+#ifdef HOST
+    if (TRUE) {
+#else
     if (Camera_SetMode1()) {
+#endif
         MenuCtrl_SetTransitionActive();
         MenuCtrl_SetTransitionProgress(0);
         sMenuScreenProgress = 0x1000;
@@ -330,9 +339,7 @@ extern "C" BOOL MenuScreen_StepAct04() {
     if (MenuScreen_LoadBackground(5)) {
         Gfx2d_DisableMainWindows(2);
         Gfx2d_HideSubPlanes(0xf);
-#ifndef HOST
         Gfx2d_ShowLayer(5);
-#endif
         gGfxMainOnTop = 1;
         MenuCtrl_ClearScreenChanging();
         MenuCtrl_SetMenuOnTop();
@@ -348,10 +355,12 @@ extern "C" BOOL MenuScreen_StepAct04() {
 extern "C" BOOL MenuScreen_StepAct05() {
     if (sMenuScreenProgress == 0) {
         sMenuScreenState.v = 6;
+#ifndef HOST
         if (Unk_0206dc9c_IsZero(gFieldSceneKind)) {
             Sky_Disable();
         }
         Gfx2d_SetMainBgModeState(0);
+#endif
         return TRUE;
     }
     if (sMenuScreenProgress > sMenuScreenProgressStep) {
@@ -366,7 +375,9 @@ extern "C" BOOL MenuScreen_StepAct05() {
 extern "C" BOOL MenuScreen_StepAct06() {
     Gfx2d_DisableMainWindows(1);
     Gfx2d_DisableMainWindows(2);
+#ifndef HOST
     Gfx2d_HideMainPlanes(0xe);
+#endif
     sMenuScreenState.v = 7;
     return TRUE;
 }
@@ -391,12 +402,16 @@ extern "C" BOOL MenuScreen_StepAct09() {
     if (sMenuScreenProgress == 0) {
         if (!MenuScreen_HasFlags(1)) {
             Gfx2d_SetLayerPriority(5, 1);
+#ifndef HOST
             MenuScreen_LoadBackground(1);
+#endif
             MenuCtrl_ClearTransitionActive();
             sMenuScreenState.v = 10;
             gGfxMainOnTop = 0;
             Gfx2d_HideMainPlanes(0xe);
+#ifndef HOST
             Gfx2d_ShowLayer(1);
+#endif
             Gfx2d_ResetLayer(5);
             HudObjGfx_LoadForSceneSub();
             if (Unk_0206dc9c_IsZero(gFieldSceneKind)) {
@@ -416,6 +431,11 @@ extern "C" BOOL MenuScreen_StepAct09() {
 }
 
 extern "C" BOOL MenuScreen_StepAct0A() {
+#ifdef HOST
+    Camera_RestorePrevMode();
+    sMenuScreenState.v = 0xb;
+    return TRUE;
+#endif
     Gfx2d_EnableMainWindows(2);
     Gfx2d_DisableMainWindows(1);
     Gfx2d_SetMainWin1Planes(0x1f);
