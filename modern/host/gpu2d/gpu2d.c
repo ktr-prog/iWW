@@ -345,6 +345,10 @@ static void compose_line(Engine *e, int line, const u32 *line3d, u32 *dst) {
         u32 back = 0;
         for (int k = 0; k < layers; k++)
             if (order[k] < 4 && (reg16(e, REG_BGCNT + 2 * order[k]) & 3) > back) back = reg16(e, REG_BGCNT + 2 * order[k]) & 3;
+        {
+            extern unsigned Scene_GetCurrent(void);
+            if (Scene_GetCurrent() != 0x2c) back = 0;
+        }
         u8 o2[4 * 5 + 1];
         int m2 = 0;
         for (int k = 0; k < layers; k++)
@@ -702,7 +706,7 @@ static void single_compose(const Gpu2dFrameInput *in, int blank) {
     int sw = (sPowCnt & 0x8000) != 0;
     extern int MenuCtrl_IsIdle(void);
     int menu = sw || !MenuCtrl_IsIdle();
-    static u32 skyRow[CANVAS_MAX];
+    static u32 skyRow[CANVAS_MAX], skyPix[CANVAS_MAX * SCREEN_W];
     static int skyRowHave;
     if (!sw && (!(reg32(b, REG_DISPCNT) & 0xe000) || !haveRef)) {
         memcpy(ref, b->out + (SCREEN_H - 1) * SCREEN_W, sizeof ref);
@@ -738,7 +742,7 @@ static void single_compose(const Gpu2dFrameInput *in, int blank) {
         if (menu && skyRowHave) {
             const u32 *l3 = top3d && sA3dPrev ? top3d + y * SCREEN_W : NULL;
             for (int x = 0; x < SCREEN_W; x++) {
-                u32 o = skyRow[y], c = l3 ? l3[x] : 0, al = c >> 24 & 31;
+                u32 o = skyPix[y * SCREEN_W + x], c = l3 ? l3[x] : 0, al = c >> 24 & 31;
                 if (al) o = al == 31 ? c & 0x3f3f3f : blend3d(c & 0x3f3f3f, o, al);
                 if ((mb >> 14) == 1 && f) o = brighten(o, f, 0);
                 else if ((mb >> 14) == 2 && f) o = darken(o, f, 15);
@@ -787,6 +791,7 @@ static void single_compose(const Gpu2dFrameInput *in, int blank) {
             const u32 *src = by >= 0 ? b->out + by * SCREEN_W : y < sExtRows ? sExtSky + y * SCREEN_W : NULL;
             if (!src) {
                 skyRow[y] = skyTop;
+                for (int x = 0; x < SCREEN_W; x++) skyPix[y * SCREEN_W + x] = skyTop;
                 continue;
             }
             u32 dom = src[0];
@@ -797,6 +802,7 @@ static void single_compose(const Gpu2dFrameInput *in, int blank) {
                 if (n > best) best = n, dom = src[x];
             }
             skyRow[y] = dom;
+            for (int x = 0; x < SCREEN_W; x++) skyPix[y * SCREEN_W + x] = src[x];
         }
         skyRowHave = 1;
     }
@@ -910,7 +916,13 @@ void gpu2d_render_frame(const Gpu2dFrameInput *in) {
             else if (line == 0 && e->haveNextLine0) e->obj = e->objNextLine0;
             else if (line == 0) memset(&e->obj, 0, sizeof e->obj);
             else gpu2d_render_obj_line(e, line, &e->obj);
-            render_line(e, in, line);
+            if (n == 1 && (sPowCnt & 0x8000)) {
+                u8 keep = e->regs[REG_DISPCNT + 1];
+                e->regs[REG_DISPCNT + 1] &= (u8)~0x04;
+                render_line(e, in, line);
+                e->regs[REG_DISPCNT + 1] = keep;
+            } else
+                render_line(e, in, line);
         }
         if (in->hblank) in->hblank(line, in->hblankContext);
         if (sGpu) gpu_versions(in);
