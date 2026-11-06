@@ -317,7 +317,7 @@ int gpu2d_tall_3d_ok(void) {
     u32 d = reg32(&sEngine[0], REG_DISPCNT);
     return (d & 8) && (d & 0x100) && !(d & 0x80);
 }
-int gpu2d_main_on_bottom(void) { return !(sPowCnt & 0x8000); }
+int gpu2d_main_on_bottom(void) { return 1; }
 
 static void compose_line(Engine *e, int line, const u32 *line3d, u32 *dst) {
     u32 dispcnt = reg32(e, REG_DISPCNT);
@@ -773,7 +773,7 @@ static void single_compose(const Gpu2dFrameInput *in, int blank) {
 }
 
 static int sTouchTop;
-int gpu2d_touch_on_top(void) { return sTouchTop && !sSingle; }
+int gpu2d_touch_on_top(void) { return (sPowCnt & 0x8000) != 0; }
 extern int gHostCanvasRows;
 static void classic_compose(const Gpu2dFrameInput *in) {
     int rows = gHostCanvasRows < SCREEN_H ? SCREEN_H : gHostCanvasRows > CANVAS_MAX ? CANVAS_MAX : gHostCanvasRows;
@@ -826,7 +826,7 @@ void gpu2d_render_frame(const Gpu2dFrameInput *in) {
     gHostSingleScreen = sSingle;
     {
         extern int Scene_HostIsOutdoor(void);
-        sOutdoors = Scene_HostIsOutdoor();
+        sOutdoors = Scene_HostIsOutdoor() && !(sPowCnt & 0x8000);
     }
     sA3dPrev = sA3dNow;
     sA3dNow = 0;
