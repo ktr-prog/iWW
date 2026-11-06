@@ -7,6 +7,7 @@
 static Engine sEngine[2];
 static int sSingle, sSingleBlank, sA3dNow, sA3dPrev, sOutdoors;
 static u8 sSkyA[SCREEN_W * SCREEN_H];
+static u8 sBBack[SCREEN_W * SCREEN_H];
 int gHostSingleScreen;
 static u16 sPowCnt;
 static u8 sVramCnt[9];
@@ -325,7 +326,7 @@ static void compose_line(Engine *e, int line, const u32 *line3d, u32 *dst) {
     u8 mask[SCREEN_W];
     window_line(e, obj, mask);
     obj_mosaic_x(e, &e->obj);
-    int top3d = e->num == 1 && sSingle && line3d && sA3dPrev;
+    int top3d = e->num == 1 && sSingle && line3d && sA3dPrev && !(sPowCnt & 0x8000);
     int has3d = e->num == 0 && (dispcnt & 8) && (dispcnt & 0x100) && line3d;
     int defer3d = e->num == 0 && (dispcnt & 8) && (dispcnt & 0x100) && sDefer3d;
     if (has3d || defer3d) gpu2d_feature(e, F_3D);
@@ -406,6 +407,7 @@ static void compose_line(Engine *e, int line, const u32 *line3d, u32 *dst) {
         }
         if (sSingle && e->num == 0 && is3d[0]) sA3dNow = 1;
         if (sSingle && e->num == 0) sSkyA[line * SCREEN_W + x] = (u8)(sOutdoors && is3d[0] && (line3d[x + hofs3d] >> 31));
+        if (e->num == 1 && line < SCREEN_H) sBBack[line * SCREEN_W + x] = (u8)(!found);
         if (!found) lay[1] = LAYER_NONE;
         u32 out = col[0], eff = EFF_NONE;
         int effOk = m & 0x20, below2nd = (second >> lay[1]) & 1;
@@ -696,7 +698,8 @@ static void single_compose(const Gpu2dFrameInput *in, int blank) {
         sCanvasRows = rows;
         return;
     }
-    if (!(reg32(b, REG_DISPCNT) & 0xe000) || !haveRef) {
+    int sw = (sPowCnt & 0x8000) != 0;
+    if (!sw && (!(reg32(b, REG_DISPCNT) & 0xe000) || !haveRef)) {
         memcpy(ref, b->out + (SCREEN_H - 1) * SCREEN_W, sizeof ref);
         haveRef = 1;
     }
@@ -722,11 +725,13 @@ static void single_compose(const Gpu2dFrameInput *in, int blank) {
         if (y >= t) {
             const u32 *src = a->out + (y - t) * SCREEN_W;
             const u8 *sky = sSkyA + (y - t) * SCREEN_W;
-            for (int x = 0; x < SCREEN_W; x++) d[x] = argb(sky[x] ? ref[x] : src[x]);
+            const u32 *bm = b->out + (y - t) * SCREEN_W;
+            const u8 *bb = sBBack + (y - t) * SCREEN_W;
+            for (int x = 0; x < SCREEN_W; x++) d[x] = argb(sw && !bb[x] ? bm[x] : sky[x] ? ref[x] : src[x]);
             continue;
         }
         int by = y - (t - SCREEN_H);
-        if (by >= 0) {
+        if (by >= 0 && !sw) {
             for (int x = 0; x < SCREEN_W; x++) d[x] = argb(b->out[by * SCREEN_W + x]);
             continue;
         }
@@ -773,7 +778,7 @@ static void single_compose(const Gpu2dFrameInput *in, int blank) {
 }
 
 static int sTouchTop;
-int gpu2d_touch_on_top(void) { return (sPowCnt & 0x8000) != 0; }
+int gpu2d_touch_on_top(void) { return 0; }
 extern int gHostCanvasRows;
 static void classic_compose(const Gpu2dFrameInput *in) {
     int rows = gHostCanvasRows < SCREEN_H ? SCREEN_H : gHostCanvasRows > CANVAS_MAX ? CANVAS_MAX : gHostCanvasRows;
@@ -826,7 +831,7 @@ void gpu2d_render_frame(const Gpu2dFrameInput *in) {
     gHostSingleScreen = sSingle;
     {
         extern int Scene_HostIsOutdoor(void);
-        sOutdoors = Scene_HostIsOutdoor() && !(sPowCnt & 0x8000);
+        sOutdoors = Scene_HostIsOutdoor();
     }
     sA3dPrev = sA3dNow;
     sA3dNow = 0;
