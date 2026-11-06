@@ -7,7 +7,6 @@
 static const struct {
     const char *key, *name;
 } kFeatures[FEAT_COUNT] = {
-    [FEAT_CIRCLE_PAD] = {"circle_pad", "CIRCLE PAD"},
     [FEAT_FPS] = {"fps", "FPS COUNTER"},
     [FEAT_NO_RESETTI] = {"no_resetti", "NEVER GET RESETTI"},
 };
@@ -44,7 +43,7 @@ void features_init(const char *path) {
     for (int i = 0; i < FEAT_COUNT; i++) fprintf(stderr, "features: %s %s\n", kFeatures[i].key, sOn[i] ? "on" : "off");
 }
 
-int feature_on(int f) { return f >= 0 && f < FEAT_COUNT && sOn[f]; }
+int feature_on(int f) { return f == FEAT_CIRCLE_PAD || (f >= 0 && f < FEAT_COUNT && sOn[f]); }
 
 static int env_off(const char *name) { return getenv(name) && atoi(getenv(name)) == 0; }
 int host_local_play_on(void) { return !env_off("ACWW_LOCAL_PLAY"); }

@@ -6,10 +6,10 @@ extern "C" {
 #endif
 
 enum {
-    FEAT_CIRCLE_PAD,
     FEAT_FPS,
     FEAT_NO_RESETTI,
-    FEAT_COUNT
+    FEAT_COUNT,
+    FEAT_CIRCLE_PAD = FEAT_COUNT
 };
 
 extern volatile unsigned long long gHostGameFrames;

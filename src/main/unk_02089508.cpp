@@ -149,7 +149,11 @@ BOOL LabelBalloon::requestOpen() {
 }
 
 BOOL LabelBalloon::requestClose() {
+#ifdef HOST
+    BOOL r = state == 2 || state == 1 ? TRUE : FALSE;
+#else
     BOOL r = state == 2 ? TRUE : FALSE;
+#endif
     if (r) {
         closeRequest = 1;
     }

@@ -7,6 +7,7 @@ static float clampf(float v, float lo, float hi) { return v < lo ? lo : v > hi ?
 static float minf(float a, float b) { return a < b ? a : b; }
 static float maxf(float a, float b) { return a > b ? a : b; }
 static TcRect rect(float x, float y, float w, float h) { TcRect r = {x, y, w, h}; return r; }
+static TcRect fit32(int w, int h);
 static TcRect square_at(float cx, float cy, float d) { return rect(cx - d / 2, cy - d / 2, d, d); }
 static int inside(TcRect r, float x, float y) { return x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h; }
 
@@ -33,7 +34,7 @@ void tc_layout(TcLayout *l, int w, int h, float pt, const float safe[4], int con
     TcRect safeRect = rect(sx, sy, sw, sh);
     if (!controls) {
         l->screens = fit_screens(safeRect);
-        l->fill = rect(0, 0, (float)w, (float)h);
+        l->fill = fit32(w, h);
         return;
     }
     const float m = 8 * pt;
@@ -43,7 +44,7 @@ void tc_layout(TcLayout *l, int w, int h, float pt, const float safe[4], int con
         float sch = sh - ctrl, scw = sch / 1.5f;
         if (scw > sw) scw = sw, sch = scw * 1.5f;
         l->screens = rect(sx + (sw - scw) / 2, sy, scw, sch);
-        l->fill = rect(0, 0, (float)w, (float)h);
+        l->fill = fit32(w, h);
         float top = sy + sch, bottom = sy + sh, ch = bottom - top;
         float rh = clampf(ch * 0.17f, 30 * pt, 44 * pt);
         float rowY = top + m * 0.75f;
@@ -164,6 +165,12 @@ int tc_canvas_rows(const TcLayout *l) {
     if (l->fill.w <= 0 || l->fill.h <= 0) return 384;
     int n = (int)floorf(256.0f * l->fill.h / l->fill.w + 0.5f);
     return n < 192 ? 192 : n > 640 ? 640 : n;
+}
+
+static TcRect fit32(int w, int h) {
+    float fw = (float)w, fh = fw * 1.5f;
+    if (fh > (float)h) fh = (float)h, fw = fh / 1.5f;
+    return rect(((float)w - fw) / 2, ((float)h - fh) / 2, fw, fh);
 }
 
 static void stylus_point(TcState *s, const TcLayout *l, float x, float y) {
