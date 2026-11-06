@@ -9,6 +9,11 @@
 
 extern "C" {
 s32 Scene_GetCurrent(void);
+void DC_FlushRange(void *p, u32 size);
+void GX_LoadOBJPltt(void *p, u32 src, u32 size);
+void GXS_LoadOBJPltt(void *p, u32 src, u32 size);
+void GX_LoadOBJ(void *p, u32 src, u32 size);
+void GXS_LoadOBJ(void *p, u32 src, u32 size);
 void MI_CpuFill8(void *dst, u32 v, u32 n);
 
 extern const u8 sSceneHudKinds[0x34];
@@ -49,6 +54,15 @@ extern "C" void HudObjGfx_LoadKind(u32 a, u32 b) { sHudObjGfx.loadKind(a, b); }
 
 extern "C" void HudObjGfx_LoadCameraButton(u32 a, u32 b, u32 c) { sHudObjGfx.loadCameraButton(a, b, c); }
 
+#ifdef HOST
+extern "C" void HudObjGfx_HostKindChars(u32 kind) {
+    HudObjGfx *p = &sHudObjGfx;
+    HudObjGfx_InitFile(p);
+    if (p->loadKindChars(kind)) p->uploadKindChars(1);
+    p->releaseKindChars();
+}
+#endif
+
 extern "C" void HudObjGfx_SetCountdownVariant(u8 v) { sHudObjGfx.countdownVariant = v; }
 
 extern "C" u8 HudObjGfx_GetCountdownVariant(void) { return sHudObjGfx.countdownVariant; }
@@ -80,10 +94,39 @@ void HudObjGfx::loadForScene(u32 a) {
     p->freePalette();
     if (p->loadChars()) p->uploadChars(a);
     p->freeChars();
+#ifdef HOST
+    hostLoadCamera(Hud_GetSceneHudKind(), a);
+#else
     if (Hud_GetSceneHudKind() == 2) {
         if (InputMode_IsTouch()) loadCameraButton(1, 0, a);
     }
+#endif
 }
+
+#ifdef HOST
+void HudObjGfx::hostLoadCamera(s32 kind, u32 which) {
+    if (kind != 1 && kind != 2) return;
+    if (kind == 1) {
+        HudObjGfx_InitFile(this);
+        if (loadPalette(2)) {
+            DC_FlushRange(paletteBuf, 0x180);
+            if (which <= 1) GX_LoadOBJPltt(paletteBuf + 0x20, 0xa0, 0x40);
+            if (which == 0 || which == 2) GXS_LoadOBJPltt(paletteBuf + 0x20, 0xa0, 0x40);
+        }
+        freePalette();
+        HudObjGfx_InitFile(this);
+        if (loadCameraButtonChars(1)) {
+            DC_FlushRange(cameraButtonChars, 0x200);
+            for (s32 i = 0; i < 2; i++) {
+                if (which <= 1) GX_LoadOBJ(cameraButtonChars + i * 0x100, 0x1380 + i * 0x400, 0x80);
+                if (which == 0 || which == 2) GXS_LoadOBJ(cameraButtonChars + i * 0x100, 0x1380 + i * 0x400, 0x80);
+            }
+        }
+        return;
+    }
+    loadCameraButton(1, 0, which);
+}
+#endif
 
 void HudObjGfx::loadKind(u32 a, u32 b) {
     HudObjGfx *p = &sHudObjGfx;
@@ -92,9 +135,13 @@ void HudObjGfx::loadKind(u32 a, u32 b) {
     p->freePalette();
     if (p->loadKindChars(a)) p->uploadKindChars(b);
     p->releaseKindChars();
+#ifdef HOST
+    hostLoadCamera(a == 4 ? Hud_GetSceneHudKind() : (s32)a, b);
+#else
     if (a == 2 || (a == 4 && Hud_GetSceneHudKind() == 2)) {
         if (InputMode_IsTouch()) loadCameraButton(1, 0, b);
     }
+#endif
 }
 
 void HudObjGfx::loadCameraButton(u32 a, u32 b, u32 c) {

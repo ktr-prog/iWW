@@ -777,6 +777,22 @@ void Camera::updateModeDefault() {
             clampToRoomBounds((s32 *)&targetFocus.x);
         }
     } else {
+#ifdef HOST
+        static BOOL sHostOutdoorPreset;
+        if (presetRow != 1 || presetCol != 1) {
+            sHostOutdoorPreset = TRUE;
+            s32 g = sCameraPoseGrid[presetRow].v[presetCol], m = sCameraPoseGrid[1].v[1];
+            target.x = sCameraPoseTable[0].x + sCameraPoseTable[g].x - sCameraPoseTable[m].x;
+            target.y = sCameraPoseTable[0].y + sCameraPoseTable[g].y - sCameraPoseTable[m].y;
+            target.z = sCameraPoseTable[0].z + sCameraPoseTable[g].z - sCameraPoseTable[m].z;
+            target.w0 = sCameraPoseTable[0].w0 + sCameraPoseTable[g].w0 - sCameraPoseTable[m].w0;
+            target.h1 = (s16)(sCameraPoseTable[0].h1 + sCameraPoseTable[g].h1 - sCameraPoseTable[m].h1);
+            target.h0 = (s16)(sCameraPoseTable[0].h0 + sCameraPoseTable[g].h0 - sCameraPoseTable[m].h0);
+        } else if (sHostOutdoorPreset) {
+            sHostOutdoorPreset = FALSE;
+            loadPose(0, 0);
+        }
+#endif
         dragFocusTo((VecFx32 *)&d);
     }
     VecFx32 v;

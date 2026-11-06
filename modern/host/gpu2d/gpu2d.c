@@ -9,6 +9,7 @@ static int sSingle, sSingleBlank, sA3dNow, sA3dPrev, sOutdoors;
 static u8 sSkyA[SCREEN_W * SCREEN_H];
 static u8 sBBack[SCREEN_W * SCREEN_H];
 static u8 sATop[SCREEN_W * SCREEN_H];
+static u8 sBKeep[SCREEN_W * SCREEN_H];
 int gHostSingleScreen;
 static u16 sPowCnt;
 static u8 sVramCnt[9];
@@ -414,6 +415,8 @@ static void compose_line(Engine *e, int line, const u32 *line3d, u32 *dst) {
         if (sSingle && e->num == 0) sSkyA[line * SCREEN_W + x] = (u8)(sOutdoors && is3d[0] && (line3d[x + hofs3d] >> 31));
         if (e->num == 1 && line < SCREEN_H) sBBack[line * SCREEN_W + x] = (u8)(!found);
         if (e->num == 0 && line < SCREEN_H) sATop[line * SCREEN_W + x] = (u8)(is3d[0] ? 6 : lay[0]);
+        if (e->num == 1 && line < SCREEN_H)
+            sBKeep[line * SCREEN_W + x] = (u8)((dispcnt & 0x8000) && lay[0] == LAYER_OBJ && !(m & 0x20) && effect == 3);
         if (!found) lay[1] = LAYER_NONE;
         u32 out = col[0], eff = EFF_NONE;
         int effOk = m & 0x20, below2nd = (second >> lay[1]) & 1;
@@ -710,11 +713,13 @@ static void single_compose(const Gpu2dFrameInput *in, int blank) {
     int menu = sw || !MenuCtrl_IsIdle();
     static u32 skyRow[CANVAS_MAX], skyPix[CANVAS_MAX * SCREEN_W];
     static int skyRowHave;
-    if (!sw && (!(reg32(b, REG_DISPCNT) & 0xe000) || !haveRef)) {
+    int iris = gHostIrisRadius >= 0 && (reg32(b, REG_DISPCNT) & 0x2000);
+    int bLast = 0;
+    for (int x = 0; x < SCREEN_W; x++) bLast |= !sBBack[(SCREEN_H - 1) * SCREEN_W + x];
+    if (!sw && bLast && ((!menu && !iris && !(reg16(b, REG_MASTER_BRIGHT) & 0x1f) && !(mb & 0x1f)) || !haveRef)) {
         memcpy(ref, b->out + (SCREEN_H - 1) * SCREEN_W, sizeof ref);
         haveRef = 1;
     }
-    int iris = gHostIrisRadius >= 0 && (reg32(b, REG_DISPCNT) & 0x2000);
     static u32 skyTop, skyCand;
     static int skyHave, skyRun;
     {
@@ -739,8 +744,9 @@ static void single_compose(const Gpu2dFrameInput *in, int blank) {
             const u32 *bm = b->out + (y - t) * SCREEN_W;
             const u8 *bb = sBBack + (y - t) * SCREEN_W;
             const u8 *at = sATop + (y - t) * SCREEN_W;
+            const u8 *bk = sBKeep + (y - t) * SCREEN_W;
             for (int x = 0; x < SCREEN_W; x++)
-                d[x] = argb(sw && !bb[x] && at[x] >= LAYER_BACKDROP ? bm[x] : sky[x] ? ref[x] : src[x]);
+                d[x] = argb(sw && !bb[x] && (at[x] >= LAYER_BACKDROP || bk[x]) ? bm[x] : sky[x] ? ref[x] : src[x]);
             continue;
         }
         if (menu && skyRowHave) {

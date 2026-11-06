@@ -5955,7 +5955,14 @@ void PlayerActor::changeHeldItemUpdate() {
         else ((Unk_02007694 *)(void *)(((PlayerActor *)this)))->requestAct05(3, 5, -1);
     } else {
         (((PlayerActor *)this))->turnToCamera(0x400);
+#ifdef HOST
+        u32 entered = ((u32)((PlayerActor *)this)->bodyModel.curFrame >> 12) != ((u32)((PlayerActor *)this)->bodyModel.prevFrame >> 12)
+                          ? ((u32)((PlayerActor *)this)->bodyModel.curFrame << 4) >> 16
+                          : 0;
+        switch (entered) {
+#else
         switch (((u32)((PlayerActor *)this)->bodyModel.curFrame << 4) >> 16) {
+#endif
         case 8:
             PlayerActor_SetHoldableItem(0, ((PlayerActor *)this)->sessionSlot);
             break;

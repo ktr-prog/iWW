@@ -25,6 +25,9 @@ struct SpriteAnimSeq;
 
 
 
+#ifdef HOST
+extern "C" void HudObjGfx_HostKindChars(u32 kind);
+#endif
 extern "C" {
 s32 func_01ffcb0c(s32 a, s32 b);
 void Math_ApproachS32(void *p, s32 a, s32 b, s32 c, s32 d);
@@ -193,7 +196,7 @@ void HudClock::update() {
     static Unk_020e0f64_Fn tbl[4] = {(Unk_020e0f64_Fn)&HudClock::updateHidden, (Unk_020e0f64_Fn)&HudClock::updateAppearing,
                                      (Unk_020e0f64_Fn)&HudClock::updateShown, (Unk_020e0f64_Fn)&HudClock::updateHiding};
 #ifdef HOST
-    if (MenuCtrl_IsMenuOpen()) {
+    if (MenuCtrl_IsMenuOpen() || TalkRequest_IsCameraViewRunning()) {
         if (state != 0) {
             freeLabels();
             enterHidden();
@@ -1386,6 +1389,17 @@ void HudCameraButton::draw() {
             s32 bx = getOriginX();
             s32 by = getOriginY();
             s32 t = ((u32)(state - 3) <= 2) ? 6 : 5;
+#ifdef HOST
+            u16 moved[4];
+            if (Hud_GetSceneHudKind() != 2) {
+                const u16 *c = (const u16 *)v;
+                moved[0] = c[0];
+                moved[1] = c[1];
+                moved[2] = (u16)((c[2] & ~0x3ff) | ((c[2] & 0x3ff) - 0x8c + 0x9c));
+                moved[3] = 0xffff;
+                v = (GXOamAttr *)moved;
+            }
+#endif
             Oam_DrawCell(0, v, bx + x, by + y, t, -1, 0x1000, 0x1000, 0, -1, 0, 0);
         }
     }
@@ -1452,6 +1466,9 @@ BOOL HudCameraButton::canShow() {
     if (v - 8 <= 7) b = TRUE; else b = FALSE;
     if (v - 0x24 <= 8) c = TRUE; else c = FALSE;
     BOOL r;
+#ifdef HOST
+    if (MenuCtrl_IsMenuOpen()) a = TRUE;
+#endif
     if (enabled != 0 && !a && !b && !c) {
         r = TRUE;
     } else {
@@ -1477,6 +1494,9 @@ BOOL HudCameraButton::isTogglePressed(s32 flag) {
     if (!f) {
         if (grid.isSettled()) {
             u32 k = gPad[1];
+#ifdef HOST
+            if (Hud_GetSceneHudKind() != 2) k &= ~0x400u;
+#endif
             if ((k & 0x400) != 0 || (flag != 0 && (k & 2) != 0)) {
                 r = TRUE;
                 openedByButton = 1;
@@ -1560,6 +1580,9 @@ void HudCameraButton::updateShown() {
 }
 
 void HudCameraButton::enterGridOpening() {
+#ifdef HOST
+    if (Hud_GetSceneHudKind() != 2) HudObjGfx_HostKindChars(2);
+#endif
     state = 3;
     grid.setVisible(1);
     gridActive = 1;
@@ -1600,6 +1623,9 @@ void HudCameraButton::enterGridClosing() {
 
 void HudCameraButton::updateGridClosing() {
     if (grid.isClosed()) {
+#ifdef HOST
+        if (Hud_GetSceneHudKind() != 2) HudObjGfx_HostKindChars(1);
+#endif
         TalkRequest_FinishCameraView();
         gridActive = 0;
         enterShown();
@@ -1930,6 +1956,9 @@ void HudController::update() {
         (Fn)&HudControllerStates::updateCameraButton, (Fn)&HudControllerStates::updateWallet, (Fn)&HudControllerStates::updateHidden,
     };
     (this->*tbl[state])();
+#ifdef HOST
+    if (state != 1 && state != 3) ((HudCameraButton *)(&cameraButton))->disable();
+#endif
     clock.callUpdate();
     countdown.callUpdate();
     ((HudCameraButton *)(&cameraButton))->callUpdate();
@@ -1979,6 +2008,13 @@ void HudController::updateClock() {
     } else {
         clock.show();
     }
+#ifdef HOST
+    if (a) {
+        ((HudCameraButton *)(&cameraButton))->disable();
+    } else {
+        ((HudCameraButton *)(&cameraButton))->enable();
+    }
+#endif
 }
 
 void HudController::enterCountdown() {
@@ -2098,9 +2134,11 @@ void HudControllerStates::updateInputLayout() {
     }
     if (r) {
         buttonLayout = buttonLayout == 0 ? 1 : 0;
+#ifndef HOST
         if (state == 3) {
             HudObjGfx_LoadCameraButton(buttonLayout, 1, 1);
         }
+#endif
     }
 }
 

@@ -42,6 +42,9 @@ struct HudObjGfx : public HudObjGfxIo {
     void loadSlideIcon(u32 v);
     void loadLinkIcon(u32 v);
     void loadCameraButton(u32 a, u32 b, u32 c);
+#ifdef HOST
+    void hostLoadCamera(s32 kind, u32 which);
+#endif
     void loadKind(u32 a, u32 b);
     void loadForScene(u32 a);
 };
