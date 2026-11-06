@@ -1,6 +1,6 @@
 #include "types.h"
 #ifdef HOST
-extern "C" int gHostStickRun;
+extern "C" int gHostStickRun, gHostNoTouchWalk;
 #endif
 #include "host_input.h"
 extern "C" s32 Math_Sqrt64(u64 x);
@@ -799,7 +799,11 @@ void PlayerActor::readInput() {
             if (vc) mode = 2; else mode = 1;
         } else if (gPad.cur & 0x2ff3) {
             mode = 1;
+#ifdef HOST
+        } else if (vc && !gHostNoTouchWalk) {
+#else
         } else if (vc) {
+#endif
             mode = 2;
         }
         if (mode == 2) {

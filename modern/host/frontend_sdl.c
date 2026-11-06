@@ -908,8 +908,12 @@ static void frame_body(void) {
     ios_states();
     sTouch.canvas_rows = sShm->rows >= 192 && sShm->rows <= 640 ? (int)sShm->rows : 0;
     {
-        extern int Scene_InTown(void), Scene_HostIsOutdoor(void), MenuCtrl_IsIdle(void), TalkRequest_IsActive(void);
-        sTouch.buttons_off = !Scene_InTown() || !MenuCtrl_IsIdle() || TalkRequest_IsActive();
+        extern int MenuCtrl_IsIdle(void), TalkRequest_IsActive(void);
+        extern unsigned Scene_GetCurrent(void);
+        extern void *PlayerActor_Get(int);
+        extern int gHostNoTouchWalk;
+        sTouch.buttons_off = Scene_GetCurrent() == 0x2c || !PlayerActor_Get(4) || !MenuCtrl_IsIdle() || TalkRequest_IsActive();
+        gHostNoTouchWalk = sLayout.controls && !sTouch.buttons_off;
     }
     sShm->keys = keyboard_keys() | pad_keys() | tc_keys(&sTouch);
     sShm->stick = stick_word();
