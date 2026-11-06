@@ -674,9 +674,7 @@ BOOL FtrActor::onExecute() {
         if (kind == 0) {
             hasIndoorFlag6();
         }
-        TICK_LEGACY_BEGIN()
         updateActive();
-        TICK_LEGACY_END()
     } else {
         updateAppearRemove();
         if (switchState.isChanging()) {

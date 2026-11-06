@@ -740,10 +740,25 @@ BOOL TalkParser::stepSpeed() {
         }
         goto end;
     }
-    if (!TICK_STEP_ENDS()) {
+#ifdef HOST
+    if (TICK_STEPS() > 1) {
+        static u32 acc;
+        BOOL ff = printMode != 2 && printVars.fastForwardLock == 0 && printVars.fastForward != 0;
+        if (ff) printVars.waitTimer = 0;
+        if (printVars.waitTimer > 0) {
+            printVars.waitTimer -= TICK_PART(0x1800);
+            r = FALSE;
+            goto end;
+        }
+        if (steppersIdle()) goto end;
+        acc += ff ? 2 : 1;
         r = FALSE;
+        if (acc < 2) goto end;
+        acc = 0;
+        stepSteppers();
         goto end;
     }
+#endif
     BOOL t;
     if (printMode != 2 && printVars.fastForwardLock == 0 && printVars.fastForward != 0) {
         t = TRUE;

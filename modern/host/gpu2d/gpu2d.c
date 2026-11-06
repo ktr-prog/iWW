@@ -760,6 +760,15 @@ static void single_compose(const Gpu2dFrameInput *in, int blank) {
             d[x] = argb(o);
         }
     }
+    if (iris)
+        for (int y = 0; y < rows; y++) {
+            u32 *d = sCanvas + y * SCREEN_W;
+            double dy = y + 0.5 - cy;
+            for (int x = 0; x < SCREEN_W; x++) {
+                double dx = x + 0.5 - cx;
+                if (dx * dx + dy * dy > rr) d[x] = argb(0);
+            }
+        }
     sCanvasRows = rows;
 }
 
