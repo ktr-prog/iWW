@@ -180,7 +180,7 @@ static void stylus_point(TcState *s, const TcLayout *l, float x, float y) {
     if (s->canvas_rows > 0) {
         TcRect f = l->fill;
         px = (int)floorf((x - f.x) * 256.0f / f.w);
-        py = (int)floorf((y - f.y) * (float)s->canvas_rows / f.h) - (s->canvas_rows - 192);
+        py = (int)floorf((y - f.y) * (float)s->canvas_rows / f.h) - (s->canvas_rows - (s->touch_top ? 384 : 192));
     }
     s->stylus_x = px < 0 ? 0 : px > 255 ? 255 : px;
     s->stylus_y = py < 0 ? 0 : py > 191 ? 191 : py;
@@ -211,7 +211,10 @@ int tc_pointer(TcState *s, const TcLayout *l, int64_t id, int event, float x, fl
         int onButton = s->canvas_rows > 0 && ctl && (dpad_at(l, x, y) || button_at(l, x, y) >= 0);
         if (inside(sc, x, y) && !onButton) {
             int bottom = y >= sc.y + sc.h / 2;
-            if (s->canvas_rows > 0) bottom = y >= sc.y + sc.h * (float)(s->canvas_rows - 192) / (float)s->canvas_rows;
+            if (s->canvas_rows > 0) {
+                float r0 = (float)(s->canvas_rows - (s->touch_top ? 384 : 192)) / (float)s->canvas_rows;
+                bottom = y >= sc.y + sc.h * r0 && y < sc.y + sc.h * (r0 + 192.0f / (float)s->canvas_rows);
+            }
             if (bottom) {
                 for (int j = 0; j < TC_MAX_POINTERS; j++)
                     if (j != i && s->p[j].used && s->p[j].what == WHAT_STYLUS) s->p[j].what = WHAT_NOTHING;

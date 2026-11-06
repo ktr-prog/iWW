@@ -914,6 +914,8 @@ static void frame_body(void) {
         extern int gHostNoTouchWalk;
         sTouch.buttons_off = Scene_GetCurrent() == 0x2c || !PlayerActor_Get(4) || !MenuCtrl_IsIdle() || TalkRequest_IsActive();
         gHostNoTouchWalk = sLayout.controls && !sTouch.buttons_off;
+        extern int gpu2d_touch_on_top(void);
+        sTouch.touch_top = gpu2d_touch_on_top();
     }
     sShm->keys = keyboard_keys() | pad_keys() | tc_keys(&sTouch);
     sShm->stick = stick_word();

@@ -742,7 +742,6 @@ BOOL TalkParser::stepSpeed() {
     }
 #ifdef HOST
     if (TICK_STEPS() > 1) {
-        static u32 acc;
         BOOL ff = printMode != 2 && printVars.fastForwardLock == 0 && printVars.fastForward != 0;
         if (ff) printVars.waitTimer = 0;
         if (printVars.waitTimer > 0) {
@@ -751,10 +750,10 @@ BOOL TalkParser::stepSpeed() {
             goto end;
         }
         if (steppersIdle()) goto end;
-        acc += ff ? 2 : 1;
+        printVars.charCount += ff ? 2 : 1;
         r = FALSE;
-        if (acc < 2) goto end;
-        acc = 0;
+        if (printVars.charCount < 2) goto end;
+        printVars.charCount = 0;
         stepSteppers();
         goto end;
     }

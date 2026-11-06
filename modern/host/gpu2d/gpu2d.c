@@ -772,11 +772,15 @@ static void single_compose(const Gpu2dFrameInput *in, int blank) {
     sCanvasRows = rows;
 }
 
+static int sTouchTop;
+int gpu2d_touch_on_top(void) { return sTouchTop && !sSingle; }
 extern int gHostCanvasRows;
 static void classic_compose(const Gpu2dFrameInput *in) {
     int rows = gHostCanvasRows < SCREEN_H ? SCREEN_H : gHostCanvasRows > CANVAS_MAX ? CANVAS_MAX : gHostCanvasRows;
     int aTop = (sPowCnt & 0x8000) != 0;
-    const Engine *top = &sEngine[aTop ? 0 : 1], *bottom = &sEngine[aTop ? 1 : 0], *a = &sEngine[0];
+    const Engine *top = &sEngine[1], *bottom = &sEngine[0], *a = &sEngine[0];
+    sTouchTop = aTop;
+    aTop = 0;
     int ext = rows - 2 * SCREEN_H;
     u16 mb = reg16(a, REG_MASTER_BRIGHT);
     u32 f = mb & 0x1f;
