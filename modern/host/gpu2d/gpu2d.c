@@ -609,7 +609,8 @@ static void render_ext_sky(const Gpu2dFrameInput *in) {
     int rows = gHostCanvasRows < SCREEN_H ? SCREEN_H : gHostCanvasRows > CANVAS_MAX ? CANVAS_MAX : gHostCanvasRows;
     int t = rows - SCREEN_H, ext = t - SCREEN_H;
     sExtRows = 0;
-    if (ext <= 0 || !sA3dPrev || !(sPowCnt & 0x200) || (reg32(b, REG_DISPCNT) & 0x80) || !(reg32(b, REG_DISPCNT) >> 16 & 1)) return;
+    extern int MenuCtrl_IsIdle(void);
+    if (ext <= 0 || !sA3dPrev || (sPowCnt & 0x8000) || !MenuCtrl_IsIdle() || !(sPowCnt & 0x200) || (reg32(b, REG_DISPCNT) & 0x80) || !(reg32(b, REG_DISPCNT) >> 16 & 1)) return;
     const u32 *top = in->topRows == t ? in->lines3dTop : NULL;
     ObjLine *saved = malloc(sizeof *saved);
     if (!saved) return;
@@ -699,6 +700,10 @@ static void single_compose(const Gpu2dFrameInput *in, int blank) {
         return;
     }
     int sw = (sPowCnt & 0x8000) != 0;
+    extern int MenuCtrl_IsIdle(void);
+    int menu = sw || !MenuCtrl_IsIdle();
+    static u32 skyRow[CANVAS_MAX];
+    static int skyRowHave;
     if (!sw && (!(reg32(b, REG_DISPCNT) & 0xe000) || !haveRef)) {
         memcpy(ref, b->out + (SCREEN_H - 1) * SCREEN_W, sizeof ref);
         haveRef = 1;
@@ -728,6 +733,17 @@ static void single_compose(const Gpu2dFrameInput *in, int blank) {
             const u32 *bm = b->out + (y - t) * SCREEN_W;
             const u8 *bb = sBBack + (y - t) * SCREEN_W;
             for (int x = 0; x < SCREEN_W; x++) d[x] = argb(sw && !bb[x] ? bm[x] : sky[x] ? ref[x] : src[x]);
+            continue;
+        }
+        if (menu && skyRowHave) {
+            const u32 *l3 = top3d && sA3dPrev ? top3d + y * SCREEN_W : NULL;
+            for (int x = 0; x < SCREEN_W; x++) {
+                u32 o = skyRow[y], c = l3 ? l3[x] : 0, al = c >> 24 & 31;
+                if (al) o = al == 31 ? c & 0x3f3f3f : blend3d(c & 0x3f3f3f, o, al);
+                if ((mb >> 14) == 1 && f) o = brighten(o, f, 0);
+                else if ((mb >> 14) == 2 && f) o = darken(o, f, 15);
+                d[x] = argb(o);
+            }
             continue;
         }
         int by = y - (t - SCREEN_H);
@@ -764,6 +780,25 @@ static void single_compose(const Gpu2dFrameInput *in, int blank) {
             }
             d[x] = argb(o);
         }
+    }
+    if (!menu && !iris && sA3dPrev) {
+        for (int y = 0; y < t; y++) {
+            int by = y - (t - SCREEN_H);
+            const u32 *src = by >= 0 ? b->out + by * SCREEN_W : y < sExtRows ? sExtSky + y * SCREEN_W : NULL;
+            if (!src) {
+                skyRow[y] = skyTop;
+                continue;
+            }
+            u32 dom = src[0];
+            int best = 0;
+            for (int x = 0; x < SCREEN_W; x += 8) {
+                int n = 0;
+                for (int k = 0; k < SCREEN_W; k += 8) n += src[k] == src[x];
+                if (n > best) best = n, dom = src[x];
+            }
+            skyRow[y] = dom;
+        }
+        skyRowHave = 1;
     }
     if (iris)
         for (int y = 0; y < rows; y++) {

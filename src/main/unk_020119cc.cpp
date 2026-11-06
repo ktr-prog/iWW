@@ -1105,7 +1105,9 @@ BOOL NpcActor::onExecute() {
     s32 cur;
 
     NpcActor_UpdateMovement(&moveCtrl, this);
+    TICK_LEGACY_BEGIN()
     updateAct();
+    TICK_LEGACY_END()
     if (updateEnabled == 0) {
         return TRUE;
     }
@@ -1161,8 +1163,10 @@ BOOL NpcActor::onExecute() {
             }
         }
     }
+    TICK_LEGACY_BEGIN()
     ((NpcTalkCtrl *)(&talkCtrl))->update((NpcActor *)(this));
     actionCtrl.update(this);
+    TICK_LEGACY_END()
     ((NpcEmotionFx *)(&emotionFx))->update(&jointPos[0], rotY, ((NpcAnimCtrl *)(&animCtrl))->getAnimId(0), ((Unk_0201b2b8_Bits *)&model.curFrame)->mid);
     ((NpcMoveCtrl *)(&moveCtrl))->updateTurn((Character *)(this));
     if (NetArea_IsLocalOwner() && collisionEnabled && collisionRadius > 0) {
