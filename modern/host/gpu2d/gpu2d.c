@@ -8,6 +8,7 @@ static Engine sEngine[2];
 static int sSingle, sSingleBlank, sA3dNow, sA3dPrev, sOutdoors;
 static u8 sSkyA[SCREEN_W * SCREEN_H];
 static u8 sBBack[SCREEN_W * SCREEN_H];
+static u8 sATop[SCREEN_W * SCREEN_H];
 int gHostSingleScreen;
 static u16 sPowCnt;
 static u8 sVramCnt[9];
@@ -412,6 +413,7 @@ static void compose_line(Engine *e, int line, const u32 *line3d, u32 *dst) {
         if (sSingle && e->num == 0 && is3d[0]) sA3dNow = 1;
         if (sSingle && e->num == 0) sSkyA[line * SCREEN_W + x] = (u8)(sOutdoors && is3d[0] && (line3d[x + hofs3d] >> 31));
         if (e->num == 1 && line < SCREEN_H) sBBack[line * SCREEN_W + x] = (u8)(!found);
+        if (e->num == 0 && line < SCREEN_H) sATop[line * SCREEN_W + x] = (u8)(is3d[0] ? 6 : lay[0]);
         if (!found) lay[1] = LAYER_NONE;
         u32 out = col[0], eff = EFF_NONE;
         int effOk = m & 0x20, below2nd = (second >> lay[1]) & 1;
@@ -736,7 +738,9 @@ static void single_compose(const Gpu2dFrameInput *in, int blank) {
             const u8 *sky = sSkyA + (y - t) * SCREEN_W;
             const u32 *bm = b->out + (y - t) * SCREEN_W;
             const u8 *bb = sBBack + (y - t) * SCREEN_W;
-            for (int x = 0; x < SCREEN_W; x++) d[x] = argb(sw && !bb[x] ? bm[x] : sky[x] ? ref[x] : src[x]);
+            const u8 *at = sATop + (y - t) * SCREEN_W;
+            for (int x = 0; x < SCREEN_W; x++)
+                d[x] = argb(sw && !bb[x] && at[x] >= LAYER_BACKDROP ? bm[x] : sky[x] ? ref[x] : src[x]);
             continue;
         }
         if (menu && skyRowHave) {

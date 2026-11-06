@@ -586,7 +586,7 @@ void host_test_post_task(void) {
 
 static int sInputWantsTurn;
 int gHostCanvasRows = 384;
-int gHostStickRun, gHostNoTouchWalk;
+int gHostStickRun;
 static u32 sLastTouchDown, sLastKeys;
 int host_input_wants_turn(void) {
     int r = sInputWantsTurn;

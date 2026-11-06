@@ -911,9 +911,7 @@ static void frame_body(void) {
         extern int MenuCtrl_IsIdle(void), TalkRequest_IsActive(void);
         extern unsigned Scene_GetCurrent(void);
         extern void *PlayerActor_Get(int);
-        extern int gHostNoTouchWalk;
         sTouch.buttons_off = Scene_GetCurrent() == 0x2c || !PlayerActor_Get(4) || !MenuCtrl_IsIdle() || TalkRequest_IsActive();
-        gHostNoTouchWalk = sLayout.controls && !sTouch.buttons_off;
         extern int gpu2d_touch_on_top(void);
         sTouch.touch_top = gpu2d_touch_on_top();
     }

@@ -192,6 +192,16 @@ void HudClock::draw() {
 void HudClock::update() {
     static Unk_020e0f64_Fn tbl[4] = {(Unk_020e0f64_Fn)&HudClock::updateHidden, (Unk_020e0f64_Fn)&HudClock::updateAppearing,
                                      (Unk_020e0f64_Fn)&HudClock::updateShown, (Unk_020e0f64_Fn)&HudClock::updateHiding};
+#ifdef HOST
+    if (MenuCtrl_IsMenuOpen()) {
+        if (state != 0) {
+            freeLabels();
+            enterHidden();
+        }
+        showDelay = 10;
+        return;
+    }
+#endif
     (this->*tbl[state])();
     pollDateTime();
     refreshLabels();

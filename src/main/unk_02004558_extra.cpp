@@ -1,6 +1,6 @@
 #include "types.h"
 #ifdef HOST
-extern "C" int gHostStickRun, gHostNoTouchWalk;
+extern "C" int gHostStickRun;
 #endif
 #include "host_input.h"
 extern "C" s32 Math_Sqrt64(u64 x);
@@ -795,17 +795,19 @@ void PlayerActor::readInput() {
     } else {
         s32 fast = 0;
         this->actionPressed = fast;
+#ifdef HOST
+        if (this->inputMode == 2 || (gPad.cur & 0x2ff3)) {
+            mode = 1;
+        }
+#else
         if (this->inputMode == 2) {
             if (vc) mode = 2; else mode = 1;
         } else if (gPad.cur & 0x2ff3) {
             mode = 1;
-#ifdef HOST
-        } else if (vc && !gHostNoTouchWalk) {
-#else
         } else if (vc) {
-#endif
             mode = 2;
         }
+#endif
         if (mode == 2) {
             if (this->action >= 0x1d && this->action <= 0x23) {
                 sp20 = gCamera;
@@ -857,7 +859,11 @@ void PlayerActor::readInput() {
             if (res > 0) {
                 this->inputAngle = Math_Atan2(pv[0].x, pv[0].z);
             }
+#ifdef HOST
+            if (0) {
+#else
             if (!got) {
+#endif
                 if (Unk_0200d64c_Both()) {
                     v14 = 1;
                     r5c = p50;

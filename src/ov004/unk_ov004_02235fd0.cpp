@@ -43,6 +43,10 @@
 
 #pragma opt_loop_invariants off
 
+#ifdef HOST
+static s32 sHouseRoachTickMode;
+#endif
+
 class HouseRoach : public Actor {
 public:
     HouseRoach();
@@ -61,6 +65,9 @@ public:
     BOOL checkStomped();
     BOOL checkHeight();
     BOOL execute();
+#ifdef HOST
+    BOOL executeStep();
+#endif
     void updateAppear();
     void updateCollision();
     void updateState();
@@ -487,11 +494,21 @@ void HouseRoach::updateCollision() {
             fr[i] = BoxCollider_Register(&colliders[i], 0x1000, a, b, &v[i], z1, NULL);
         }
     }
+#ifdef HOST
+    if (roachState != 0 && sHouseRoachTickMode != 2) {
+        move();
+    }
+    if (sHouseRoachTickMode != 1) {
+        updatePosition((ActorCollider *)&hitBox);
+        Collision_Move(&moveResult, p, &prevPosition, ang, 0x666, this, 0xf);
+    }
+#else
     if (roachState != 0) {
         move();
     }
     updatePosition((ActorCollider *)&hitBox);
     Collision_Move(&moveResult, p, &prevPosition, ang, 0x666, this, 0xf);
+#endif
     for (i = 0; i < n; i++) {
         if (fr[i] != 0) {
             BoxCollider_Unregister(&colliders[i]);
@@ -511,7 +528,47 @@ void HouseRoach::updateAppear() {
     sound.callUpdateRelative(&v);
 }
 
+#ifdef HOST
 BOOL HouseRoach::execute() {
+    u32 lifeBefore = lifeState;
+    BOOL stepped = FALSE;
+    TICK_LEGACY_BEGIN()
+    sHouseRoachTickMode = 1;
+    executeStep();
+    sHouseRoachTickMode = 0;
+    stepped = TRUE;
+    TICK_LEGACY_END()
+    if (lifeState == 4) {
+        return TRUE;
+    }
+    if (lifeBefore == 1 && lifeState == 1) {
+        sHouseRoachTickMode = 2;
+        if (param >= 0x1f) {
+            if (!stepped) {
+                updateHitBox();
+            }
+            if (roachState != 2) {
+                updateCollision();
+            }
+        } else {
+            updateCollision();
+            position.y = prevPosition.y;
+        }
+        sHouseRoachTickMode = 0;
+    }
+    {
+        Mtx43 buf;
+        drawTilt = WorldCurve_ToCurved(&drawPos, &position);
+        calcModelMatrix(&buf);
+        model.mtx = buf;
+    }
+    return TRUE;
+}
+
+BOOL HouseRoach::executeStep() {
+#else
+BOOL HouseRoach::execute() {
+#endif
     u32 t;
     wantsCrawlSe = 0;
     t = param;
@@ -742,7 +799,7 @@ void HouseRoach::updateCrawl() {
         }
         if (o != 0 && res == 0) {
             VecFx32 *q = &o->position;
-            stateTimer = stateTimer - (TICK_STEP_ENDS() ? 1 : 0);
+            stateTimer = stateTimer - 1;
             speed = zero;
             if (stateTimer <= 0) {
                 roachState = 1;
@@ -796,7 +853,7 @@ BOOL HouseRoach::move() {
                         t = -t;
                     }
                     if (t < 0x2aaa) {
-                        jumpTimer = jumpTimer + (TICK_STEP_ENDS() ? 1 : 0);
+                        jumpTimer = jumpTimer + 1;
                         isJumping = 1;
                         hit = 1;
                         speed = jumpSpeed;
@@ -817,7 +874,7 @@ BOOL HouseRoach::move() {
             isJumping = 0;
             model.setFrame(0);
         } else {
-            jumpTimer = jumpTimer + (TICK_STEP_ENDS() ? 1 : 0);
+            jumpTimer = jumpTimer + 1;
             model.stepAnim();
         }
     } else {

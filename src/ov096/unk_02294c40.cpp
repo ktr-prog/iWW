@@ -414,9 +414,6 @@ void PocketMenu::stateSlideIn() {
 }
 
 void PocketMenu::stateWaitSlideIn() {
-#ifdef HOST
-    for (s32 popIn = 0; popIn < 64 && !stepSlideIn(0); popIn++) {}
-#endif
     if (stepSlideIn(0)) {
         setPhase(2);
         PocketMenu_ReturnToIdle(this);
@@ -465,9 +462,6 @@ void PocketMenu::stateOpenLetterView() {
 }
 
 void PocketMenu::stateWaitLetterView() {
-#ifdef HOST
-    for (s32 popIn = 0; popIn < 64 && !stepSlideIn(0); popIn++) {}
-#endif
     if (stepSlideIn(0)) {
         setPhase(2);
         if (MenuCtrl_IsTouch()) {
