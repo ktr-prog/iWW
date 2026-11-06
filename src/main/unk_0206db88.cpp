@@ -330,7 +330,9 @@ extern "C" BOOL MenuScreen_StepAct04() {
     if (MenuScreen_LoadBackground(5)) {
         Gfx2d_DisableMainWindows(2);
         Gfx2d_HideSubPlanes(0xf);
+#ifndef HOST
         Gfx2d_ShowLayer(5);
+#endif
         gGfxMainOnTop = 1;
         MenuCtrl_ClearScreenChanging();
         MenuCtrl_SetMenuOnTop();
