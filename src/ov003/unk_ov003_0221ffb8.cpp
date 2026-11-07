@@ -3357,14 +3357,77 @@ extern "C" void FieldFish_SetModelMatrix(O_f3 *a, VecFx32 *b, Model *dst, s32 an
 }
 
 
+#ifdef HOST
+extern "C" u32 gHostTick;
+
+struct FishHostInterp {
+    Mtx43 mtx;
+    s32 dt[3];
+    u32 frPrev, frCur;
+    BOOL live;
+};
+
+static FishHostInterp sFishHostInterp[7];
+
+static void FishHost_Begin(Model *m, FishHostInterp *h) {
+    if (h->live) ((AnimModel *)m)->curFrame = h->frCur;
+    h->mtx = m->mtx;
+    h->frPrev = ((AnimModel *)m)->curFrame;
+}
+
+static void FishHost_End(Model *m, FishHostInterp *h, BOOL on) {
+    if (!on) {
+        h->live = FALSE;
+        return;
+    }
+    BOOL big = FALSE;
+    for (s32 k = 0; k < 3; k++) {
+        h->dt[k] = m->mtx.m[9 + k] - h->mtx.m[9 + k];
+        if (h->dt[k] > 0x4000 || h->dt[k] < -0x4000) big = TRUE;
+    }
+    if (big || !h->live) h->dt[0] = h->dt[1] = h->dt[2] = 0;
+    h->mtx = m->mtx;
+    h->frCur = ((AnimModel *)m)->curFrame;
+    if (!h->live || h->frCur < h->frPrev) h->frPrev = h->frCur;
+    h->live = TRUE;
+}
+
+static void FishHost_Apply(Model *m, FishHostInterp *h) {
+    if (!h->live) return;
+    s32 n = TICK_STEPS();
+    s32 a = (s32)((gHostTick + 1) % (u32)n) + 1;
+    for (s32 k = 0; k < 3; k++) m->mtx.m[9 + k] = h->mtx.m[9 + k] - h->dt[k] * (n - a) / n;
+    ((AnimModel *)m)->curFrame = h->frPrev + (u32)((s64)(h->frCur - h->frPrev) * a / n);
+}
+#endif
+
 BOOL FieldFishManager::onExecute() {
     O_f3 *o = this;
     E_f3 *e = sFishShadows;
     s32 i;
+#ifdef HOST
+    TICK_LEGACY_BEGIN()
+    for (i = 0; i < 6; i++) FishHost_Begin(&sFishShadows[i].model, &sFishHostInterp[i]);
+    FishHost_Begin(&sFishFinModel.model, &sFishHostInterp[6]);
+    for (i = 0; i < 6; e++, i++) {
+        FishShadow_Run(o, e, i);
+    }
+    BOOL fin = FALSE;
+    for (i = 0; i < 6; i++) {
+        FishHost_End(&sFishShadows[i].model, &sFishHostInterp[i], sFishShadows[i].state == 3);
+        if (sFishShadows[i].state == 3 && sFishShadows[i].hasFin) fin = TRUE;
+    }
+    FishHost_End(&sFishFinModel.model, &sFishHostInterp[6], fin);
+    o->spawnAttempted = 0;
+    TICK_LEGACY_END()
+    for (i = 0; i < 6; i++) FishHost_Apply(&sFishShadows[i].model, &sFishHostInterp[i]);
+    FishHost_Apply(&sFishFinModel.model, &sFishHostInterp[6]);
+#else
     for (i = 0; i < 6; e++, i++) {
         FishShadow_Run(o, e, i);
     }
     o->spawnAttempted = 0;
+#endif
     FieldFishManager_UpdatePlayers(o);
     return TRUE;
 }

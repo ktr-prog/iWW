@@ -795,11 +795,6 @@ void PlayerActor::readInput() {
     } else {
         s32 fast = 0;
         this->actionPressed = fast;
-#ifdef HOST
-        if (this->inputMode == 2 || (gPad.cur & 0x2ff3)) {
-            mode = 1;
-        }
-#else
         if (this->inputMode == 2) {
             if (vc) mode = 2; else mode = 1;
         } else if (gPad.cur & 0x2ff3) {
@@ -807,7 +802,6 @@ void PlayerActor::readInput() {
         } else if (vc) {
             mode = 2;
         }
-#endif
         if (mode == 2) {
             if (this->action >= 0x1d && this->action <= 0x23) {
                 sp20 = gCamera;
@@ -852,6 +846,10 @@ void PlayerActor::readInput() {
                     res = 0;
                 }
             }
+#ifdef HOST
+            s32 tapRes = res;
+            res = 0;
+#endif
             this->inputMagnitude = res;
             if (res > 0xc32) {
                 fast = 1;
@@ -860,7 +858,7 @@ void PlayerActor::readInput() {
                 this->inputAngle = Math_Atan2(pv[0].x, pv[0].z);
             }
 #ifdef HOST
-            if (0) {
+            if (!got && tapRes == 0) {
 #else
             if (!got) {
 #endif

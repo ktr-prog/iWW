@@ -432,7 +432,6 @@ extern "C" BOOL MenuScreen_StepAct09() {
 
 extern "C" BOOL MenuScreen_StepAct0A() {
 #ifdef HOST
-    Camera_RestorePrevMode();
     sMenuScreenState.v = 0xb;
     return TRUE;
 #endif

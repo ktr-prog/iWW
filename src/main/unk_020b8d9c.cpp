@@ -6380,7 +6380,11 @@ void Sky_FrameOutdoor(void) {
     }
     Sky_ApplyPalettes(gWeatherManager.engine);
     if (gCamera != 0) {
+#ifdef HOST
+        a = 0;
+#else
         a = MenuCtrl_GetTransitionProgress() * 0x123 >> 12;
+#endif
         b = Camera_GetCloseUpFactor() * 30 >> 12;
         gWeatherManager.screenOffsetY[gWeatherManager.bufferIndex ^ 1] = a + b;
     }

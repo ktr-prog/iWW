@@ -710,7 +710,8 @@ static void single_compose(const Gpu2dFrameInput *in, int blank) {
     }
     int sw = (sPowCnt & 0x8000) != 0;
     extern int MenuCtrl_IsIdle(void);
-    int menu = sw || !MenuCtrl_IsIdle();
+    extern int MenuCtrl_IsMenuOpen(void);
+    int menu = sw || (!MenuCtrl_IsIdle() && MenuCtrl_IsMenuOpen());
     static u32 skyRow[CANVAS_MAX], skyPix[CANVAS_MAX * SCREEN_W];
     static int skyRowHave;
     int iris = gHostIrisRadius >= 0 && (reg32(b, REG_DISPCNT) & 0x2000);

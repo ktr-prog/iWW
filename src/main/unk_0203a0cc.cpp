@@ -896,8 +896,13 @@ void Camera::updateMode1() {
             e.y = o.y;
             e.z = o.z;
         }
+#ifdef HOST
+        v.y = v.y + 0x1000 * 15;
+        e.y = e.y + 0x1000 * 2;
+#else
         v.y = v.y + (0x1000 - MenuCtrl_GetTransitionProgress()) * 15;
         e.y = e.y + (0x1000 - MenuCtrl_GetTransitionProgress()) * 2;
+#endif
         if (prevMode == 9) {
             v.y = v.y + Camera_UpdateSway(this);
         }

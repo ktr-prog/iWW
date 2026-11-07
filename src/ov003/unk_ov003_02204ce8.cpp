@@ -6217,7 +6217,11 @@ extern "C" s32 PlayerActor_BugNetSwingCheckGround(Obj *o, V3 *a, V3 *b, V3 *c) {
         if (((AnimFrameCtrl *)((AnimFrameCtrl *)&o->bodyModel))->hasPassedFrame(5) == 0) {
             goto end0;
         }
+#ifdef HOST
+        {
+#else
         if (gCommManager->isLocalSlot(o->sessionSlot) == 0) {
+#endif
             GroundInfoBase q;
             ((GroundInfo *)(void *)(&q))->initAtPos((VecFx32 *)(b), 0, 0);
             if (q.waterKind == 0) {
