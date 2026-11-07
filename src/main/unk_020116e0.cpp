@@ -79,7 +79,14 @@ extern "C" void HudObjGfx_FlushCameraButton(void) {
     }
 }
 
-extern "C" s32 Hud_GetSceneHudKind(void) { return sSceneHudKinds[Scene_GetCurrent()]; }
+extern "C" s32 Hud_GetSceneHudKind(void) {
+#ifdef HOST
+    s32 k = sSceneHudKinds[Scene_GetCurrent()];
+    return k == 3 ? 2 : k;
+#else
+    return sSceneHudKinds[Scene_GetCurrent()];
+#endif
+}
 
 extern "C" u8 HudObjGfx_IsMsgUiActive(void) { return sHudObjGfx.msgUiActive; }
 

@@ -771,6 +771,9 @@ void Camera::updateModeDefault() {
                 clampToRoomBounds((s32 *)&targetFocus.x);
             }
         } else {
+#ifdef HOST
+            loadPose(sCameraPoseGrid[presetRow].v[presetCol], 0);
+#endif
             targetFocus.x = d.x;
             targetFocus.y = d.y;
             targetFocus.z = d.z;
