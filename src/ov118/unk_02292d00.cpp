@@ -1,4 +1,7 @@
 #include "ds_div.h"
+#ifdef HOST
+extern "C" int gHostMenuPatternShown;
+#endif
 #include "host_labels.h"
 #include "host_shared_calls.h"
 #include "talk/MsgString9C.h"
@@ -469,6 +472,9 @@ void MapTab::stateOpen() {
         o->redrawAligned(1, 0);
     }
     beginSubSlideIn(0xa, 3, 0, 0x30);
+#ifdef HOST
+    gHostMenuPatternShown = 1;
+#endif
     Gfx2d_ShowLayer(4);
     applySlideOffset(4, 0, 0);
     Gfx2d_ShowLayer(6);
@@ -503,6 +509,9 @@ void MapTab::stateClose() {
 
 void MapTab::stateClosing() {
     if (stepSlideOut(0)) {
+#ifdef HOST
+        gHostMenuPatternShown = 0;
+#endif
         Gfx2d_ResetLayer(4);
         Gfx2d_ResetLayer(6);
         clearFlags(4);

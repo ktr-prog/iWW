@@ -68,12 +68,6 @@ void InventoryBg_LoadBg(InventoryBg *p, s32 flag) {
     void *h = gCurrentHeap;
     Gfx2d_LoadPaletteFile(data_ov094_0229499c, h, p->bgId, 0, 1, 0xd);
     File_LoadToBuffer(flag ? data_ov094_022949b8 : data_ov094_022949d8, p->screen, 0x800);
-#ifdef HOST
-    for (s32 i = 0; i < 0x400; i++) {
-        u16 *e = (u16 *)p->screen + i;
-        if ((*e & 0x3ff) < 0x10) *e = 0x3ff;
-    }
-#endif
     Gfx2d_LoadScreen((u8 *)p->screen, p->bgId, 0x800, 0);
     Gfx2d_LoadCharFile(data_ov094_022949f8, h, p->bgId, 0, 0x10, 0xff);
     Gfx2d_LoadCharFile(data_ov094_02294a14, h, p->bgId, 0x100, 0x100, 0x1ff);

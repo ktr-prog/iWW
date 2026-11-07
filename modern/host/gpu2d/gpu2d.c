@@ -7,6 +7,7 @@
 static Engine sEngine[2];
 static int sSingle, sSingleBlank, sA3dNow, sA3dPrev, sOutdoors;
 static u8 sSkyA[SCREEN_W * SCREEN_H];
+int gHostMenuPatternShown;
 static u8 sBBack[SCREEN_W * SCREEN_H];
 static u8 sATop[SCREEN_W * SCREEN_H];
 static u8 sBKeep[SCREEN_W * SCREEN_H];
@@ -927,7 +928,7 @@ void gpu2d_render_frame(const Gpu2dFrameInput *in) {
             else if (line == 0 && e->haveNextLine0) e->obj = e->objNextLine0;
             else if (line == 0) memset(&e->obj, 0, sizeof e->obj);
             else gpu2d_render_obj_line(e, line, &e->obj);
-            if (n == 1 && (sPowCnt & 0x8000)) {
+            if (n == 1 && (sPowCnt & 0x8000) && !gHostMenuPatternShown) {
                 u8 keep = e->regs[REG_DISPCNT + 1];
                 e->regs[REG_DISPCNT + 1] &= (u8)~0x04;
                 render_line(e, in, line);
