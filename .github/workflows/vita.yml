@@ -15,6 +15,7 @@ jobs:
     env:
       # a workspace-local install so the VitaSDK scripts need no sudo; configure_host.py reads $VITASDK
       VITASDK: ${{ github.workspace }}/vitasdk
+      SDL_TAG: release-2.32.10
     steps:
       - uses: actions/checkout@v4
 
@@ -25,23 +26,39 @@ jobs:
       - name: Tools
         run: sudo apt-get update && sudo apt-get install -y ninja-build imagemagick cmake
 
-      # VitaSDK's package manager installs the arm-vita-eabi toolchain and then every package, SDL2 and the
-      # libraries it needs among them. install-all.sh is thorough but slow; `vdpm sdl2 zlib libpng jpeg freetype`
-      # after bootstrap is the faster subset if this step ever needs trimming. Cached by the toolchain's commit.
+      # The VitaSDK (arm-vita-eabi toolchain + SDL2 built for Vita) is cached by key. SDL2 is installed into the
+      # toolchain prefix ($VITASDK/arm-vita-eabi), where configure_host.py and arm-vita-eabi-pkg-config find it.
       - name: Cache VitaSDK
         id: vitasdk
         uses: actions/cache@v4
         with:
           path: ${{ env.VITASDK }}
-          key: vitasdk-${{ runner.os }}-v1
+          key: vitasdk-${{ runner.os }}-${{ env.SDL_TAG }}-v2
 
-      - name: VitaSDK + packages
+      # bootstrap-vitasdk.sh installs the toolchain (vitasdk-core: arm-vita-eabi-gcc, the Sce stubs, the CMake
+      # toolchain file). We do NOT run install-all.sh - its pacman-based bulk install is brittle on the runner, and
+      # we only need SDL2, which we build from source below (as the iOS workflow builds SDL2 for iOS).
+      - name: VitaSDK toolchain
         if: steps.vitasdk.outputs.cache-hit != 'true'
         run: |
           git clone --depth 1 https://github.com/vitasdk/vdpm
           cd vdpm
           ./bootstrap-vitasdk.sh
-          ./install-all.sh
+          test -x "$VITASDK/bin/arm-vita-eabi-gcc"
+          test -f "$VITASDK/share/vita.toolchain.cmake"
+
+      - name: Build SDL2 for Vita
+        if: steps.vitasdk.outputs.cache-hit != 'true'
+        run: |
+          git clone --depth 1 --branch "$SDL_TAG" https://github.com/libsdl-org/SDL.git build/SDL2-src
+          cmake -S build/SDL2-src -B build/SDL2-build -G Ninja \
+            -DCMAKE_TOOLCHAIN_FILE="$VITASDK/share/vita.toolchain.cmake" \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DSDL_SHARED=OFF -DSDL_STATIC=ON -DSDL_TEST=OFF \
+            -DCMAKE_INSTALL_PREFIX="$VITASDK/arm-vita-eabi"
+          cmake --build build/SDL2-build
+          cmake --install build/SDL2-build
+          test -f "$VITASDK/arm-vita-eabi/include/SDL2/SDL.h"
 
       - name: PATH
         run: echo "$VITASDK/bin" >> "$GITHUB_PATH"
