@@ -412,8 +412,12 @@ static void dma_run(int ch) {
     int dc = cnt >> 21 & 3, sc = cnt >> 23 & 3;
     if (n == 0) n = 0x200000;
     if (src < 0x10000 || dst < 0x10000) {
-        fprintf(stderr, "host: DMA%d from %08llx to %08llx, control %08x: bad address\n", ch, (unsigned long long)src,
-                (unsigned long long)dst, cnt);
+        fprintf(stderr, "host: DMA%d bad address: src=%08llx dst=%08llx ctrl=%08x "
+                "[regs sad=%08x dad=%08x hostptr=%08llx/%08llx] ra=%p<-%p<-%p<-%p\n",
+                ch, (unsigned long long)src, (unsigned long long)dst, cnt,
+                R32(base), R32(base + 4), (unsigned long long)sDmaSrc[ch], (unsigned long long)sDmaDst[ch],
+                __builtin_return_address(0), __builtin_return_address(1),
+                __builtin_return_address(2), __builtin_return_address(3));
         R32(base + 8) = cnt & ~0x80000000u;
         return;
     }
