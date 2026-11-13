@@ -183,14 +183,20 @@ AcwwShm *frontend_backend_open(const char *argv0) {
 #if !HOST_IOS
     sFeSp = host_coro_prepare(stack, FE_STACK, fe_main, 0);
 #endif
+#if HOST_VITA
+    // the Vita has a single fixed 960x544 display; make the window match it (asking for an off-size fullscreen
+    // mode leaves the screen black). RenderSetLogicalSize(256,384) below letterboxes the two DS screens into it.
+    sWin = SDL_CreateWindow("iWW", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 960, 544, SDL_WINDOW_SHOWN);
+#else
     sWin = SDL_CreateWindow("iWW", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
                             256 * sScale, 384 * sScale, SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI
-#if HOST_IOS || HOST_VITA
+#if HOST_IOS
                             | SDL_WINDOW_FULLSCREEN | SDL_WINDOW_BORDERLESS
 #elif defined(__APPLE__)
                             | (render_on_gpu() ? SDL_WINDOW_METAL : 0)
 #endif
                             );
+#endif
     int vsync = getenv("ACWW_VSYNC") && atoi(getenv("ACWW_VSYNC"));
     if (sWin && render_on_gpu()) {
 #if defined(__APPLE__)
@@ -224,6 +230,21 @@ AcwwShm *frontend_backend_open(const char *argv0) {
         sTex = SDL_CreateTexture(sRen, SDL_PIXELFORMAT_XRGB8888, SDL_TEXTUREACCESS_STREAMING, 256, 384);
 #endif
     }
+#if HOST_VITA
+    {
+        const char *vd = SDL_GetCurrentVideoDriver();
+        fprintf(stderr, "frontend: video driver %s\n", vd ? vd : "(none)");
+        if (sRen) {
+            SDL_RendererInfo ri;
+            if (SDL_GetRendererInfo(sRen, &ri) == 0)
+                fprintf(stderr, "frontend: renderer %s flags %#x\n", ri.name ? ri.name : "?", ri.flags);
+            int ow = 0, oh = 0, ww = 0, wh = 0;
+            SDL_GetRendererOutputSize(sRen, &ow, &oh);
+            SDL_GetWindowSize(sWin, &ww, &wh);
+            fprintf(stderr, "frontend: window %dx%d, renderer output %dx%d\n", ww, wh, ow, oh);
+        }
+    }
+#endif
     if (!sTex && !sGpu) {
         fprintf(stderr, "frontend: no window (%s): running headless\n", SDL_GetError());
         SDL_Quit();
