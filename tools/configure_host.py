@@ -396,7 +396,11 @@ elif VITA:
     # The game thread's stack switch (coro_switch.S) has an ARMv7 path. The CPU renderers draw into SDL textures.
     HOST_FLAGS = (f"{VITA_ARCH} -O1 -g -fno-omit-frame-pointer -ffp-contract=off -Wall -std=gnu11 -DHOST "
                   "-DHOST_VITA=1 -Iinclude" + FRONTEND_FLAG)
-    LINK_FLAGS = f"{VITA_ARCH} -Wl,-q"
+    # -Wl,-q keeps the relocations vita-elf-create needs. The game's .bss is huge and 2 MB-aligned (gHostMainRam),
+    # which otherwise gives the NOBITS segment a 2 MB-aligned file offset that overlaps .text and defeats
+    # vita-elf-create's layout; a 4 KiB max-page-size packs it right after .data in the file (the 2 MB virtual
+    # alignment is unchanged).
+    LINK_FLAGS = f"{VITA_ARCH} -Wl,-q -Wl,-z,max-page-size=0x1000 -Wl,-z,common-page-size=0x1000"
     HOST_CXX_FLAGS = f"{VITA_ARCH} -O1 -g -ffp-contract=off -std=c++17 -DHOST -DHOST_VITA=1"
     MELON_LIBS = ""
 else:
