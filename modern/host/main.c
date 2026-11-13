@@ -118,7 +118,13 @@ int main(int argc, char **argv) {
     extern void frontend_shutdown(void);
     frontend_init(argv[0]);
     atexit(frontend_shutdown);
+    // the Vita's DS-SDK boot overflows a 1 MB coroutine stack (ARM frames are larger, and newlib stdio is
+    // stack-hungry), which faults in early init; give it room
+#if HOST_VITA
+    enum { MAIN_STACK = 8 * 1024 * 1024 };
+#else
     enum { MAIN_STACK = 1024 * 1024 };
+#endif
     void *stack = host_stack_alloc(MAIN_STACK);
     if (!stack) host_fatal("no memory for the main thread's stack");
     host_coro_switch(&gHostMainSp, host_coro_prepare(stack, MAIN_STACK, game_main, 0));

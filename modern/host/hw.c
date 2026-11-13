@@ -395,12 +395,6 @@ static void io_write(u32 a, u32 old);
 static uintptr_t sDmaSrc[4], sDmaDst[4];
 void HostDma_Addresses(unsigned int ch, uintptr_t src, uintptr_t dst) {
     if (ch < 4) { sDmaSrc[ch] = src; sDmaDst[ch] = dst; }
-    // (diagnostic: when a DMA is set up with a null source/dest, log who asked, so the game-side caller can be
-    // mapped from the symbol dump - the fault follows this on the Vita)
-    if (src < 0x10000 || dst < 0x10000)
-        fprintf(stderr, "host: dma%u null set src=%08llx dst=%08llx, ra %p <- %p <- %p\n", ch,
-                (unsigned long long)src, (unsigned long long)dst,
-                __builtin_return_address(0), __builtin_return_address(1), __builtin_return_address(2));
 }
 static uintptr_t dma_address(u32 reg, uintptr_t full) { return (u32)full == reg ? full : reg; }
 static int dma_is_io(uintptr_t a) { return a <= 0xffffffffu && is_io((u32)a); }
@@ -412,17 +406,9 @@ static void dma_run(int ch) {
     int dc = cnt >> 21 & 3, sc = cnt >> 23 & 3;
     if (n == 0) n = 0x200000;
     if (src < 0x10000 || dst < 0x10000) {
-        fprintf(stderr, "host: DMA%d bad address: src=%08llx dst=%08llx ctrl=%08x "
-                "[regs sad=%08x dad=%08x hostptr=%08llx/%08llx] ra=%p<-%p<-%p<-%p\n",
-                ch, (unsigned long long)src, (unsigned long long)dst, cnt,
-                R32(base), R32(base + 4), (unsigned long long)sDmaSrc[ch], (unsigned long long)sDmaDst[ch],
-                __builtin_return_address(0), __builtin_return_address(1),
-                __builtin_return_address(2), __builtin_return_address(3));
-#if HOST_VITA
-        // a known host function's runtime address, to recover the load offset for mapping the caller logged in
-        // HostIo_Write (runtime address of a symbol minus its ELF address = the load offset)
-        fprintf(stderr, "host: &dma_run=%p\n", (void *)&dma_run);
-#endif
+        // MI_StopDma fires a dummy transfer from/to address 0 to stop a channel; harmless, just skip it
+        fprintf(stderr, "host: DMA%d from %08llx to %08llx, control %08x: bad address\n", ch,
+                (unsigned long long)src, (unsigned long long)dst, cnt);
         R32(base + 8) = cnt & ~0x80000000u;
         return;
     }
@@ -744,27 +730,6 @@ unsigned long long HostIo_Read(uintptr_t addr, unsigned int size) {
 }
 unsigned long long HostIo_Write(uintptr_t addr, unsigned int size, unsigned long long v) {
     u32 a = (u32)addr;
-#if HOST_VITA
-    // log the game-side caller of any DMA-enable (DMACNT at 0x040000b8 + ch*12, enable bit set); depth-0 return
-    // address is safe on ARM. The culprit is the one whose value is 0x81400001 with null DMASAD/DMADAD.
-    if (a >= 0x040000b8 && a <= 0x040000dc && (a - 0x040000b8) % 12 == 0 && ((u32)v & 0x80000000u)) {
-        // caller = the game function; dma_run@ = a known symbol's runtime address, so its offset from the ELF
-        // address (symbol map) gives the load slide to map the caller. One flushed line, printed before any fault.
-        fprintf(stderr, "host: DMACNT[%u] = %08x caller %p dma_run@%p\n", (a - 0x040000b8) / 12, (u32)v,
-                __builtin_return_address(0), (void *)&dma_run);
-        fflush(stderr);
-        // bounded, flushed stack scan: older frames sit at higher addresses, so a short upward scan collects the
-        // return-address chain above the caller (which boot init is running). Small + per-line flush so it's safe.
-        uintptr_t *stk = (uintptr_t *)__builtin_frame_address(0);
-        for (int i = 0; i < 700; i++) {
-            uintptr_t rv = stk[i];
-            if (rv > 0x81040000u && rv < 0x81400000u) {
-                fprintf(stderr, "host:  stk+%d %08lx\n", i, (unsigned long)rv);
-                fflush(stderr);
-            }
-        }
-    }
-#endif
     int traced = sHBlankLine < 0;
     if (traced) io_note(addr, 1, __builtin_return_address(0));
     if (traced && sIoTrace > 0) io_trace_value(a, 1, v);

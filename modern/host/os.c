@@ -78,7 +78,11 @@ int host_irq_ready(void) { return !sIrqDisabled && !sInIrq && host_irq_pending()
 void OSi_ExceptionHandler(void) { host_fatal("OSi_ExceptionHandler"); }
 
 #define MAX_CTX 64
+#if HOST_VITA
+#define HOST_STACK (2 * 1024 * 1024)  // DS threads: larger on the Vita (ARM frames + stdio are stack-hungry)
+#else
 #define HOST_STACK (512 * 1024)
+#endif
 typedef struct { void *key; void *sp; u8 *stack; uptr pc; int fresh; u32 irq; } HostCtx;
 static HostCtx sCtx[MAX_CTX];
 static void *sSaving;
