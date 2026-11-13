@@ -124,6 +124,15 @@ void *host_coro_prepare(void *stack, size_t size, void (*fn)(void *), void *arg)
     sp[1] = (uint64_t)(uintptr_t)arg;
     sp[11] = (uint64_t)(uintptr_t)host_coro_boot;
     return sp;
+#elif defined(__arm__)
+    /* matches the ARM frame in coro_switch.S: 26 words (r4-r11, ip, lr, d8-d15).
+       fn lands in r4 (sp[0]), arg in r5 (sp[1]), host_coro_boot in the lr slot (sp[9]) */
+    uint32_t *sp = (uint32_t *)top - 26;
+    memset(sp, 0, 26 * sizeof *sp);
+    sp[0] = (uint32_t)(uintptr_t)fn;
+    sp[1] = (uint32_t)(uintptr_t)arg;
+    sp[9] = (uint32_t)(uintptr_t)host_coro_boot;
+    return sp;
 #else
 #error "coro.c: no stack switch for this CPU yet"
 #endif

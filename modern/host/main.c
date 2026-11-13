@@ -88,8 +88,11 @@ static void game_main(void *arg) {
 char **gHostArgv;
 void *gHostMainSp;
 HOST_STATE_KEEP(gHostMainSp)
-#if HOST_IOS
+#if HOST_IOS || HOST_VITA
+// the glue (ios/ios_glue.m, vita/vita_glue.c) owns main(): it finds the game on the device and calls host_main
 #define main host_main
+#endif
+#if HOST_IOS
 void frontend_backend_main_loop(void);
 #endif
 int main(int argc, char **argv) {

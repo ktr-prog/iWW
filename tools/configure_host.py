@@ -55,7 +55,7 @@ parser.add_argument("--cross", default=os.path.expanduser(
 parser.add_argument("--qemu", default=os.path.expanduser("~/acww/toolchains/qemu/usr/bin/qemu-aarch64"),
                     help="--arch aarch64: qemu-aarch64 (user mode) for running the tests (the game: ACWW_RUNNER, "
                          "tools/host_oracle.sh)")
-parser.add_argument("--os", choices=["linux", "windows", "macos", "ios"], default="macos" if sys.platform == "darwin" else "linux",
+parser.add_argument("--os", choices=["linux", "windows", "macos", "ios", "vita"], default="macos" if sys.platform == "darwin" else "linux",
                     help="windows (with --arch x86_64): a cross build for x86-64 Windows with llvm-mingw (clang, UCRT, "
                          "libc++, lld; --mingw): build_host_win64.ninja, build/hostwin64_<v>/acww.exe, headless only "
                          "(no frontend yet), run with Wine here (ACWW_RUNNER; docs/host.md); macos (the default on a "
@@ -63,7 +63,10 @@ parser.add_argument("--os", choices=["linux", "windows", "macos", "ios"], defaul
                          "(Homebrew): build_host64.ninja, build/host64_<v>; ios: arm64 iPhone/iPad, cross-compiled "
                          "with Apple's clang (--ios-sdk) against a static SDL2 built for iOS (--sdl2: its install "
                          "prefix): build_host_ios.ninja, build/hostios_<v>/acww, packaged by tools/ios_package.py "
-                         "(docs/ios.md)")
+                         "(docs/ios.md); vita: PS Vita (ARMv7/NEON), cross-compiled with VitaSDK's arm-vita-eabi-gcc "
+                         "against SDL2 for Vita ($VITASDK), the CPU renderers shown through SDL as on iOS: "
+                         "build_host_vita.ninja, build/hostvita_<v>/acww, packaged into a .vpk by "
+                         "tools/vita_package.py (docs/vita.md)")
 parser.add_argument("--ios-sdk", default="",
                     help="--os ios: the iPhoneOS SDK (default: `xcrun --sdk iphoneos --show-sdk-path`)")
 parser.add_argument("--ios-min", default="12.0", help="--os ios: the oldest iOS version the app runs on")
@@ -98,7 +101,25 @@ root = Path(__file__).resolve().parent.parent
 WIN = args.os == "windows"
 IOS = args.os == "ios"
 MAC = args.os == "macos"
+VITA = args.os == "vita"
+VITASDK = os.environ.get("VITASDK", "/usr/local/vitasdk")
+VITA_ARCH = "-mcpu=cortex-a9 -mfpu=neon -mfloat-abi=hard" if VITA else ""
 IOS_TARGET = ""
+if VITA:
+    # PS Vita: a 32-bit ARMv7 cross build with VitaSDK's arm-vita-eabi GCC. Like iOS it has no WebGPU/Metal, so it
+    # draws with the CPU renderers (modern/host/gpu2d, gpu3d) shown through SDL2's own renderer; SDL2 for Vita
+    # (its GXM backend) provides the window, input and audio. The ARM ABI is not the i386 reference's, so the
+    # i386-only flags below are kept off for it (docs/vita.md, docs/portability.md).
+    if args.guards or args.oracle or args.sanitize:
+        sys.exit("--os vita: no --guards, --oracle or --sanitize")
+    if not os.path.isdir(VITASDK):
+        sys.exit("--os vita: set $VITASDK to the VitaSDK install (e.g. /usr/local/vitasdk)")
+    if args.cc == "gcc":
+        args.cc = f"{VITASDK}/bin/arm-vita-eabi-gcc"
+    sdl_h = f"{VITASDK}/arm-vita-eabi/include/SDL2/SDL.h"
+    if not os.path.exists(sdl_h):
+        sys.exit(f"--os vita: SDL2 for Vita not found ({sdl_h}); install it (e.g. `vdpm sdl2`)")
+    args.arch = "armv7"
 if IOS:
     # (the same build as macOS's in every other respect: Apple's clang and linker, Mach-O, arm64; MAC below is set
     # for that - IOS marks what differs: the target, the SDK, a static SDL2, the iOS frontend parts)
@@ -192,12 +213,16 @@ elif WIN:
     CXX = f"{args.mingw}/bin/x86_64-w64-mingw32-clang++"
     build = Path("build") / f"hostwin64{args.suffix}_{args.version}"
     NINJA_FILE = f"build_host_win64{args.suffix}.ninja"
+elif VITA:
+    CXX = f"{VITASDK}/bin/arm-vita-eabi-g++"
+    build = Path("build") / f"hostvita{args.suffix}_{args.version}"
+    NINJA_FILE = f"build_host_vita{args.suffix}.ninja"
 else:
     build = Path("build") / (f"host64{args.suffix}_{args.version}" if X64 else f"host{args.suffix}_{args.version}")
     NINJA_FILE = f"build_host64{args.suffix}.ninja" if X64 else f"build_host{args.suffix}.ninja"
 R = args.sysroot
 G = f"{R}/usr/lib/gcc/x86_64-linux-gnu/15/32"
-M_FLAG = "" if MAC or A64 else "-m64" if X64 else "-m32"
+M_FLAG = "" if MAC or A64 or VITA else "-m64" if X64 else "-m32"
 # the compiler command; clang is told its target (llvm-mingw's clang is a cross compiler for Windows too; on Linux it
 # finds the system's GCC installation for the host runtime's headers and libraries)
 CC = f"{args.cc} --target={'x86_64' if X64 else 'i386'}-linux-gnu" if CLANG and not WIN and not MAC else args.cc
@@ -219,9 +244,14 @@ GAME_FLAGS = " ".join([
 if WIN:
     # GCC's bitfield layout, not Microsoft's: the save data's layout (its static_asserts) needs it
     GAME_FLAGS += " -mno-ms-bitfields"
-if not HOST64:
-    # small structs returned in memory, as mwcc does: kept while the 32-bit build is the reference (its captures were
-    # taken with it); the 64-bit builds use the platform ABI (clang supports the flag only on i386)
+if VITA:
+    # the Vita's ARMv7 core (Cortex-A9) with NEON and hard float; the game's structures keep the DS layout
+    # (its static_asserts check it), as on every other target
+    GAME_FLAGS += " " + VITA_ARCH
+if not HOST64 and not VITA:
+    # small structs returned in memory, as mwcc does: kept while the i386 build is the reference (its captures were
+    # taken with it); the 64-bit builds use the platform ABI (clang supports the flag only on i386). The Vita's ARM
+    # build is not the reference: it uses the AAPCS return convention (docs/vita.md - validate against the reference)
     GAME_FLAGS += " -fpcc-struct-return"
 C_FLAGS = "-std=gnu11"
 CXX_FLAGS = ("-std=gnu++14 -fno-exceptions -fno-rtti -fno-threadsafe-statics -fno-use-cxa-atexit "
@@ -232,8 +262,8 @@ CXX_FLAGS += " -femit-class-debug-always"
 if args.guards:
     # a section per variable: tools/host_guards.py puts a guard after each
     GAME_FLAGS += " -fdata-sections"
-if A64 or MAC:
-    # no fused multiply-adds (GCC contracts a * b + c by default on arm64, x86-64 has no FMA without -mfma): the
+if A64 or MAC or VITA:
+    # no fused multiply-adds (GCC contracts a * b + c by default on ARM, x86-64 has no FMA without -mfma): the
     # same floating-point results as the x86 builds
     GAME_FLAGS += " -ffp-contract=off"
 if CLANG:
@@ -297,6 +327,8 @@ def find_sdl2():
     return tree(os.path.expanduser("~/acww/toolchains/sdl2-dev"))
 if IOS:  # (an install prefix of SDL2 built for iOS: include/SDL2, lib/libSDL2.a)
     SDL2_DIRS = [f"{args.sdl2}/include/SDL2"]
+elif VITA:  # (SDL2 for Vita, from the VitaSDK: arm-vita-eabi/include/SDL2)
+    SDL2_DIRS = [f"{VITASDK}/arm-vita-eabi/include/SDL2"]
 else:
     SDL2_DIRS = find_sdl2() if (X64 or MAC) and not WIN else None
 SDL2 = bool(SDL2_DIRS)
@@ -311,6 +343,12 @@ if IOS:
                 "-framework AudioToolbox -framework AVFoundation -framework CoreBluetooth -framework CoreGraphics "
                 "-framework CoreMotion -framework Foundation -weak_framework GameController -framework Metal "
                 "-framework OpenGLES -framework QuartzCore -framework UIKit -weak_framework CoreHaptics -lobjc")
+elif VITA:
+    # SDL2 for Vita and the Sce stub libraries it needs: its own pkg-config gives the exact set for the installed
+    # package (-lSDL2 plus -lSceGxm_stub, -lSceDisplay_stub, -lSceCtrl_stub, -lSceTouch_stub, -lSceAudio_stub, ...)
+    pc = subprocess.run([f"{VITASDK}/bin/arm-vita-eabi-pkg-config", "--libs", "sdl2"], capture_output=True,
+                        text=True)
+    SDL_LIBS = pc.stdout.strip() or "-lSDL2"
 elif MAC and SDL2:
     SDL_LIBS = subprocess.run(["pkg-config", "--libs", "sdl2"], capture_output=True, text=True).stdout.strip() or "-lSDL2"
 if MAC:
@@ -353,6 +391,14 @@ elif X64:
     HOST_CXX_FLAGS = (f"-m64 -fPIE -O1 -g -std=c++17 -I{M}/src -I{M}/build-core/src -DJIT_ENABLED -DGDBSTUB_ENABLED "
                       "-DHOST" + SAN_FLAGS)
     MELON_LIBS = f"{M}/build-core/src/libcore.a {M}/build-core/src/teakra/src/libteakra.a"
+elif VITA:
+    # VitaSDK's arm-vita-eabi GCC and newlib; no melonDS. -Wl,-q keeps the relocations vita-elf-create needs.
+    # The game thread's stack switch (coro_switch.S) has an ARMv7 path. The CPU renderers draw into SDL textures.
+    HOST_FLAGS = (f"{VITA_ARCH} -O1 -g -fno-omit-frame-pointer -ffp-contract=off -Wall -std=gnu11 -DHOST "
+                  "-DHOST_VITA=1 -Iinclude" + FRONTEND_FLAG)
+    LINK_FLAGS = f"{VITA_ARCH} -Wl,-q"
+    HOST_CXX_FLAGS = f"{VITA_ARCH} -O1 -g -ffp-contract=off -std=c++17 -DHOST -DHOST_VITA=1"
+    MELON_LIBS = ""
 else:
     HOST_FLAGS = (f"-m32 -fno-pie -O1 -g -fno-omit-frame-pointer -Wall -std=gnu11 --sysroot={R} -isystem {R}/usr/include "
                   f"-isystem /usr/include/x86_64-linux-gnu -isystem /usr/include -DHOST -Iinclude") + GUARD_FLAGS
@@ -377,11 +423,11 @@ HOST_CXX_FLAGS += " -fno-stack-protector"
 
 # WebGPU (wgpu-native, linked statically): ACWW_RENDERER3D=wgpu
 WGPU = args.wgpu
-if IOS:
-    # (iOS: the CPU renderers, shown by SDL's own renderer - Metal - with the touch controls around the screens:
-    # modern/host/frontend_sdl.c, modern/host/ios/)
+if IOS or VITA:
+    # (iOS and Vita: no WebGPU - the CPU renderers, shown by SDL's own renderer, Metal on iOS and GXM on the Vita:
+    # modern/host/frontend_sdl.c, modern/host/ios/ or modern/host/vita/)
     if WGPU not in (None, "none"):
-        sys.exit("--os ios: no --wgpu (the iOS frontend draws with SDL's renderer)")
+        sys.exit(f"--os {args.os}: no --wgpu (the frontend draws with SDL's renderer)")
     WGPU = "none"
 if WGPU is None:
     WGPU = "none"
@@ -444,14 +490,17 @@ def main():
         # (the runtime's units too: the game calls into them, some through function pointers)
         n.rule("hostcc", f"{abi}{CC} {HOST_FLAGS} $flags -MMD -MF $out.d -c $in -o $out", depfile="$out.d", deps="gcc",
                description="HOSTCC $in")
-        n.rule("hostas_S", " ".join(x for x in (CC, M_FLAG, PIE) if x) + " -c $in -o $out", description="AS $in")
+        n.rule("hostas_S", " ".join(x for x in (CC, M_FLAG, PIE, VITA_ARCH) if x) + " -c $in -o $out", description="AS $in")
         n.rule("hostcxx", f"{abi}{CXX} {HOST_CXX_FLAGS} -MMD -MF $out.d -c $in -o $out", depfile="$out.d", deps="gcc",
                description="HOSTCXX $in")
         if IOS:  # (the iOS glue: Objective-C, with ARC)
             n.rule("hostobjc", f"{CC} {HOST_FLAGS} -fobjc-arc $flags -MMD -MF $out.d -c $in -o $out", depfile="$out.d",
                    deps="gcc", description="HOSTOBJC $in")
         libs = " -lws2_32" if WIN else f" {SDL_LIBS} -lc++ -lpthread -lm" if MAC else \
+            f" {SDL_LIBS} -lstdc++ -lm" if VITA else \
             f" {SDL_LIBS} -lstdc++ -lpthread -lm -lc -lgcc"  # (ws2_32: wm7.c's sockets)
+        # (Vita: SDL_LIBS already carries the Sce stub libraries from its pkg-config; newlib's libc/libgcc are
+        # linked by gcc itself. Online play (wm7.c's sockets) needs -lSceNet_stub -lSceNetCtl_stub added here.)
         extra_ld = f" {args.extra_ldflags}" if args.extra_ldflags else ""
         n.rule("link", f"{CXX} {LINK_FLAGS}{extra_ld} -o $out @$objects {MELON_LIBS}{WGPU_LIBS}{libs}", description="LINK $out")
         objs = []
@@ -467,13 +516,15 @@ def main():
                 continue
             if ("ios" in s.parts or s.suffix == ".m") and not IOS:
                 continue  # (the iOS frontend's parts: --os ios only)
+            if "vita" in s.parts and not VITA:
+                continue  # (the Vita frontend's parts: --os vita only)
             if WIN and s.name in ("frontend_sdl.c", "frontend_ui.c", "frontend_viewer.c", "plat_posix.c"):
                 continue  # (debug_posix.c and guards.c are empty there: HOST_DEBUG_POSIX 0, no HOST_GUARDS)
             if s.name in (("melon_none.c",) if args.oracle else ("melon.cpp", "melon_platform.cpp")):
                 continue  # (melonDS, or the stand-in that refuses it: --oracle)
             o = str(build / s.with_suffix(".o"))
             rule = {".cpp": "hostcxx", ".S": "hostas_S", ".m": "hostobjc"}.get(s.suffix, "hostcc")
-            sdl = (s.name in ("frontend_sdl.c", "frontend_ui.c") or "ios" in s.parts) and SDL_CFLAGS
+            sdl = (s.name in ("frontend_sdl.c", "frontend_ui.c") or "ios" in s.parts or "vita" in s.parts) and SDL_CFLAGS
             implicit = []
             if s.name == "wgpu_display.c":  # (the 2D renderer's shader, embedded: modern/host/gpu2d.wgsl)
                 wgsl_h = str(build / "gen" / "gpu2d_wgsl.h")
@@ -577,7 +628,7 @@ def main():
         vdirs = find_sdl2() or []
         vflags = " ".join(f"-I{os.path.dirname(d) if os.path.exists(d + '/SDL.h') else d}" for d in vdirs)
         n.rule("viewer", f"gcc -O2 {vflags} $in -o $out -l:libSDL2-2.0.so.0", description="VIEWER $out")
-        if WIN or MAC:
+        if WIN or MAC or VITA:
             n.default([exe])
         elif A64:
             n.default([exe])
@@ -611,6 +662,9 @@ def summary():
     """What the build has, and what to do about what it hasn't."""
     print(f"configure_host.py: {NINJA_FILE}: build with `ninja -f {NINJA_FILE}`, the game: {build}/"
           f"{'acww.exe' if WIN else 'acww'}")
+    if VITA:
+        print("  window: SDL2 for Vita (GXM); GPU renderer: none, the CPU renderers (as on iOS)")
+        print(f"  package: ninja -f {NINJA_FILE} && python3 tools/vita_package.py {build}/acww build/vita/iWW.vpk")
     if (HOST64 or MAC) and not WIN:
         print("  window: " + ("SDL2" if SDL2 else
               "none, headless only - install SDL2's development files (e.g. libsdl2-dev) or give --sdl2"))

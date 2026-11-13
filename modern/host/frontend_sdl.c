@@ -185,7 +185,7 @@ AcwwShm *frontend_backend_open(const char *argv0) {
 #endif
     sWin = SDL_CreateWindow("iWW", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
                             256 * sScale, 384 * sScale, SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI
-#if HOST_IOS
+#if HOST_IOS || HOST_VITA
                             | SDL_WINDOW_FULLSCREEN | SDL_WINDOW_BORDERLESS
 #elif defined(__APPLE__)
                             | (render_on_gpu() ? SDL_WINDOW_METAL : 0)

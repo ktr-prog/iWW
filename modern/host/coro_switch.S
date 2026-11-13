@@ -95,6 +95,37 @@ SYM(host_coro_boot):
     blr x19
     brk #0
 
+#elif defined(__arm__)
+
+    @ 32-bit ARM, EABI (PS Vita: ARMv7-A, Cortex-A9, VFPv3/NEON, hard float).
+    @ host_coro_switch(void **save in r0, void *to in r1): save the callee-saved
+    @ state on the current stack, store sp through r0, load sp from r1, restore.
+    @ The saved frame is 104 bytes (8-byte aligned): r4-r11, ip, lr at the low
+    @ addresses, then d8-d15 above them (ip is a filler to keep the count even).
+    .syntax unified
+    .arm
+    .fpu neon
+
+    .globl SYM(host_coro_switch)
+    .type SYM(host_coro_switch), %function
+SYM(host_coro_switch):
+    vpush {d8-d15}
+    push {r4, r5, r6, r7, r8, r9, r10, r11, ip, lr}
+    str sp, [r0]
+    mov sp, r1
+    pop {r4, r5, r6, r7, r8, r9, r10, r11, ip, lr}
+    vpop {d8-d15}
+    bx lr
+
+    .globl SYM(host_coro_boot)
+    .type SYM(host_coro_boot), %function
+SYM(host_coro_boot):
+    /* entered with the function in r4 and its argument in r5 (coro.c lays the
+       new stack out so the switch above restores them) */
+    mov r0, r5
+    blx r4
+    udf #0
+
 #elif !(defined(__x86_64__) && defined(_WIN32))
 #error "coro_switch.S: no stack switch for this CPU yet"
 #endif

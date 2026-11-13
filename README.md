@@ -31,3 +31,12 @@ Supported version (user needs to provide .nds file in Files app):
 | Version        | Game code | SHA-1                                      |
 | -------------- | --------- | ------------------------------------------ |
 | USA (Rev 1)    | `ADME`    | `77fde3e30e1e6068395d1f96ea63be569b61c351` |
+
+Platforms:
+
+- iOS — an unsigned `.ipa` for sideloading (see `docs/ios.md`); CI: Actions > iOS.
+- PS Vita — a homebrew `.vpk` (see `docs/vita.md`); CI: Actions > Vita. **Work in progress** — the build and
+  packaging are set up; it still needs validation on real hardware.
+
+Both are built from the one shared game core in `src/`/`include/`/`modern/`, so a bug fix made once applies to
+every platform.

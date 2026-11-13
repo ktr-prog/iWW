@@ -1,0 +1,75 @@
+# The PS Vita homebrew: a .vpk for installation (docs/vita.md). Runs on every push, on pull requests and by hand
+# (Actions > Vita > Run workflow). The .vpk is in the run's artifacts as iWW-Vita. No game data is used or needed
+# here: the player adds their own copy of the game under ux0:/data/iWW on the device.
+name: Vita
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  vita:
+    name: Vita homebrew (.vpk)
+    runs-on: ubuntu-latest
+    env:
+      # a workspace-local install so the VitaSDK scripts need no sudo; configure_host.py reads $VITASDK
+      VITASDK: ${{ github.workspace }}/vitasdk
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Tools
+        run: sudo apt-get update && sudo apt-get install -y ninja-build imagemagick cmake
+
+      # VitaSDK's package manager installs the arm-vita-eabi toolchain and then every package, SDL2 and the
+      # libraries it needs among them. install-all.sh is thorough but slow; `vdpm sdl2 zlib libpng jpeg freetype`
+      # after bootstrap is the faster subset if this step ever needs trimming. Cached by the toolchain's commit.
+      - name: Cache VitaSDK
+        id: vitasdk
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.VITASDK }}
+          key: vitasdk-${{ runner.os }}-v1
+
+      - name: VitaSDK + packages
+        if: steps.vitasdk.outputs.cache-hit != 'true'
+        run: |
+          git clone --depth 1 https://github.com/vitasdk/vdpm
+          cd vdpm
+          ./bootstrap-vitasdk.sh
+          ./install-all.sh
+
+      - name: PATH
+        run: echo "$VITASDK/bin" >> "$GITHUB_PATH"
+
+      - name: Configure
+        run: python3 tools/configure_host.py --os vita
+
+      - name: Build
+        run: ninja -f build_host_vita.ninja
+
+      - name: Check the program
+        run: file build/hostvita_usa/acww
+
+      - name: Placeholder icon (only if no real one is committed)
+        run: |
+          if [ ! -f modern/host/vita/sce_sys/icon0.png ]; then
+            convert -size 128x128 xc:'#3a7d3a' -gravity center -pointsize 30 -fill white \
+              -annotate 0 'iWW' modern/host/vita/sce_sys/icon0.png
+          fi
+
+      - name: Package
+        run: |
+          python3 tools/vita_package.py build/hostvita_usa/acww build/vita/iWW.vpk
+          ls -l build/vita/iWW.vpk
+          unzip -l build/vita/iWW.vpk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: iWW-Vita
+          path: build/vita/iWW.vpk
+          if-no-files-found: error
