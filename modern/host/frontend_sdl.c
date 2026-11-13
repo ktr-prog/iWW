@@ -906,19 +906,39 @@ static void show(void) {
             fprintf(stderr, "vita: frame %lu pixels non-black: top %lu bottom %lu (of 49152 each)\n", fc - 1, top, bot);
         }
     }
-    // Dedicated Vita present: explicit centered dst rect (no logical size), temporary blue clear to tell apart
-    // "present works but the texture doesn't blit" (screen goes blue) from "nothing presents at all" (stays black).
-    SDL_UpdateTexture(sTex, 0, sShm->pixels, 256 * 4);
-    SDL_SetRenderDrawColor(sRen, 0, 0, 160, 255);
-    SDL_RenderClear(sRen);
+    // Dedicated Vita present. sShm->pixels is the two DS screens stacked (256x384: top rows 0-191, bottom
+    // 192-383). By default show the bottom screen stretched to the whole 960x544 display; ACWW_SCREEN=top or
+    // =both (in acww-options.txt) picks the other screen or both letterboxed, without a rebuild.
     {
-        int w = (int)(256.0f * (544.0f / 384.0f) + 0.5f);  // ~363 px: fit 256x384 to 544 tall, keep aspect
-        SDL_Rect dst = {(960 - w) / 2, 0, w, 544};
-        SDL_RenderCopy(sRen, sTex, NULL, &dst);
+        static int which = -1;  // 0 bottom, 1 top, 2 both
+        if (which < 0) {
+            const char *s = getenv("ACWW_SCREEN");
+            which = s && !strcmp(s, "top") ? 1 : s && !strcmp(s, "both") ? 2 : 0;
+        }
+        uint64_t t0 = host_plat_time_ns();
+        SDL_UpdateTexture(sTex, 0, sShm->pixels, 256 * 4);
+        SDL_SetRenderDrawColor(sRen, 0, 0, 0, 255);
+        SDL_RenderClear(sRen);
+        if (which == 2) {
+            int w = (int)(256.0f * (544.0f / 384.0f) + 0.5f);
+            SDL_Rect dst = {(960 - w) / 2, 0, w, 544};
+            SDL_RenderCopy(sRen, sTex, NULL, &dst);
+        } else {
+            SDL_Rect src = {0, which == 1 ? 0 : 192, 256, 192};  // one DS screen
+            SDL_Rect dst = {0, 0, 960, 544};                     // stretched to fill the Vita display
+            SDL_RenderCopy(sRen, sTex, &src, &dst);
+        }
+        window_shot();
+        if (sPendingShot[0]) shot(sPendingShot), sPendingShot[0] = 0;
+        SDL_RenderPresent(sRen);
+        static unsigned long pc;
+        static uint64_t acc;
+        acc += host_plat_time_ns() - t0;
+        if ((++pc % 120) == 0) {
+            fprintf(stderr, "vita: present avg %lu us / 120 frames\n", (unsigned long)(acc / 120000));
+            acc = 0;
+        }
     }
-    window_shot();
-    if (sPendingShot[0]) shot(sPendingShot), sPendingShot[0] = 0;
-    SDL_RenderPresent(sRen);
     return;
 #endif
     SDL_UpdateTexture(sTex, 0, sShm->pixels, 256 * 4);
