@@ -59,7 +59,11 @@ extern HostSysWork gHostSysWork;
 #define HW_SYSWORK(T, m) ((T *)&gHostSysWork.m)
 #define HW_SYSWORK_AT(T, m, o) ((T *)((unsigned char *)&gHostSysWork.m + (o)))
 
-#if defined(_WIN32) || defined(__APPLE__)
+// runtime-allocated aligned blocks instead of statically-aligned arrays: on Windows and Apple platforms, and on
+// the Vita, where a huge 2 MB-aligned static .bss (gHostMainRam) gives the NOBITS segment a file offset that
+// overlaps .text and defeats vita-elf-create. (HOST_VITA is defined for the game units too on that build, so the
+// game and host runtime agree on the layout of gHostMainRam et al.)
+#if defined(_WIN32) || defined(__APPLE__) || HOST_VITA
 #define HOST_MEM_RUNTIME_ALIGN 1
 #else
 #define HOST_MEM_RUNTIME_ALIGN 0

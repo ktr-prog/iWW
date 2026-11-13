@@ -28,14 +28,7 @@ void HostMem_Init(void) {
 #else
 unsigned char gHostDtcm[0x4000] __attribute__((aligned(0x4000)));
 unsigned char gHostItcm[0x8000] __attribute__((aligned(0x8000)));
-// (the Vita uses a 4 KiB alignment: its 2 MB alignment would make the 44 MB .bss segment take a 2 MB-aligned
-// file offset that overlaps .text and defeats vita-elf-create; the DS<->host address map is purely additive, so
-// the base's alignment doesn't matter here)
-#if HOST_VITA
-unsigned char gHostMainRam[HOST_MAIN_RAM_HI - HOST_MAIN_RAM_LO] __attribute__((aligned(0x1000)));
-#else
 unsigned char gHostMainRam[HOST_MAIN_RAM_HI - HOST_MAIN_RAM_LO] __attribute__((aligned(0x200000)));
-#endif
 void HostMem_Init(void) {}
 #endif
 
