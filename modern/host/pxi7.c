@@ -407,7 +407,7 @@ static void save_load(u32 size) {
     if (sSaveFile) {
         fseek(sSaveFile, 0, SEEK_SET);
         size_t n = fread(sSave, 1, size, sSaveFile);
-        fprintf(stderr, "pxi7: save memory %#x bytes, %#zx loaded from %s\n", size, n, sSavePath);
+        fprintf(stderr, "pxi7: save memory %#x bytes, %#lx loaded from %s\n", size, (unsigned long)n, sSavePath);
         int v = save_version(sSave, (u32)n);
         if (v == 'E') {
             char keep[1100];
