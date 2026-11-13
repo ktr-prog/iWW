@@ -111,6 +111,7 @@ static void read_options(void) {
 
 int main(int argc, char **argv) {
     SDL_SetMainReady();
+    vita_io_init();  // must precede any file I/O: the game coroutine's file syscalls are marshaled to this worker
     mkdir("ux0:/data", 0777);
     mkdir(DATA_DIR, 0777);
     open_log();

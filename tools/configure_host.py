@@ -399,7 +399,12 @@ elif VITA:
                   "-DHOST_VITA=1 -Iinclude" + FRONTEND_FLAG)
     # -Wl,-q keeps the relocations vita-elf-create needs. (The big DS memory blocks are runtime-allocated on the
     # Vita, HOST_MEM_RUNTIME_ALIGN, so the static .bss stays small and vita-elf-create can lay the velf out.)
-    LINK_FLAGS = f"{VITA_ARCH} -Wl,-q"
+    # --wrap routes newlib's file syscalls through modern/host/vita/vita_io.c: the game runs on a coroutine stack,
+    # and the Vita's sceIo* gate faults unless the caller's sp is a kernel-registered stack, so those calls are
+    # marshaled to a dedicated worker thread (the wrappers call the real __real__* on that thread's stack).
+    IO_WRAPS = ("_open_r", "_close_r", "_read_r", "_write_r", "_lseek_r", "_fstat_r", "_isatty_r",
+                "rename", "remove", "unlink")
+    LINK_FLAGS = f"{VITA_ARCH} -Wl,-q " + " ".join(f"-Wl,--wrap={w}" for w in IO_WRAPS)
     HOST_CXX_FLAGS = f"{VITA_ARCH} -O1 -g -ffp-contract=off -std=c++17 -DHOST -DHOST_VITA=1"
     MELON_LIBS = ""
 else:
