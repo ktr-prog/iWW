@@ -406,9 +406,8 @@ static void dma_run(int ch) {
     int dc = cnt >> 21 & 3, sc = cnt >> 23 & 3;
     if (n == 0) n = 0x200000;
     if (src < 0x10000 || dst < 0x10000) {
-        // MI_StopDma fires a dummy transfer from/to address 0 to stop a channel; harmless, just skip it
-        fprintf(stderr, "host: DMA%d from %08llx to %08llx, control %08x: bad address\n", ch,
-                (unsigned long long)src, (unsigned long long)dst, cnt);
+        // MI_StopDma fires a dummy transfer from/to address 0 to stop a channel; harmless, skip it silently
+        // (logging here is file I/O, which is exactly what faults from the game coroutine - keep this path quiet)
         R32(base + 8) = cnt & ~0x80000000u;
         return;
     }
