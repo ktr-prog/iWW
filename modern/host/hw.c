@@ -419,18 +419,9 @@ static void dma_run(int ch) {
                 __builtin_return_address(0), __builtin_return_address(1),
                 __builtin_return_address(2), __builtin_return_address(3));
 #if HOST_VITA
-        // __builtin_return_address(n>0) doesn't walk on ARM; scan the stack for code-range values instead, so the
-        // game function that set up this DMA can be mapped (runtime base is the ELF + 0x10000)
-        {
-            uintptr_t *s = (uintptr_t *)__builtin_frame_address(0);
-            int found = 0;
-            fprintf(stderr, "host: stack code refs:");
-            for (int i = 0; i < 1024 && found < 24; i++) {
-                uintptr_t v = s[i];
-                if (v >= 0x81010000u && v < 0x81360000u) { fprintf(stderr, " %08lx", (unsigned long)v); found++; }
-            }
-            fprintf(stderr, "\n");
-        }
+        // a known host function's runtime address, to recover the load offset for mapping the caller logged in
+        // HostIo_Write (runtime address of a symbol minus its ELF address = the load offset)
+        fprintf(stderr, "host: &dma_run=%p\n", (void *)&dma_run);
 #endif
         R32(base + 8) = cnt & ~0x80000000u;
         return;
@@ -753,6 +744,13 @@ unsigned long long HostIo_Read(uintptr_t addr, unsigned int size) {
 }
 unsigned long long HostIo_Write(uintptr_t addr, unsigned int size, unsigned long long v) {
     u32 a = (u32)addr;
+#if HOST_VITA
+    // log the game-side caller of any DMA-enable (DMACNT at 0x040000b8 + ch*12, enable bit set); depth-0 return
+    // address is safe on ARM. The culprit is the one whose value is 0x81400001 with null DMASAD/DMADAD.
+    if (a >= 0x040000b8 && a <= 0x040000dc && (a - 0x040000b8) % 12 == 0 && ((u32)v & 0x80000000u))
+        fprintf(stderr, "host: DMACNT[%u] = %08x caller %p\n", (a - 0x040000b8) / 12, (u32)v,
+                __builtin_return_address(0));
+#endif
     int traced = sHBlankLine < 0;
     if (traced) io_note(addr, 1, __builtin_return_address(0));
     if (traced && sIoTrace > 0) io_trace_value(a, 1, v);
