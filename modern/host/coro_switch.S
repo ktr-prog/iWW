@@ -126,6 +126,29 @@ SYM(host_coro_boot):
     blx r4
     udf #0
 
+    @ host_get_sp(void) -> void*: the current stack pointer. Used on the Vita to
+    @ tell a coroutine stack from the main thread's kernel-registered stack.
+    .globl SYM(host_get_sp)
+    .type SYM(host_get_sp), %function
+SYM(host_get_sp):
+    mov r0, sp
+    bx lr
+
+    @ host_call_on_stack(void *new_sp in r0, void (*fn)(void*) in r1, void *arg in r2):
+    @ run fn(arg) with sp switched to new_sp (which must be 8-byte aligned), then
+    @ restore sp and return fn's result. On the Vita this runs a kernel syscall on
+    @ the main thread's registered stack, which the sceIo/threadmgr gate requires.
+    .globl SYM(host_call_on_stack)
+    .type SYM(host_call_on_stack), %function
+SYM(host_call_on_stack):
+    push {r4, lr}
+    mov r4, sp
+    mov sp, r0
+    mov r0, r2
+    blx r1
+    mov sp, r4
+    pop {r4, pc}
+
 #elif !(defined(__x86_64__) && defined(_WIN32))
 #error "coro_switch.S: no stack switch for this CPU yet"
 #endif

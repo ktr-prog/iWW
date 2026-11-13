@@ -1,23 +1,27 @@
 // File-I/O marshaling for the PS Vita port.
 //
-// Why this exists: the game runs in a cooperative coroutine with its own stack (modern/host/main.c allocates an
-// 8 MB stack and host_coro_switch()es into it; the DS-SDK threads in modern/host/os.c are coroutines too). The
-// Vita kernel routes filesystem calls (sceIoOpen/Read/Write/...) through an IPC gate to sceIofilemgr, and that
-// gate validates that the caller's stack pointer lies inside the thread's *kernel-registered* stack. A coroutine
-// stack is an ordinary heap allocation, far outside that range, so every file syscall made from the game
-// coroutine faults inside sceIoWrite (data abort). GPU/audio syscalls don't do this check, which is why SDL came
-// up fine while the first log write or save write from the game crashed.
+// Why this exists: the game and the SDL frontend run as cooperative coroutines, each on its own stack allocated
+// from the heap (modern/host/main.c switches into game_main; modern/host/frontend_sdl.c runs fe_main; the DS-SDK
+// threads in modern/host/os.c are coroutines too). The one real OS thread - the process main thread - parks
+// forever inside host_coro_switch at main.c and never runs game/frontend code directly.
 //
-// Fix: run every file syscall on a dedicated worker thread whose stack IS kernel-registered. We intercept
-// newlib's reentrant syscall layer with the linker's --wrap (see tools/configure_host.py): references to
-// _open_r/_write_r/etc. become __wrap__*; the originals are __real__*. Each wrapper packages its call into a job,
-// hands it to the worker, and blocks; the worker runs the genuine __real__* function (so VitaSDK keeps doing the
-// POSIX->SCE flag translation, fd table and errno) from its own registered stack, then wakes us. Only one job is
-// in flight at a time (a mutex serializes submitters), and before the worker is up calls run inline - startup
-// runs on the real main thread, which is already registered.
+// The Vita kernel routes syscalls through a gate that validates the caller's stack pointer lies inside the
+// current thread's KERNEL-REGISTERED stack. A coroutine stack is an ordinary heap allocation, far outside that
+// range, so a syscall made from a coroutine faults (data abort inside e.g. sceIoWrite - and likewise inside
+// sceKernelLockMutex, which is why an earlier worker-thread design crashed in its own sema call). GPU/audio
+// paths don't hit this check, which is why SDL came up but the first log write and every save write crashed.
+//
+// Fix: when a file syscall is made from a coroutine, briefly switch the stack pointer to the main thread's
+// registered stack and run the real call there. The main thread is parked at gHostMainSp with everything below
+// it unused, so the region just below gHostMainSp is a safe scratch stack that passes the gate's check (the
+// current OS thread is still the main thread - only its sp was borrowed). We intercept newlib's reentrant
+// syscall layer with the linker's --wrap (see tools/configure_host.py): __wrap__* package the call, and the
+// genuine __real__* (which keeps doing VitaSDK's flag translation, fd table and errno) runs on the scratch
+// stack. Calls made on the main thread itself (early startup) run inline.
 
-#include <errno.h>
 #include <reent.h>
+#include <stdint.h>
+#include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 
@@ -37,6 +41,24 @@ extern int __real_rename(const char *, const char *);
 extern int __real_remove(const char *);
 extern int __real_unlink(const char *);
 
+// modern/host/main.c: the main OS thread's sp, saved when it switched into the game coroutine (0 until then).
+// modern/host/coro_switch.S: read sp, and run a function on a different stack.
+extern void *gHostMainSp;
+extern void *host_get_sp(void);
+extern long host_call_on_stack(void *new_sp, void *fn, void *arg);
+
+static uintptr_t g_main_lo, g_main_hi;  // the main thread's registered stack bounds
+
+void vita_io_init(void) {
+    SceKernelThreadInfo info;
+    memset(&info, 0, sizeof info);
+    info.size = sizeof info;
+    if (sceKernelGetThreadInfo(sceKernelGetThreadId(), &info) == 0 && info.stack && info.stackSize > 0) {
+        g_main_lo = (uintptr_t)info.stack;
+        g_main_hi = g_main_lo + (uintptr_t)info.stackSize;
+    }
+}
+
 struct iojob {
     void (*run)(struct iojob *);
     struct _reent *r;
@@ -50,48 +72,22 @@ struct iojob {
     long long ret;
 };
 
-static SceUID g_req, g_done, g_mtx;
-static volatile struct iojob *g_job;
-static int g_ready;
-
-static int worker(SceSize args, void *argp) {
-    (void)args;
-    (void)argp;
-    for (;;) {
-        sceKernelWaitSema(g_req, 1, NULL);
-        struct iojob *j = (struct iojob *)g_job;
-        j->run(j);
-        sceKernelSignalSema(g_done, 1);
-    }
-    return 0;
-}
-
-static void submit(struct iojob *j) {
-    if (!g_ready) {  // early boot: still on the registered main-thread stack, so just do it here
+// run j->run(j): inline when we are already on the main thread's registered stack (startup), otherwise on a
+// scratch stack carved just below the parked main thread's sp so the syscall passes the kernel's stack check.
+static void dispatch(struct iojob *j) {
+    uintptr_t cur = (uintptr_t)host_get_sp();
+    if (!gHostMainSp || (g_main_lo && cur >= g_main_lo && cur < g_main_hi)) {
         j->run(j);
         return;
     }
-    sceKernelLockMutex(g_mtx, 1, NULL);
-    g_job = j;
-    sceKernelSignalSema(g_req, 1);
-    sceKernelWaitSema(g_done, 1, NULL);
-    sceKernelUnlockMutex(g_mtx, 1);
-}
-
-void vita_io_init(void) {
-    g_req = sceKernelCreateSema("acww_io_req", 0, 0, 1, NULL);
-    g_done = sceKernelCreateSema("acww_io_done", 0, 0, 1, NULL);
-    g_mtx = sceKernelCreateMutex("acww_io_mtx", 0, 0, NULL);
-    SceUID th = sceKernelCreateThread("acww_io_worker", worker, 0x10000100, 0x10000, 0, 0, NULL);
-    if (th < 0 || g_req < 0 || g_done < 0 || g_mtx < 0) return;  // leave g_ready 0: fall back to inline calls
-    sceKernelStartThread(th, 0, NULL);
-    g_ready = 1;
+    uintptr_t scratch = ((uintptr_t)gHostMainSp - 4096) & ~(uintptr_t)15u;
+    host_call_on_stack((void *)scratch, (void *)j->run, j);
 }
 
 #define JOB(init) \
     struct iojob j = {0}; \
     init; \
-    submit(&j)
+    dispatch(&j)
 
 static void do_open(struct iojob *j) { j->ret = __real__open_r(j->r, j->p1, j->flags, j->mode); }
 int __wrap__open_r(struct _reent *r, const char *path, int flags, int mode) {
