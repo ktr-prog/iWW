@@ -75,6 +75,13 @@ jobs:
       - name: Check the program
         run: file build/hostvita_usa/acww
 
+      - name: SceLibm / imports diagnostic
+        run: |
+          echo "=== pkg-config sdl2 libs ==="; arm-vita-eabi-pkg-config --libs sdl2 || true
+          echo "=== SceLib strings in ELF ==="; arm-vita-eabi-strings build/hostvita_usa/acww 2>/dev/null | grep -i "SceLib" | sort -u || strings build/hostvita_usa/acww | grep -i SceLib | sort -u
+          echo "=== vita-elf-create verbose (imported modules/NIDs) ==="; vita-elf-create -v -n build/hostvita_usa/acww /tmp/diag.velf 2>&1 | grep -iE "libm|module|import|resolv|NID|0x" | head -80 || true
+          echo "=== which objects reference libm math (sqrt/sin/pow) ==="; arm-vita-eabi-nm build/hostvita_usa/acww 2>/dev/null | grep -iE " (sqrt|sqrtf|sin|cos|pow|__aeabi_)" | head -30
+
       - name: Symbol map (for mapping crash/diagnostic return addresses)
         run: |
           arm-vita-eabi-nm -n --defined-only build/hostvita_usa/acww > build/vita-symbols.txt
