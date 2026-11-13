@@ -10,3 +10,7 @@
 
 None are strictly required to install and run, so the Vita CI (`.github/workflows/vita.yml`) generates a plain
 placeholder `icon0.png` when none is committed here. Replace it with real artwork whenever you like.
+
+**Every PNG here must be quantized with `pngquant`** (`pngquant --force --ext .png 256 icon0.png`) — the Vita's
+installer rejects a package whose LiveArea PNGs are not pngquant'd (install error `0x8010113D`). The CI runs
+pngquant over this folder automatically; do the same to anything you commit here.

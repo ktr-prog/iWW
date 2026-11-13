@@ -24,7 +24,7 @@ jobs:
           python-version: "3.12"
 
       - name: Tools
-        run: sudo apt-get update && sudo apt-get install -y ninja-build imagemagick cmake
+        run: sudo apt-get update && sudo apt-get install -y ninja-build imagemagick cmake pngquant
 
       # The VitaSDK (arm-vita-eabi toolchain + SDL2 built for Vita) is cached by key. SDL2 is installed into the
       # toolchain prefix ($VITASDK/arm-vita-eabi), where configure_host.py and arm-vita-eabi-pkg-config find it.
@@ -79,12 +79,15 @@ jobs:
           echo "=== sections ==="; arm-vita-eabi-readelf -S -W build/hostvita_usa/acww
           echo "=== vita-elf-create help ==="; vita-elf-create 2>&1 | head -40 || true
 
-      - name: Placeholder icon (only if no real one is committed)
+      - name: LiveArea assets (placeholder icon if none committed, then pngquant)
         run: |
-          if [ ! -f modern/host/vita/sce_sys/icon0.png ]; then
-            convert -size 128x128 xc:'#3a7d3a' -gravity center -pointsize 30 -fill white \
-              -annotate 0 'iWW' modern/host/vita/sce_sys/icon0.png
+          icon=modern/host/vita/sce_sys/icon0.png
+          if [ ! -f "$icon" ]; then
+            convert -size 128x128 xc:'#3a7d3a' -gravity center -pointsize 34 -fill white \
+              -annotate 0 'vWW' "$icon"
           fi
+          # the Vita installer rejects LiveArea PNGs that were not quantized with pngquant (install error 0x8010113D)
+          find modern/host/vita/sce_sys -name '*.png' -print -exec pngquant --force --ext .png 256 {} \;
 
       - name: Package
         run: |
