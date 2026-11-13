@@ -75,6 +75,40 @@ static void ensure_readme(void) {
     fclose(f);
 }
 
+// read ux0:/data/vitaWW/acww-options.txt and set each "NAME=value" as an environment variable (host subsystems
+// read ACWW_* from the environment); create a template if it is missing. Lets options be changed on the device
+// without a rebuild.
+static void read_options(void) {
+    FILE *f = fopen(DATA_DIR "/acww-options.txt", "r");
+    if (!f) {
+        f = fopen(DATA_DIR "/acww-options.txt", "w");
+        if (f) {
+            fputs("# vitaWW options: one NAME=value per line; remove the # to enable, then restart vitaWW.\n"
+                  "#ACWW_MUTE=1            # run without sound\n"
+                  "#ACWW_OVLOG=1           # log overlay/module loads to acww-log.txt (boot progress)\n"
+                  "#ACWW_IOLOG=4000000     # log I/O register writes at/above this address\n"
+                  "#ACWW_AUDIO_SAMPLES=1024\n", f);
+            fclose(f);
+        }
+        return;
+    }
+    char line[512];
+    while (fgets(line, sizeof line, f)) {
+        char *s = line;
+        while (*s == ' ' || *s == '\t') s++;
+        if (*s == '#' || *s == '\n' || *s == '\r' || *s == 0) continue;
+        char *eq = strchr(s, '=');
+        if (!eq) continue;
+        *eq = 0;
+        char *name = s, *val = eq + 1;
+        char *end = val + strlen(val);
+        while (end > val && (end[-1] == '\n' || end[-1] == '\r' || end[-1] == ' ' || end[-1] == '\t')) *--end = 0;
+        setenv(name, val, 1);
+        fprintf(stderr, "vita: option %s=%s\n", name, val);
+    }
+    fclose(f);
+}
+
 int main(int argc, char **argv) {
     SDL_SetMainReady();
     mkdir("ux0:/data", 0777);
@@ -82,6 +116,9 @@ int main(int argc, char **argv) {
     open_log();
     ensure_readme();
     chdir(DATA_DIR);
+    read_options();
+    // default-on boot diagnostics (overridable via acww-options.txt) while the Vita port is being brought up
+    setenv("ACWW_OVLOG", "1", 0);
 
     static char path[1024];
     if (!find_rom(path, sizeof path)) {
