@@ -52,8 +52,13 @@ def main():
         velf = f"{tmp}/eboot.velf"
         eboot = f"{tmp}/eboot.bin"
         sfo = f"{tmp}/param.sfo"
+        # strip the debug sections first (keeping the symbol table and the -Wl,-q relocations vita-elf-create
+        # needs): with -g left in, libelf can't lay the velf out ("overlapping sections")
+        stripped = f"{tmp}/acww.strip.elf"
+        shutil.copyfile(args.elf, stripped)
+        run(tool("arm-vita-eabi-strip"), "--strip-debug", stripped)
         # the ELF -> a Vita ELF (velf) -> a signed fake-self eboot.bin (-s: no extra permissions, for homebrew)
-        run(tool("vita-elf-create"), args.elf, velf)
+        run(tool("vita-elf-create"), stripped, velf)
         run(tool("vita-make-fself"), "-s", velf, eboot)
         run(tool("vita-mksfoex"), "-s", f"TITLE_ID={args.title_id}", args.title, sfo)
 
