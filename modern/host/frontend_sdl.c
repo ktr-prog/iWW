@@ -197,7 +197,11 @@ AcwwShm *frontend_backend_open(const char *argv0) {
 #endif
                             );
 #endif
+#if HOST_VITA
+    int vsync = !(getenv("ACWW_VSYNC") && atoi(getenv("ACWW_VSYNC")) == 0);  // default on: the GXM renderer flips on it
+#else
     int vsync = getenv("ACWW_VSYNC") && atoi(getenv("ACWW_VSYNC"));
+#endif
     if (sWin && render_on_gpu()) {
 #if defined(__APPLE__)
         if ((sMetalView = SDL_Metal_CreateView(sWin)))
@@ -225,6 +229,10 @@ AcwwShm *frontend_backend_open(const char *argv0) {
 #if HOST_IOS
         sTex = SDL_CreateTexture(sRen, SDL_PIXELFORMAT_XRGB8888, SDL_TEXTUREACCESS_STREAMING, 256, 384);
         if (sTex) SDL_SetTextureScaleMode(sTex, SDL_ScaleModeNearest);
+#elif HOST_VITA
+        // no logical size on the Vita GXM renderer; show() scales with an explicit centered dst rect
+        sTex = SDL_CreateTexture(sRen, SDL_PIXELFORMAT_XRGB8888, SDL_TEXTUREACCESS_STREAMING, 256, 384);
+        if (sTex) SDL_SetTextureScaleMode(sTex, SDL_ScaleModeLinear);
 #else
         SDL_RenderSetLogicalSize(sRen, 256, 384);
         sTex = SDL_CreateTexture(sRen, SDL_PIXELFORMAT_XRGB8888, SDL_TEXTUREACCESS_STREAMING, 256, 384);
@@ -898,6 +906,20 @@ static void show(void) {
             fprintf(stderr, "vita: frame %lu pixels non-black: top %lu bottom %lu (of 49152 each)\n", fc - 1, top, bot);
         }
     }
+    // Dedicated Vita present: explicit centered dst rect (no logical size), temporary blue clear to tell apart
+    // "present works but the texture doesn't blit" (screen goes blue) from "nothing presents at all" (stays black).
+    SDL_UpdateTexture(sTex, 0, sShm->pixels, 256 * 4);
+    SDL_SetRenderDrawColor(sRen, 0, 0, 160, 255);
+    SDL_RenderClear(sRen);
+    {
+        int w = (int)(256.0f * (544.0f / 384.0f) + 0.5f);  // ~363 px: fit 256x384 to 544 tall, keep aspect
+        SDL_Rect dst = {(960 - w) / 2, 0, w, 544};
+        SDL_RenderCopy(sRen, sTex, NULL, &dst);
+    }
+    window_shot();
+    if (sPendingShot[0]) shot(sPendingShot), sPendingShot[0] = 0;
+    SDL_RenderPresent(sRen);
+    return;
 #endif
     SDL_UpdateTexture(sTex, 0, sShm->pixels, 256 * 4);
     SDL_SetRenderDrawColor(sRen, 0, 0, 0, 255);
