@@ -19,6 +19,7 @@
 // genuine __real__* (which keeps doing VitaSDK's flag translation, fd table and errno) runs on the scratch
 // stack. Calls made on the main thread itself (early startup) run inline.
 
+#include <dirent.h>
 #include <reent.h>
 #include <stdint.h>
 #include <string.h>
@@ -40,6 +41,9 @@ extern int __real__isatty_r(struct _reent *, int);
 extern int __real_rename(const char *, const char *);
 extern int __real_remove(const char *);
 extern int __real_unlink(const char *);
+extern DIR *__real_opendir(const char *);
+extern struct dirent *__real_readdir(DIR *);
+extern int __real_closedir(DIR *);
 
 // modern/host/main.c: the main OS thread's sp, saved when it switched into the game coroutine (0 until then).
 // modern/host/coro_switch.S: read sp, and run a function on a different stack.
@@ -146,5 +150,25 @@ int __wrap_remove(const char *p) {
 static void do_unlink(struct iojob *j) { j->ret = __real_unlink(j->p1); }
 int __wrap_unlink(const char *p) {
     JOB((j.run = do_unlink, j.p1 = p));
+    return (int)j.ret;
+}
+
+// directory reads go through sceIoDopen/Dread/Dclose, which are gated the same way, so pxi7.c's save-file scan
+// (opendir/readdir/closedir from the game coroutine) needs the same stack switch.
+static void do_opendir(struct iojob *j) { j->ret = (long long)(uintptr_t)__real_opendir(j->p1); }
+DIR *__wrap_opendir(const char *p) {
+    JOB((j.run = do_opendir, j.p1 = p));
+    return (DIR *)(uintptr_t)j.ret;
+}
+
+static void do_readdir(struct iojob *j) { j->ret = (long long)(uintptr_t)__real_readdir((DIR *)j->buf); }
+struct dirent *__wrap_readdir(DIR *d) {
+    JOB((j.run = do_readdir, j.buf = d));
+    return (struct dirent *)(uintptr_t)j.ret;
+}
+
+static void do_closedir(struct iojob *j) { j->ret = __real_closedir((DIR *)j->buf); }
+int __wrap_closedir(DIR *d) {
+    JOB((j.run = do_closedir, j.buf = d));
     return (int)j.ret;
 }
