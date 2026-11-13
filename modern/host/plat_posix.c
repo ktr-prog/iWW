@@ -7,9 +7,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/mman.h>
 #include <time.h>
 #include <unistd.h>
+#if HOST_VITA
+// VitaSDK's newlib has no <sys/mman.h>: the Vita can't reserve/guard pages, so the stack and page allocators
+// below use aligned malloc instead (the 64-bit pointer arena is already compiled out on this 32-bit target)
+#include <malloc.h>
+#else
+#include <sys/mman.h>
+#endif
 #if defined(__GLIBC__) || defined(__APPLE__)
 #include <execinfo.h>
 #define HAVE_EXECINFO 1
@@ -58,10 +64,14 @@ static void *thread_main(void *p) {
     return 0;
 }
 void host_plat_restart(char **argv) {
+#if HOST_VITA
+    (void)argv;  // no process restart on the Vita
+#else
 #ifdef __linux__
     execv("/proc/self/exe", argv);
 #endif
     execvp(argv[0], argv);
+#endif
 }
 
 int host_plat_thread_start(void (*fn)(void *), void *arg) {
@@ -69,21 +79,29 @@ int host_plat_thread_start(void (*fn)(void *), void *arg) {
     if (!s) return 0;
     s->fn = fn;
     s->arg = arg;
+#if !HOST_VITA
     sigset_t all, old;
     sigfillset(&all);
     pthread_sigmask(SIG_SETMASK, &all, &old);
+#endif
     pthread_t t;
     int err = pthread_create(&t, 0, thread_main, s);
+#if !HOST_VITA
     pthread_sigmask(SIG_SETMASK, &old, 0);
+#endif
     if (err) { free(s); return 0; }
     pthread_detach(t);
     return 1;
 }
 
 static size_t page_size(void) {
+#if HOST_VITA
+    return 4096;
+#else
     static size_t page;
     if (!page) page = (size_t)sysconf(_SC_PAGESIZE);
     return page;
+#endif
 }
 
 #if UINTPTR_MAX > 0xffffffffu
@@ -153,32 +171,52 @@ void *host_plat_stack_alloc(size_t n, int flags) {
     size_t page = page_size();
     n = (n + page - 1) & ~(page - 1);
     (void)flags;
+#if HOST_VITA
+    // no guard page (the Vita can't PROT_NONE): a plain page-aligned block
+    void *p = memalign(page, n);
+    if (!p) return 0;
+    host_state_track_stack(p, n);
+    return p;
+#else
     unsigned char *p = arena_take(n + page);
     if (!p) p = mmap(0, n + page, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
     if (p == MAP_FAILED || !p) return 0;
     mprotect(p, page, PROT_NONE);
     host_state_track_stack(p + page, n);
     return p + page;
+#endif
 }
 
 void host_plat_stack_free(void *stack, size_t n) {
     if (!stack) return;
     host_state_untrack(stack);
+#if HOST_VITA
+    (void)n;
+    free(stack);
+#else
 #if UINTPTR_MAX > 0xffffffffu
     if (sArena && (unsigned char *)stack >= sArena && (unsigned char *)stack < sArena + ARENA_SIZE) return;
 #endif
     size_t page = page_size();
     n = (n + page - 1) & ~(page - 1);
     munmap((unsigned char *)stack - page, n + page);
+#endif
 }
 
 void *host_plat_pages_alloc(size_t n) {
     size_t page = page_size();
+#if HOST_VITA
+    void *p = memalign(page, (n + page - 1) & ~(page - 1));
+    if (!p) return 0;
+    host_state_track(p, n);
+    return p;
+#else
     void *p = arena_take((n + page - 1) & ~(page - 1));
     if (!p) p = mmap(0, n, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
     if (p == MAP_FAILED || !p) return 0;
     host_state_track(p, n);
     return p;
+#endif
 }
 
 int host_plat_image_bounds(uintptr_t *lo, uintptr_t *hi) {
@@ -202,7 +240,7 @@ int host_plat_image_bounds(uintptr_t *lo, uintptr_t *hi) {
     if (l >= h) return 0;
     *lo = l, *hi = h;
     return 1;
-#elif defined(__ELF__)
+#elif defined(__ELF__) && !HOST_VITA
     extern char __executable_start[], _end[];
     *lo = (uintptr_t)__executable_start;
     *hi = (uintptr_t)_end;
