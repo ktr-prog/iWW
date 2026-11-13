@@ -35,3 +35,4 @@ build_host_ios*.ninja
 build_host64_asan.ninja
 build_host*_oracle.ninja
 /toolchains/
+modern/host/vita/build_id.h

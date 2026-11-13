@@ -63,6 +63,9 @@ jobs:
       - name: PATH
         run: echo "$VITASDK/bin" >> "$GITHUB_PATH"
 
+      - name: Build stamp
+        run: echo "#define VITA_BUILD \"${GITHUB_SHA::7}\"" > modern/host/vita/build_id.h
+
       - name: Configure
         run: python3 tools/configure_host.py --os vita
 

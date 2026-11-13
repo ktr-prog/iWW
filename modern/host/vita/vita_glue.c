@@ -15,6 +15,16 @@
 
 #include "vita.h"
 
+// CI writes build_id.h with the commit short SHA so every log says exactly which build produced it
+#if defined(__has_include)
+#  if __has_include("build_id.h")
+#    include "build_id.h"
+#  endif
+#endif
+#ifndef VITA_BUILD
+#define VITA_BUILD "dev"
+#endif
+
 #define DATA_DIR "ux0:/data/vitaWW"
 #define README   DATA_DIR "/Put your Animal Crossing Wild World .nds file here.txt"
 
@@ -51,7 +61,7 @@ static void open_log(void) {
     // (newlib on the Vita has no dup2: the game logs to stderr, so only stderr is redirected to the file)
     if (!freopen(DATA_DIR "/acww-log.txt", "w", stderr)) return;
     setvbuf(stderr, NULL, _IONBF, 0);
-    fprintf(stderr, "vita: vitaWW starting\n");
+    fprintf(stderr, "vita: vitaWW starting (build %s)\n", VITA_BUILD);
 }
 
 static void ensure_readme(void) {
