@@ -747,9 +747,13 @@ unsigned long long HostIo_Write(uintptr_t addr, unsigned int size, unsigned long
 #if HOST_VITA
     // log the game-side caller of any DMA-enable (DMACNT at 0x040000b8 + ch*12, enable bit set); depth-0 return
     // address is safe on ARM. The culprit is the one whose value is 0x81400001 with null DMASAD/DMADAD.
-    if (a >= 0x040000b8 && a <= 0x040000dc && (a - 0x040000b8) % 12 == 0 && ((u32)v & 0x80000000u))
-        fprintf(stderr, "host: DMACNT[%u] = %08x caller %p\n", (a - 0x040000b8) / 12, (u32)v,
-                __builtin_return_address(0));
+    if (a >= 0x040000b8 && a <= 0x040000dc && (a - 0x040000b8) % 12 == 0 && ((u32)v & 0x80000000u)) {
+        // caller = the game function; dma_run@ = a known symbol's runtime address, so its offset from the ELF
+        // address (symbol map) gives the load slide to map the caller. One flushed line, printed before any fault.
+        fprintf(stderr, "host: DMACNT[%u] = %08x caller %p dma_run@%p\n", (a - 0x040000b8) / 12, (u32)v,
+                __builtin_return_address(0), (void *)&dma_run);
+        fflush(stderr);
+    }
 #endif
     int traced = sHBlankLine < 0;
     if (traced) io_note(addr, 1, __builtin_return_address(0));
