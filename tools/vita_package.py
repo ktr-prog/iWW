@@ -60,7 +60,10 @@ def main():
         # the ELF -> a Vita ELF (velf) -> a signed fake-self eboot.bin (-s: no extra permissions, for homebrew)
         run(tool("vita-elf-create"), stripped, velf)
         run(tool("vita-make-fself"), "-s", velf, eboot)
-        run(tool("vita-mksfoex"), "-s", f"TITLE_ID={args.title_id}", args.title, sfo)
+        # ATTRIBUTE2=12 asks for the extended-memory budget (MAIN LPDDR ~365 MB instead of ~256 MB), so the
+        # enlarged main-thread stack (which hosts every coroutine's stack, see modern/host/plat_posix.c) fits
+        # alongside the newlib heap.
+        run(tool("vita-mksfoex"), "-s", f"TITLE_ID={args.title_id}", "-d", "ATTRIBUTE2=12", args.title, sfo)
 
         pack = [tool("vita-pack-vpk"), "-s", sfo, "-b", eboot]
         assets = Path(args.assets)
