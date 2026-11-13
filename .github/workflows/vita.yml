@@ -81,12 +81,12 @@ jobs:
 
       - name: Package
         run: |
-          python3 tools/vita_package.py build/hostvita_usa/acww build/vita/iWW.vpk
-          ls -l build/vita/iWW.vpk
-          unzip -l build/vita/iWW.vpk
+          python3 tools/vita_package.py build/hostvita_usa/acww build/vita/vitaWW.vpk
+          ls -l build/vita/vitaWW.vpk
+          unzip -l build/vita/vitaWW.vpk
 
       - uses: actions/upload-artifact@v4
         with:
-          name: iWW-Vita
-          path: build/vita/iWW.vpk
+          name: vitaWW
+          path: build/vita/vitaWW.vpk
           if-no-files-found: error

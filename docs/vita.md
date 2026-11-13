@@ -1,6 +1,6 @@
-# PS Vita port
+# PS Vita port (vitaWW)
 
-A native PlayStation Vita build of iWW, packaged as a homebrew `.vpk`. It is built from the same shared game core
+A native PlayStation Vita build of iWW — named **vitaWW** on the device — packaged as a homebrew `.vpk`. It is built from the same shared game core
 as the iOS and desktop builds (`src/`, `include/`, `modern/`), so bug fixes made once apply everywhere — the Vita
 adds only its own frontend glue, toolchain wiring, and packaging.
 
@@ -26,7 +26,7 @@ Vita-specific parts:
 - `modern/host/coro_switch.S` / `coro.c` — an ARMv7 (EABI) path for the game thread's stack switch.
 - `tools/configure_host.py --os vita` — the VitaSDK cross build.
 - `tools/vita_package.py` — turns the built ELF into a `.vpk`.
-- `.github/workflows/vita.yml` — CI that installs the VitaSDK, builds, and uploads `iWW-Vita` (the `.vpk`).
+- `.github/workflows/vita.yml` — CI that installs the VitaSDK, builds, and uploads `vitaWW` (the `.vpk`).
 
 ## Building locally
 
@@ -38,15 +38,15 @@ export VITASDK=/usr/local/vitasdk
 export PATH=$VITASDK/bin:$PATH
 python3 tools/configure_host.py --os vita      # writes build_host_vita.ninja
 ninja -f build_host_vita.ninja                 # builds build/hostvita_usa/acww (an ARM ELF)
-python3 tools/vita_package.py build/hostvita_usa/acww build/vita/iWW.vpk
+python3 tools/vita_package.py build/hostvita_usa/acww build/vita/vitaWW.vpk
 ```
 
-CI does the same (it installs the VitaSDK first) — download the `iWW-Vita` artifact from an Actions run for a
+CI does the same (it installs the VitaSDK first) — download the `vitaWW` artifact from an Actions run for a
 ready `.vpk`.
 
 ## Installing and running
 
-1. Install `iWW.vpk` on the Vita (e.g. with VitaShell: press `Circle`/`X` on the file and install).
+1. Install `vitaWW.vpk` on the Vita (e.g. with VitaShell: press `Circle`/`X` on the file and install).
 2. Copy your own dump of Animal Crossing: Wild World (USA, Rev 1 — `ADME`,
    SHA-1 `77fde3e30e1e6068395d1f96ea63be569b61c351`) into `ux0:/data/iWW/`, as a single file ending in `.nds`.
 3. Launch iWW. The game saves next to the ROM (same name, ending in `.sav`) — keep a backup.

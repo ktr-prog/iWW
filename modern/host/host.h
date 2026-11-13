@@ -16,7 +16,9 @@ extern int gHostVerbose;
 extern const char *gHostRomPath;
 
 #ifndef HOST_DEBUG_POSIX
-#if defined(_WIN32)
+// the POSIX crash-backtrace aid needs glibc's <link.h>/ucontext; off on Windows and on the Vita (newlib),
+// where debug_posix.c provides empty stubs instead
+#if defined(_WIN32) || HOST_VITA
 #define HOST_DEBUG_POSIX 0
 #else
 #define HOST_DEBUG_POSIX 1

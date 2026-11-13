@@ -36,8 +36,8 @@ def main():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("elf", help="the ELF from build_host_vita.ninja")
     p.add_argument("out", help="the .vpk to write")
-    p.add_argument("--title-id", default="IWWW00001", help="9-character title id (default IWWW00001)")
-    p.add_argument("--title", default="iWW", help="the name shown in the LiveArea")
+    p.add_argument("--title-id", default="VWWW00001", help="9-character title id (default VWWW00001)")
+    p.add_argument("--title", default="vitaWW", help="the name shown in the LiveArea")
     p.add_argument("--assets", default="modern/host/vita/sce_sys",
                    help="a sce_sys directory (icon0.png, livearea/...); whatever is there is bundled")
     args = p.parse_args()
