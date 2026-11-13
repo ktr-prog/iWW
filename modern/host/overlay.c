@@ -58,7 +58,7 @@ void HostOverlay_Init(void) {
             p += v->size;
         }
     }
-    if (sLog) fprintf(stderr, "overlays: %u units, %zu variables, %zu bytes kept\n", gHostOverlayUnitCount, nvars, total);
+    if (sLog) fprintf(stderr, "overlays: %u units, %lu variables, %lu bytes kept\n", gHostOverlayUnitCount, (unsigned long)nvars, (unsigned long)total);
     for (unsigned i = 0; i < gHostOverlayUnitCount; i++) {
         const HostOverlayUnit *u = &gHostOverlayUnits[i];
         if (sKeep[u->id] && u->staticInit) u->staticInit();
@@ -113,10 +113,12 @@ void HostOverlay_Load(unsigned id) {
         inits++;
     }
     if (sLog) {
-        fprintf(stderr, "frame %llu: overlay %u loaded: data %zu bytes in %zu variables (%zu bytes changed, first in "
-                "%s+%#zx), bss %zu bytes in %zu variables (%zu bytes not zero, first in %s+%#zx), %u constructors\n",
-                (unsigned long long)host_frame(), id, data.bytes, data.vars, data.changed, data.first, data.firstOff,
-                bss.bytes, bss.vars, bss.changed, bss.first, bss.firstOff, inits);
+        fprintf(stderr, "frame %lu: overlay %u loaded: data %lu bytes in %lu variables (%lu bytes changed, first in "
+                "%s+%#lx), bss %lu bytes in %lu variables (%lu bytes not zero, first in %s+%#lx), %u constructors\n",
+                (unsigned long)host_frame(), id, (unsigned long)data.bytes, (unsigned long)data.vars,
+                (unsigned long)data.changed, data.first, (unsigned long)data.firstOff,
+                (unsigned long)bss.bytes, (unsigned long)bss.vars, (unsigned long)bss.changed, bss.first,
+                (unsigned long)bss.firstOff, inits);
     }
 }
 

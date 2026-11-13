@@ -239,7 +239,7 @@ static void write_file(void) {
         return;
     }
     sFileHave = 1;
-    fprintf(stderr, "savestate: %s written (%zu KB of state, %zu KB not zero)\n", STATE_FILE, at >> 10, written >> 10);
+    fprintf(stderr, "savestate: %s written (%lu KB of state, %lu KB not zero)\n", STATE_FILE, (unsigned long)(at >> 10), (unsigned long)(written >> 10));
 }
 
 int host_state_save(void *const *gameSp) {
@@ -253,7 +253,7 @@ int host_state_save(void *const *gameSp) {
     if (total > sSnapCap) {
         unsigned char *b = realloc(sSnap, total);
         if (!b) {
-            fprintf(stderr, "savestate: no memory for %zu MB\n", total >> 20);
+            fprintf(stderr, "savestate: no memory for %lu MB\n", (unsigned long)(total >> 20));
             message("NO MEMORY FOR A STATE");
             return 0;
         }
@@ -270,8 +270,8 @@ int host_state_save(void *const *gameSp) {
     sSnapSize = total;
     sSnapSp = *gameSp;
     write_file();
-    fprintf(stderr, "savestate: saved at frame %llu: %zu KB in %d blocks, %.1f ms\n", (unsigned long long)host_frame(),
-            total >> 10, n, (double)(host_plat_time_ns() - t0) / 1e6);
+    fprintf(stderr, "savestate: saved at frame %lu: %lu KB in %d blocks, %.1f ms\n", (unsigned long)host_frame(),
+            (unsigned long)(total >> 10), n, (double)(host_plat_time_ns() - t0) / 1e6);
     message("STATE SAVED");
     return 1;
 }
@@ -496,7 +496,7 @@ static int load_file(void) {
             for (size_t o = 0; o + 8 <= list[i].n; o += 1) {
                 uint64_t v; memcpy(&v, snap + a2 + o, 8);
                 if (v >= h.imageLo && v < h.imageHi && shown++ < 60)
-                    fprintf(stderr, "savestate: stale: block %u (%p) offset %zx%s: %llx (program + %llx)\n", i, (void *)list[i].p, o,
+                    fprintf(stderr, "savestate: stale: block %u (%p) offset %lx%s: %llx (program + %llx)\n", i, (void *)list[i].p, (unsigned long)o,
                             list[i].stack ? " (a stack)" : "", (unsigned long long)v, (unsigned long long)(v - h.imageLo));
             }
             a2 += list[i].n;

@@ -164,7 +164,7 @@ static void ram_image_put(u8 *img, u32 *at, const char *lo, const char *end, u32
     size_t n = (size_t)(end - lo);
     static int warned;
     if (*at + n > limit) {
-        if (!warned++) fprintf(stderr, "host: RAM image: the game's data and bss don't fit, %zu bytes cut\n", *at + n - limit);
+        if (!warned++) fprintf(stderr, "host: RAM image: the game's data and bss don't fit, %lu bytes cut\n", (unsigned long)(*at + n - limit));
         n = *at < limit ? limit - *at : 0;
     }
     memcpy(img + *at, lo, n);

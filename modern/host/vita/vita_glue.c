@@ -117,8 +117,7 @@ int main(int argc, char **argv) {
     ensure_readme();
     chdir(DATA_DIR);
     read_options();
-    // default-on boot diagnostics (overridable via acww-options.txt) while the Vita port is being brought up
-    setenv("ACWW_OVLOG", "1", 0);
+    // overlay logging is off by default; enable ACWW_OVLOG=1 in acww-options.txt for boot-progress diagnostics
 
     static char path[1024];
     if (!find_rom(path, sizeof path)) {
