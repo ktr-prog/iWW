@@ -753,6 +753,16 @@ unsigned long long HostIo_Write(uintptr_t addr, unsigned int size, unsigned long
         fprintf(stderr, "host: DMACNT[%u] = %08x caller %p dma_run@%p\n", (a - 0x040000b8) / 12, (u32)v,
                 __builtin_return_address(0), (void *)&dma_run);
         fflush(stderr);
+        // bounded, flushed stack scan: older frames sit at higher addresses, so a short upward scan collects the
+        // return-address chain above the caller (which boot init is running). Small + per-line flush so it's safe.
+        uintptr_t *stk = (uintptr_t *)__builtin_frame_address(0);
+        for (int i = 0; i < 96; i++) {
+            uintptr_t rv = stk[i];
+            if (rv > 0x81050000u && rv < 0x81400000u) {
+                fprintf(stderr, "host:  stk+%d %08lx\n", i, (unsigned long)rv);
+                fflush(stderr);
+            }
+        }
     }
 #endif
     int traced = sHBlankLine < 0;
