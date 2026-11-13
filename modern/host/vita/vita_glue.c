@@ -93,7 +93,6 @@ static void read_options(void) {
         if (f) {
             fputs("# vitaWW options: one NAME=value per line; remove the # to enable, then restart vitaWW.\n"
                   "#ACWW_MUTE=1            # run without sound\n"
-                  "#ACWW_SCREEN=bottom     # which DS screen to show: bottom (default), top, or both\n"
                   "#ACWW_OVLOG=1           # log overlay/module loads to acww-log.txt (boot progress)\n"
                   "#ACWW_IOLOG=4000000     # log I/O register writes at/above this address\n"
                   "#ACWW_AUDIO_SAMPLES=1024\n", f);

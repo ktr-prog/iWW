@@ -895,49 +895,46 @@ static void show(void) {
         return;
     }
 #if HOST_VITA
-    // bring-up diagnostic: is the DS actually drawing? log how many of each screen's pixels are non-black
+    // One screen, filling the Vita's 960x544. When the port's single-screen canvas is active sShm->rows holds its
+    // height (256 wide x rows); otherwise fall back to the main (bottom) DS screen. Scale to COVER the display,
+    // preserving aspect - no stretch, no black bars (overflow is cropped), so no RenderClear is needed.
     {
-        static unsigned long fc;
-        if ((fc++ % 120) == 0 && sShm) {
-            const uint32_t *px = (const uint32_t *)sShm->pixels;
-            unsigned long top = 0, bot = 0;
-            for (int i = 0; i < 256 * 192; i++) if (px[i] & 0xffffffu) top++;
-            for (int i = 256 * 192; i < 256 * 384; i++) if (px[i] & 0xffffffu) bot++;
-            fprintf(stderr, "vita: frame %lu pixels non-black: top %lu bottom %lu (of 49152 each)\n", fc - 1, top, bot);
-        }
-    }
-    // Dedicated Vita present. sShm->pixels is the two DS screens stacked (256x384: top rows 0-191, bottom
-    // 192-383). By default show the bottom screen stretched to the whole 960x544 display; ACWW_SCREEN=top or
-    // =both (in acww-options.txt) picks the other screen or both letterboxed, without a rebuild.
-    {
-        static int which = -1;  // 0 bottom, 1 top, 2 both
-        if (which < 0) {
-            const char *s = getenv("ACWW_SCREEN");
-            which = s && !strcmp(s, "top") ? 1 : s && !strcmp(s, "both") ? 2 : 0;
-        }
+        static int lastRows = -1;
+        int rows = (sShm->rows >= 192 && sShm->rows <= 640) ? (int)sShm->rows : 0;
+        if (rows != lastRows) { fprintf(stderr, "vita: canvas rows %d\n", rows); lastRows = rows; }
         uint64_t t0 = host_plat_time_ns();
-        SDL_UpdateTexture(sTex, 0, sShm->pixels, 256 * 4);
-        SDL_SetRenderDrawColor(sRen, 0, 0, 0, 255);
-        SDL_RenderClear(sRen);
-        if (which == 2) {
-            int w = (int)(256.0f * (544.0f / 384.0f) + 0.5f);
-            SDL_Rect dst = {(960 - w) / 2, 0, w, 544};
-            SDL_RenderCopy(sRen, sTex, NULL, &dst);
+        SDL_Texture *src;
+        SDL_Rect srcR;
+        if (rows) {
+            static SDL_Texture *canvasTex;
+            static int canvasRows;
+            if (!canvasTex || canvasRows != rows) {
+                if (canvasTex) SDL_DestroyTexture(canvasTex);
+                canvasTex = SDL_CreateTexture(sRen, SDL_PIXELFORMAT_XRGB8888, SDL_TEXTUREACCESS_STREAMING, 256, rows);
+                if (canvasTex) SDL_SetTextureScaleMode(canvasTex, SDL_ScaleModeLinear);
+                canvasRows = rows;
+            }
+            if (!canvasTex) return;
+            SDL_UpdateTexture(canvasTex, NULL, sShm->pixels, 256 * 4);
+            src = canvasTex;
+            srcR = (SDL_Rect){0, 0, 256, rows};
         } else {
-            SDL_Rect src = {0, which == 1 ? 0 : 192, 256, 192};  // one DS screen
-            SDL_Rect dst = {0, 0, 960, 544};                     // stretched to fill the Vita display
-            SDL_RenderCopy(sRen, sTex, &src, &dst);
+            SDL_UpdateTexture(sTex, NULL, sShm->pixels, 256 * 4);  // 256x384 (both screens stacked)
+            src = sTex;
+            srcR = (SDL_Rect){0, 192, 256, 192};  // the main (bottom) screen
         }
+        float scale = 960.0f / srcR.w;
+        if (544.0f / srcR.h > scale) scale = 544.0f / srcR.h;  // cover: fill the larger dimension
+        int dw = (int)(srcR.w * scale + 0.5f), dh = (int)(srcR.h * scale + 0.5f);
+        SDL_Rect dst = {(960 - dw) / 2, (544 - dh) / 2, dw, dh};
+        SDL_RenderCopy(sRen, src, &srcR, &dst);
         window_shot();
         if (sPendingShot[0]) shot(sPendingShot), sPendingShot[0] = 0;
         SDL_RenderPresent(sRen);
         static unsigned long pc;
         static uint64_t acc;
         acc += host_plat_time_ns() - t0;
-        if ((++pc % 120) == 0) {
-            fprintf(stderr, "vita: present avg %lu us / 120 frames\n", (unsigned long)(acc / 120000));
-            acc = 0;
-        }
+        if ((++pc % 120) == 0) { fprintf(stderr, "vita: present avg %lu us\n", (unsigned long)(acc / 120000)); acc = 0; }
     }
     return;
 #endif
