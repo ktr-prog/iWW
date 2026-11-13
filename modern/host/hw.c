@@ -395,6 +395,12 @@ static void io_write(u32 a, u32 old);
 static uintptr_t sDmaSrc[4], sDmaDst[4];
 void HostDma_Addresses(unsigned int ch, uintptr_t src, uintptr_t dst) {
     if (ch < 4) { sDmaSrc[ch] = src; sDmaDst[ch] = dst; }
+    // (diagnostic: when a DMA is set up with a null source/dest, log who asked, so the game-side caller can be
+    // mapped from the symbol dump - the fault follows this on the Vita)
+    if (src < 0x10000 || dst < 0x10000)
+        fprintf(stderr, "host: dma%u null set src=%08llx dst=%08llx, ra %p <- %p <- %p\n", ch,
+                (unsigned long long)src, (unsigned long long)dst,
+                __builtin_return_address(0), __builtin_return_address(1), __builtin_return_address(2));
 }
 static uintptr_t dma_address(u32 reg, uintptr_t full) { return (u32)full == reg ? full : reg; }
 static int dma_is_io(uintptr_t a) { return a <= 0xffffffffu && is_io((u32)a); }

@@ -72,6 +72,13 @@ jobs:
       - name: Check the program
         run: file build/hostvita_usa/acww
 
+      - name: Symbol map (for mapping crash/diagnostic return addresses)
+        run: |
+          arm-vita-eabi-nm -n --defined-only build/hostvita_usa/acww > build/vita-symbols.txt
+          echo "symbol count: $(wc -l < build/vita-symbols.txt)"
+          # print the text symbols so they're in the build log and greppable by address
+          awk 'toupper($2)=="T"' build/vita-symbols.txt
+
       - name: ELF layout (diagnostics)
         run: |
           echo "=== ELF header ==="; arm-vita-eabi-readelf -h build/hostvita_usa/acww
