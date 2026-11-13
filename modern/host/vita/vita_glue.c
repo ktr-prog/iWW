@@ -28,6 +28,12 @@
 #define DATA_DIR "ux0:/data/vitaWW"
 #define README   DATA_DIR "/Put your Animal Crossing Wild World .nds file here.txt"
 
+// Enlarge the main thread's kernel-registered stack. The game, the SDL frontend and the DS-SDK threads all run
+// as coroutines on this one OS thread, and host_plat_stack_alloc (modern/host/plat_posix.c) carves their stacks
+// from the low end of this region so that syscalls made from any coroutine pass the Vita's stack-bounds gate.
+// Must hold the game coroutine (8 MB) + frontend coroutine (8 MB) + the DS threads (2 MB each) + headroom.
+unsigned int sceUserMainThreadStackSize = 40 * 1024 * 1024;
+
 void vita_fatal_message(const char *text) {
     // the message box needs SDL's video subsystem; bring it up if the game never got that far
     SDL_InitSubSystem(SDL_INIT_VIDEO);

@@ -13,6 +13,8 @@
 // VitaSDK's newlib has no <sys/mman.h>: the Vita can't reserve/guard pages, so the stack and page allocators
 // below use aligned malloc instead (the 64-bit pointer arena is already compiled out on this 32-bit target)
 #include <malloc.h>
+#include <stdint.h>
+#include <psp2/kernel/threadmgr.h>
 #else
 #include <sys/mman.h>
 #endif
@@ -167,12 +169,50 @@ int host_plat_arena_set_used(size_t used) { (void)used; return 0; }
 int host_plat_commit(void *p, size_t n) { (void)p; (void)n; return 0; }
 #endif
 
+#if HOST_VITA
+// Coroutine stacks must live inside the main thread's KERNEL-REGISTERED stack. The Vita routes syscalls through
+// a gate that faults unless the caller's sp is within the current thread's registered stack, and the game, the
+// SDL frontend and the DS-SDK threads all run as coroutines on the one (main) OS thread. The main thread's stack
+// is enlarged via sceUserMainThreadStackSize (vita_glue.c); here we hand coroutine stacks out of its low end so
+// every coroutine's sp stays in range and any syscall it makes (file I/O, pthread/GXM mutexes, ...) passes.
+static unsigned char *sVPoolNext, *sVPoolEnd, *sVPoolLo, *sVPoolHi;
+static void vstack_pool_init(void) {
+    SceKernelThreadInfo info;
+    memset(&info, 0, sizeof info);
+    info.size = sizeof info;
+    if (sceKernelGetThreadInfo(sceKernelGetThreadId(), &info) != 0 || !info.stack || info.stackSize <= 0) return;
+    unsigned char *a = (unsigned char *)info.stack;
+    unsigned char *b = a + info.stackSize;
+    unsigned char here[16];  // a current main-stack address, to tell which end info.stack is
+    if (!((uintptr_t)here >= (uintptr_t)a && (uintptr_t)here < (uintptr_t)b)) {
+        // info.stack is the high end: the region is [stack - size, stack)
+        b = a;
+        a = b - info.stackSize;
+        if (!((uintptr_t)here >= (uintptr_t)a && (uintptr_t)here < (uintptr_t)b)) return;  // can't locate it
+    }
+    sVPoolLo = sVPoolNext = a;             // carve coroutine stacks up from the low end
+    sVPoolEnd = sVPoolHi = b - (2u << 20);  // leave 2 MB at the top for the main thread itself
+    if (sVPoolEnd < sVPoolNext) sVPoolEnd = sVPoolNext;
+}
+#endif
+
 void *host_plat_stack_alloc(size_t n, int flags) {
     size_t page = page_size();
     n = (n + page - 1) & ~(page - 1);
     (void)flags;
 #if HOST_VITA
-    // no guard page (the Vita can't PROT_NONE): a plain page-aligned block
+    // no guard page (the Vita can't PROT_NONE). Prefer a slice of the main thread's registered stack so syscalls
+    // from this coroutine pass the kernel's stack-bounds gate; fall back to the heap only if the pool is spent.
+    static int inited;
+    if (!inited) { inited = 1; vstack_pool_init(); }
+    if (sVPoolNext && sVPoolNext + n <= sVPoolEnd) {
+        void *p = sVPoolNext;
+        sVPoolNext += n;
+        host_state_track_stack(p, n);
+        return p;
+    }
+    fprintf(stderr, "host: stack pool spent, %lu bytes from the heap (syscalls from this stack may fault)\n",
+            (unsigned long)n);
     void *p = memalign(page, n);
     if (!p) return 0;
     host_state_track_stack(p, n);
@@ -192,6 +232,7 @@ void host_plat_stack_free(void *stack, size_t n) {
     host_state_untrack(stack);
 #if HOST_VITA
     (void)n;
+    if ((unsigned char *)stack >= sVPoolLo && (unsigned char *)stack < sVPoolHi) return;  // pooled: not heap, don't free
     free(stack);
 #else
 #if UINTPTR_MAX > 0xffffffffu
