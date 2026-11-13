@@ -72,6 +72,13 @@ jobs:
       - name: Check the program
         run: file build/hostvita_usa/acww
 
+      - name: ELF layout (diagnostics)
+        run: |
+          echo "=== ELF header ==="; arm-vita-eabi-readelf -h build/hostvita_usa/acww
+          echo "=== program headers (segments) ==="; arm-vita-eabi-readelf -l build/hostvita_usa/acww
+          echo "=== sections ==="; arm-vita-eabi-readelf -S -W build/hostvita_usa/acww
+          echo "=== vita-elf-create help ==="; vita-elf-create 2>&1 | head -40 || true
+
       - name: Placeholder icon (only if no real one is committed)
         run: |
           if [ ! -f modern/host/vita/sce_sys/icon0.png ]; then
