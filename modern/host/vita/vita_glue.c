@@ -13,6 +13,8 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include <psp2/power.h>
+
 #include "vita.h"
 
 // CI writes build_id.h with the commit short SHA so every log says exactly which build produced it
@@ -120,9 +122,16 @@ static void read_options(void) {
 int main(int argc, char **argv) {
     SDL_SetMainReady();
     vita_io_init();  // must precede any file I/O: the game coroutine's file syscalls are marshaled to this worker
+    // run at the stock game clocks (333 MHz ARM / 222 MHz bus) - homebrew often launch throttled lower. This is
+    // the standard frequency Vita games use, NOT an overclock (which would be 444 MHz).
+    int wasArm = scePowerGetArmClockFrequency(), wasBus = scePowerGetBusClockFrequency();
+    scePowerSetArmClockFrequency(333);
+    scePowerSetBusClockFrequency(222);
     mkdir("ux0:/data", 0777);
     mkdir(DATA_DIR, 0777);
     open_log();
+    fprintf(stderr, "vita: arm clock %d -> %d MHz, bus %d -> %d MHz\n", wasArm, scePowerGetArmClockFrequency(),
+            wasBus, scePowerGetBusClockFrequency());
     ensure_readme();
     chdir(DATA_DIR);
     read_options();

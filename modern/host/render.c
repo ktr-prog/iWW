@@ -6,6 +6,7 @@
 #include "gpu2d/gpu2d.h"
 #include "gpu3d/gpu3d.h"
 #include "host_mem.h"
+#include "plat.h"
 #include "render.h"
 #include "wgpu_display.h"
 
@@ -496,6 +497,8 @@ static void render_hblank(int line, void *context) {
     (void)context;
     host_hblank(line);
 }
+static uint64_t sRender2dNs, sRender3dNs;
+static int sRenderFrames;
 void render_frame(void) {
     const u32 *lines3d = s3d;
     if (sGpu2d) {
@@ -517,7 +520,9 @@ void render_frame(void) {
         in.hblankContext = 0;
         in.defer3d = sGpuDisplay;
         in.gpu = sGpu2dMode;
+        uint64_t t2d = host_plat_time_ns();
         gpu2d_render_frame(&in);
+        sRender2dNs += host_plat_time_ns() - t2d;
         if (sGpuDisplay) {
             const u32 *deferred[2] = {gpu2d_deferred(0), gpu2d_deferred(1)};
             const u32 *lines[2] = {gpu2d_deferred_lines(0), gpu2d_deferred_lines(1)};
@@ -532,7 +537,17 @@ void render_frame(void) {
         int above = gHostCanvasRows - (aBottom ? 192 : 384);
         gpu3d_set_tall(gpu2d_tall_3d_ok() && above > 0 && !(getenv("ACWW_SINGLE") && atoi(getenv("ACWW_SINGLE")) == 0), above);
     }
-    if (sGpu3d) gpu3d_run_frame();
+    if (sGpu3d) {
+        uint64_t t3d = host_plat_time_ns();
+        gpu3d_run_frame();
+        sRender3dNs += host_plat_time_ns() - t3d;
+    }
+    if (++sRenderFrames >= 60) {
+        fprintf(stderr, "render: 2d %llu us, 3d %llu us (avg/frame)\n",
+                (unsigned long long)(sRender2dNs / 60000), (unsigned long long)(sRender3dNs / 60000));
+        sRender2dNs = sRender3dNs = 0;
+        sRenderFrames = 0;
+    }
     if (sCompare && !sSelftest) {
         render_compare("frame", host_frame());
         render_compare_3d("frame", host_frame());
