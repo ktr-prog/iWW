@@ -206,8 +206,10 @@ void host_plat_stack_free(void *stack, size_t n) {
 void *host_plat_pages_alloc(size_t n) {
     size_t page = page_size();
 #if HOST_VITA
-    void *p = memalign(page, (n + page - 1) & ~(page - 1));
+    size_t rounded = (n + page - 1) & ~(page - 1);
+    void *p = memalign(page, rounded);
     if (!p) return 0;
+    memset(p, 0, rounded);  // mmap hands back zeroed pages on other hosts; the DS RAM/VRAM blocks rely on that
     host_state_track(p, n);
     return p;
 #else

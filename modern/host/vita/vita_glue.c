@@ -1,5 +1,5 @@
 // PS Vita entry point. The VPK's eboot.bin starts here with no arguments, so this finds the player's game
-// under ux0:/data/iWW, sets up a log file next to it, and hands the path to host_main (modern/host/main.c).
+// under ux0:/data/vitaWW, sets up a log file next to it, and hands the path to host_main (modern/host/main.c).
 // Everything after that - the window, input, audio, the frame loop - is the shared SDL frontend
 // (modern/host/frontend_sdl.c), the same code the desktop and iOS builds use.
 #define SDL_MAIN_HANDLED
@@ -15,13 +15,13 @@
 
 #include "vita.h"
 
-#define DATA_DIR "ux0:/data/iWW"
+#define DATA_DIR "ux0:/data/vitaWW"
 #define README   DATA_DIR "/Put your Animal Crossing Wild World .nds file here.txt"
 
 void vita_fatal_message(const char *text) {
     // the message box needs SDL's video subsystem; bring it up if the game never got that far
     SDL_InitSubSystem(SDL_INIT_VIDEO);
-    SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "iWW", text, NULL);
+    SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "vitaWW", text, NULL);
 }
 
 static int ends_with_nds(const char *name) {
@@ -51,7 +51,7 @@ static void open_log(void) {
     // (newlib on the Vita has no dup2: the game logs to stderr, so only stderr is redirected to the file)
     if (!freopen(DATA_DIR "/acww-log.txt", "w", stderr)) return;
     setvbuf(stderr, NULL, _IONBF, 0);
-    fprintf(stderr, "vita: iWW starting\n");
+    fprintf(stderr, "vita: vitaWW starting\n");
 }
 
 static void ensure_readme(void) {
@@ -59,8 +59,8 @@ static void ensure_readme(void) {
     if (f) { fclose(f); return; }
     f = fopen(README, "w");
     if (!f) return;
-    fputs("Copy your own dump of Animal Crossing: Wild World (USA, Rev 1) into ux0:/data/iWW -\n"
-          "one file ending in .nds - then start iWW again.\n\n"
+    fputs("Copy your own dump of Animal Crossing: Wild World (USA, Rev 1) into ux0:/data/vitaWW -\n"
+          "one file ending in .nds - then start vitaWW again.\n\n"
           "The game saves next to it (same name, ending in .sav). Keep a backup of that file somewhere safe.\n", f);
     fclose(f);
 }
@@ -77,13 +77,13 @@ int main(int argc, char **argv) {
     if (!find_rom(path, sizeof path)) {
         fprintf(stderr, "vita: no .nds found in %s\n", DATA_DIR);
         vita_fatal_message("No game found.\n\nCopy your Animal Crossing: Wild World (USA) .nds file into\n"
-                           "ux0:/data/iWW (for example with VitaShell), then start iWW again.");
+                           "ux0:/data/vitaWW (for example with VitaShell), then start vitaWW again.");
         return 1;
     }
     fprintf(stderr, "vita: the game: %s\n", path);
 
     static char *args[3];
-    args[0] = (argc > 0 && argv && argv[0]) ? argv[0] : "iWW";
+    args[0] = (argc > 0 && argv && argv[0]) ? argv[0] : "vitaWW";
     args[1] = path;
     args[2] = NULL;
     return host_main(2, args);

@@ -234,6 +234,10 @@ AcwwShm *frontend_backend_open(const char *argv0) {
     {
 #if HOST_IOS
         features_init("acww-settings.txt");
+#elif HOST_VITA
+        // a relative path in the working directory (the glue chdir'd into the app's data folder), so the Vita
+        // keeps everything under one ux0:/data/vitaWW folder instead of a separate SDL pref-path folder
+        features_init("settings.txt");
 #else
         char *dir = SDL_GetPrefPath("", "acww");
         char path[1024];
