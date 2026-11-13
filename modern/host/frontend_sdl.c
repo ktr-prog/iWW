@@ -865,6 +865,19 @@ static void show(void) {
         wdisp_present(w, h);
         return;
     }
+#if HOST_VITA
+    // bring-up diagnostic: is the DS actually drawing? log how many of each screen's pixels are non-black
+    {
+        static unsigned long fc;
+        if ((fc++ % 120) == 0 && sShm) {
+            const uint32_t *px = (const uint32_t *)sShm->pixels;
+            unsigned long top = 0, bot = 0;
+            for (int i = 0; i < 256 * 192; i++) if (px[i] & 0xffffffu) top++;
+            for (int i = 256 * 192; i < 256 * 384; i++) if (px[i] & 0xffffffu) bot++;
+            fprintf(stderr, "vita: frame %lu pixels non-black: top %lu bottom %lu (of 49152 each)\n", fc - 1, top, bot);
+        }
+    }
+#endif
     SDL_UpdateTexture(sTex, 0, sShm->pixels, 256 * 4);
     SDL_SetRenderDrawColor(sRen, 0, 0, 0, 255);
     SDL_RenderClear(sRen);
