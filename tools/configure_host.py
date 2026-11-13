@@ -497,10 +497,10 @@ def main():
             n.rule("hostobjc", f"{CC} {HOST_FLAGS} -fobjc-arc $flags -MMD -MF $out.d -c $in -o $out", depfile="$out.d",
                    deps="gcc", description="HOSTOBJC $in")
         libs = " -lws2_32" if WIN else f" {SDL_LIBS} -lc++ -lpthread -lm" if MAC else \
-            f" {SDL_LIBS} -lstdc++ -lm" if VITA else \
+            f" {SDL_LIBS} -lstdc++ -lm -lSceNet_stub -lSceNetCtl_stub" if VITA else \
             f" {SDL_LIBS} -lstdc++ -lpthread -lm -lc -lgcc"  # (ws2_32: wm7.c's sockets)
-        # (Vita: SDL_LIBS already carries the Sce stub libraries from its pkg-config; newlib's libc/libgcc are
-        # linked by gcc itself. Online play (wm7.c's sockets) needs -lSceNet_stub -lSceNetCtl_stub added here.)
+        # (Vita: SDL_LIBS carries the Sce stubs SDL needs from its pkg-config; newlib's libc/libgcc/pthread are
+        # linked by gcc itself. SceNet/SceNetCtl back the BSD sockets in wm7.c and net_nat.c.)
         extra_ld = f" {args.extra_ldflags}" if args.extra_ldflags else ""
         n.rule("link", f"{CXX} {LINK_FLAGS}{extra_ld} -o $out @$objects {MELON_LIBS}{WGPU_LIBS}{libs}", description="LINK $out")
         objs = []

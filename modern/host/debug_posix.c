@@ -1,5 +1,8 @@
 
 #define _GNU_SOURCE
+#include <stdint.h>
+#include <stdio.h>
+
 #include "host.h"
 
 #if HOST_DEBUG_POSIX
