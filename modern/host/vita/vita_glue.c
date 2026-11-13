@@ -48,10 +48,9 @@ static int find_rom(char *out, size_t cap) {
 
 static void open_log(void) {
     rename(DATA_DIR "/acww-log.txt", DATA_DIR "/acww-log-previous.txt");
+    // (newlib on the Vita has no dup2: the game logs to stderr, so only stderr is redirected to the file)
     if (!freopen(DATA_DIR "/acww-log.txt", "w", stderr)) return;
     setvbuf(stderr, NULL, _IONBF, 0);
-    dup2(fileno(stderr), STDOUT_FILENO);
-    setvbuf(stdout, NULL, _IOLBF, 0);
     fprintf(stderr, "vita: iWW starting\n");
 }
 
