@@ -418,6 +418,20 @@ static void dma_run(int ch) {
                 R32(base), R32(base + 4), (unsigned long long)sDmaSrc[ch], (unsigned long long)sDmaDst[ch],
                 __builtin_return_address(0), __builtin_return_address(1),
                 __builtin_return_address(2), __builtin_return_address(3));
+#if HOST_VITA
+        // __builtin_return_address(n>0) doesn't walk on ARM; scan the stack for code-range values instead, so the
+        // game function that set up this DMA can be mapped (runtime base is the ELF + 0x10000)
+        {
+            uintptr_t *s = (uintptr_t *)__builtin_frame_address(0);
+            int found = 0;
+            fprintf(stderr, "host: stack code refs:");
+            for (int i = 0; i < 1024 && found < 24; i++) {
+                uintptr_t v = s[i];
+                if (v >= 0x81010000u && v < 0x81360000u) { fprintf(stderr, " %08lx", (unsigned long)v); found++; }
+            }
+            fprintf(stderr, "\n");
+        }
+#endif
         R32(base + 8) = cnt & ~0x80000000u;
         return;
     }
