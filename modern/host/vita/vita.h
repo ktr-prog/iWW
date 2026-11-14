@@ -12,6 +12,13 @@ int host_main(int argc, char **argv);
 // a simple on-screen error (used when there is no game to run); best-effort, needs SDL's video up
 void vita_fatal_message(const char *text);
 
+// GPU render path (modern/host/vita/vita_gl.c), via vitaGL. Off unless ACWW_GL=1. Stage 1: build/link + a
+// GPU-alive clear; stage 2 wires the DS geometry and the display onto it.
+int vita_gl_enabled(void);
+int vita_gl_init(void);
+void vita_gl_present(void);
+void vita_gl_shutdown(void);
+
 // start the file-I/O worker thread (modern/host/vita/vita_io.c). Must be called once, early, before the game
 // starts: the game runs on a custom coroutine stack, and the Vita's filesystem syscalls fault unless they run
 // on a kernel-registered thread stack, so all file I/O is marshaled to this worker.
