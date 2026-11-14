@@ -43,6 +43,7 @@ static SDL_Renderer *sRen;
 static SDL_Texture *sTex, *sOverlayTex;
 static int sGpu;
 static SDL_AudioDeviceID sDev;
+static int sAudioRate = ACWW_AUDIO_RATE;  // actual device output rate; the callback resamples 32728 Hz to it
 static int sScale = 2, sMute;
 static SDL_GameController *sPads[4];
 
@@ -68,7 +69,9 @@ static void audio_callback(void *user, Uint8 *stream, int len) {
     sCalls++;
     if (!primed && level >= target / 2 + want) primed = 1;
     double err = (level - target) / target;
-    double ratio = 1.0 + 0.005 * (err < -1 ? -1 : err > 1 ? 1 : err);
+    // base step = game rate / device rate (resample 32728 Hz to the device), nudged by the drift correction
+    double base = (double)ACWW_AUDIO_RATE / (sAudioRate > 0 ? sAudioRate : ACWW_AUDIO_RATE);
+    double ratio = base * (1.0 + 0.005 * (err < -1 ? -1 : err > 1 ? 1 : err));
     int mute = __atomic_load_n(&sMute, __ATOMIC_RELAXED);
     uint32_t i = 0;
     for (; primed && i < want; i++) {
@@ -110,8 +113,17 @@ static void open_audio(void) {
     want.samples = getenv("ACWW_AUDIO_SAMPLES") ? (Uint16)atoi(getenv("ACWW_AUDIO_SAMPLES")) : 512;
     want.callback = audio_callback;
     want.userdata = sShm;
+#if HOST_VITA
+    // the Vita's sceAudioOut only accepts standard rates (32728 Hz is rejected as 0x80260008); ask for 48000 and
+    // let the callback resample the game's 32728 Hz stream to whatever rate the device actually gives.
+    want.freq = 48000;
+    sDev = SDL_OpenAudioDevice(NULL, 0, &want, &have,
+                               SDL_AUDIO_ALLOW_FREQUENCY_CHANGE | SDL_AUDIO_ALLOW_SAMPLES_CHANGE);
+#else
     sDev = SDL_OpenAudioDevice(NULL, 0, &want, &have, 0);
+#endif
     if (!sDev) { fprintf(stderr, "frontend: no sound: %s\n", SDL_GetError()); return; }
+    sAudioRate = have.freq > 0 ? have.freq : ACWW_AUDIO_RATE;
 #if HOST_IOS
     if (1)
 #else

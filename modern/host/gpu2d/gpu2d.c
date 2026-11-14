@@ -871,6 +871,11 @@ void gpu2d_render_frame(const Gpu2dFrameInput *in) {
     sDefer3d = in->defer3d || sGpu;
     static int off = -1;
     if (off < 0) off = getenv("ACWW_SINGLE") && atoi(getenv("ACWW_SINGLE")) == 0;
+#if HOST_VITA
+    const int mainOnly = 1;  // the Vita shows only the main screen: never render the top screen (engine 1)
+#else
+    const int mainOnly = 0;
+#endif
     {
         static int hold, swapped;
         int now = !off && !sGpu && !sDefer3d && in->lines3d && gpu2d_tall_3d_ok() && gpu2d_main_on_bottom();
@@ -878,7 +883,7 @@ void gpu2d_render_frame(const Gpu2dFrameInput *in) {
         if (now) hold = 120;
         else if (hold && swapped > 8) hold = 0;
         else if (hold) hold--;
-        sSingle = now || (hold && !off && !sGpu && !sDefer3d);
+        sSingle = !mainOnly && (now || (hold && !off && !sGpu && !sDefer3d));
         sSingleBlank = sSingle && !now;
     }
     gHostSingleScreen = sSingle;
@@ -911,7 +916,7 @@ void gpu2d_render_frame(const Gpu2dFrameInput *in) {
     }
     sExtRows = 0;
     if (sSingle && !sSingleBlank && !sGpu && !sDefer3d) render_ext_sky(in);
-    for (int n = 0; n < 2; n++) {
+    for (int n = 0; n < (mainOnly ? 1 : 2); n++) {
         Engine *e = &sEngine[n];
         for (int line = SCREEN_H + 1; line < FRAME_LINES; line++) window_vertical(e, line);
         gpu2d_render_obj_line(e, 0, &e->objNextLine0);
@@ -920,7 +925,7 @@ void gpu2d_render_frame(const Gpu2dFrameInput *in) {
             for (int x = 0; x < SCREEN_W; x++) sGpuFrame.obj0[n][x] = pack_obj(&e->objNextLine0, x);
     }
     for (int line = 0; line < SCREEN_H; line++) {
-        for (int n = 0; n < 2; n++) {
+        for (int n = 0; n < (mainOnly ? 1 : 2); n++) {
             Engine *e = &sEngine[n];
             window_vertical(e, line);
             if (sGpu) gpu_line(n, line);
@@ -957,6 +962,14 @@ void gpu2d_render_frame(const Gpu2dFrameInput *in) {
     }
     if (sGpu) sGpuFrame.tables[0][G2T_SCREEN_A] = (sPowCnt & 0x8000) ? 0 : 1;
     sCanvasRows = 0;
+    if (mainOnly) {
+        // the main screen only (engine 0, with the 3D already composited into its output): one 256x192 canvas,
+        // no top screen rendered, no sky borrowed from it.
+        for (int i = 0; i < SCREEN_W * SCREEN_H; i++) sCanvas[i] = argb(sEngine[0].out[i]);
+        sCanvasRows = SCREEN_H;
+        sFrame++;
+        return;
+    }
     if (sSingle) single_compose(in, sSingleBlank);
     else if (!sGpu && !sDefer3d) classic_compose(in);
     for (int n = 0; n < 2; n++) {
