@@ -165,6 +165,12 @@ static int SDLCALL app_events(void *user, SDL_Event *e) {
 
 AcwwShm *frontend_backend_open(const char *argv0) {
     (void)argv0;
+#if HOST_VITA
+    // one screen only: keep the canvas at a single DS screen so the 3D isn't rasterized at double height (the
+    // "tall" mode in render.c keys off this). gpu2d renders just the main engine (see gpu2d_render_frame).
+    extern int gHostCanvasRows;
+    gHostCanvasRows = 192;
+#endif
     SDL_SetHint(SDL_HINT_NO_SIGNAL_HANDLERS, "1");
     SDL_SetHint(SDL_HINT_GAMECONTROLLER_USE_BUTTON_LABELS, "0");
     SDL_SetHint(SDL_HINT_APP_NAME, "iWW");

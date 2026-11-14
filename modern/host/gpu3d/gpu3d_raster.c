@@ -535,6 +535,12 @@ static void render_band(int b) {
 }
 static void *band_worker(void *arg) {
     int b = (int)(intptr_t)arg;
+#if HOST_VITA
+    // pin each worker to a distinct Vita core (1 and 2); core 0 stays for the main thread doing band 0. Without
+    // this, pthread-embedded tends to leave them on one core and the "parallel" rasterization serializes.
+    extern int sceKernelChangeThreadCpuAffinityMask(int, int);
+    sceKernelChangeThreadCpuAffinityMask(0, 0x10000 << (1 + ((b - 1) % 2)));
+#endif
     unsigned seen = 0;
     for (;;) {
         pthread_mutex_lock(&sPoolMu);
@@ -555,6 +561,9 @@ static void render_bands(void) {
         long n = sysconf(_SC_NPROCESSORS_ONLN);
         const char *e = getenv("ACWW_GPU3D_THREADS");
         if (e) n = atoi(e);
+#if HOST_VITA
+        else if (n < 3) n = 3;  // the Vita has 3 usable Cortex-A9 cores; sysconf under-reports, so parallelize anyway
+#endif
         sBands = n < 1 ? 1 : n > MAX_BANDS ? MAX_BANDS : (int)n;
         for (int b = 1; b < sBands; b++)
             if (pthread_create(&sWorker[b], 0, band_worker, (void *)(intptr_t)b)) { sBands = b; break; }
