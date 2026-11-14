@@ -1,14 +1,17 @@
 // GPU rendering path for the Vita, via vitaGL (OpenGL ES over GXM).
 //
 // Goal: move the DS image onto the Vita GPU, the way the iOS/desktop builds use WebGPU/Metal. This file owns the
-// vitaGL context and the GPU draw path, and is the default on the Vita (set ACWW_GL=0 to force the old SDL/GXM
+// vitaGL context and the GPU present path, and is the default on the Vita (set ACWW_GL=0 for the SDL/GXM
 // software-blit renderer instead).
 //
 // Stage 1 (now): vitaGL owns the display and presents the composited DS canvas as a GPU-textured, letterboxed
-// quad - the full game image, drawn by the GPU, replacing the SDL renderer's CPU blit. The DS 3D is still
-// software-rasterized into the canvas at this stage; stage 2 moves that geometry onto the GPU for the frame-rate
-// win. The frontend uses SDL for input and audio only when this path is active (both vitaGL and SDL's renderer
-// would init GXM, and only one may).
+// image. It does this with glBlitFramebuffer, which in vitaGL uses PRECOMPILED blit/clear shaders - so the
+// runtime Cg compiler (libshacccg.suprx) is NOT needed and nothing is compiled on device. We upload the canvas
+// into a texture, attach it to an FBO, clear the screen black, and blit the FBO to the screen scaled to FIT
+// (4:3, black bars). Stage 2 moves the DS 3D geometry onto the GPU (which will need real shader compilation).
+//
+// The frontend uses SDL for input and audio only when this path is active (both vitaGL and SDL's renderer would
+// init GXM, and only one may).
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -23,8 +26,9 @@
 
 static int sOn = -1;   // -1 unknown, 0 off, 1 on
 static int sReady;
-static GLuint sTex;
-static int sTexW, sTexH;   // currently-allocated texture size
+static GLuint sTex;    // holds the uploaded canvas
+static GLuint sFbo;    // read source for the blit (canvas texture attached)
+static int sTexW, sTexH;
 
 // GPU is the default on the Vita. Only an explicit ACWW_GL=0 falls back to the SDL/GXM software-blit renderer.
 int vita_gl_enabled(void) {
@@ -35,89 +39,59 @@ int vita_gl_enabled(void) {
     return sOn;
 }
 
-// vitaGL compiles its pipeline shaders at runtime with the on-device Cg compiler libshacccg.suprx; without it
-// the first GPU draw dereferences a NULL shader and crashes. vitaGL looks for it at these two paths (vitaShaRK's
-// default, then the ScePiglet path), so check the same ones up front and fall back cleanly when it is missing.
-static int libshacccg_present(void) {
-    static const char *const paths[] = {
-        "ur0:/data/libshacccg.suprx",
-        "ur0:data/external/libshacccg.suprx",
-    };
-    for (unsigned i = 0; i < sizeof paths / sizeof *paths; i++) {
-        FILE *f = fopen(paths[i], "rb");
-        if (f) { fclose(f); return 1; }
-    }
-    return 0;
-}
-
 // Bring up the GPU context. Returns 1 on success (the frontend falls back to the SDL renderer on 0).
 int vita_gl_init(void) {
     if (!vita_gl_enabled()) return 0;
-    if (!libshacccg_present()) {
-        fprintf(stderr, "vita_gl: the shader compiler libshacccg.suprx is not installed (expected at "
-                        "ur0:/data/libshacccg.suprx). The GPU renderer needs it; using the software renderer "
-                        "instead. Install it (see the Vita shader-compiler guides) for GPU rendering.\n");
-        return 0;
-    }
-    // legacy pool != 0 so immediate mode (glBegin/glVertex) works for the fullscreen quad; a generous GXM
-    // command/vertex budget that is tuned once real geometry flows through in stage 2.
-    vglInitExtended(0x100000, SCREEN_W, SCREEN_H, 8 * 1024 * 1024, SCE_GXM_MULTISAMPLE_NONE);
+    // No immediate-mode/legacy pool needed: we only use glClear + glBlitFramebuffer (precompiled shaders).
+    vglInitExtended(0, SCREEN_W, SCREEN_H, 8 * 1024 * 1024, SCE_GXM_MULTISAMPLE_NONE);
     glViewport(0, 0, SCREEN_W, SCREEN_H);
-    glDisable(GL_DEPTH_TEST);
-    glDisable(GL_BLEND);
-    glEnable(GL_TEXTURE_2D);
+    glGenTextures(1, &sTex);
+    glGenFramebuffers(1, &sFbo);
     sReady = 1;
     return 1;
 }
 
-// Present one frame: upload the composited DS canvas (XRGB8888, i.e. B,G,R,X in memory == GL_BGRA bytes, a
-// zero-conversion upload in vitaGL) and draw the sub-rectangle [sx,sy,sw,sh] of it, scaled to FIT the 960x544
-// screen (letterbox, original 4:3 aspect kept, black bars at the sides).
-void vita_gl_present_canvas(const void *pixels, int canvas_w, int canvas_h, int sx, int sy, int sw, int sh) {
-    if (!sReady) return;
-
-    if (!sTex) glGenTextures(1, &sTex);
+// (Re)allocate the canvas texture and attach it to the read FBO when the canvas size changes.
+static void ensure_tex(int w, int h, const void *pixels) {
     glBindTexture(GL_TEXTURE_2D, sTex);
-    if (canvas_w != sTexW || canvas_h != sTexH) {
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_BGRA, canvas_w, canvas_h, 0, GL_BGRA, GL_UNSIGNED_BYTE, pixels);
+    if (w != sTexW || h != sTexH) {
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_BGRA, w, h, 0, GL_BGRA, GL_UNSIGNED_BYTE, pixels);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        sTexW = canvas_w;
-        sTexH = canvas_h;
+        glBindFramebuffer(GL_READ_FRAMEBUFFER, sFbo);
+        glFramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, sTex, 0);
+        sTexW = w;
+        sTexH = h;
     } else {
-        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, canvas_w, canvas_h, GL_BGRA, GL_UNSIGNED_BYTE, pixels);
+        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, w, h, GL_BGRA, GL_UNSIGNED_BYTE, pixels);
     }
+}
 
-    // FIT: the larger scale that still fits both axes (letterbox, keep aspect)
+// Present one frame: upload the composited DS canvas (XRGB8888 == GL_BGRA bytes, a zero-conversion upload) and
+// blit the sub-rectangle [sx,sy,sw,sh] of it to the screen, scaled to FIT (letterbox, 4:3, black bars).
+void vita_gl_present_canvas(const void *pixels, int canvas_w, int canvas_h, int sx, int sy, int sw, int sh) {
+    if (!sReady) return;
+
+    ensure_tex(canvas_w, canvas_h, pixels);
+
+    // FIT: largest scale that still fits both axes (letterbox)
     float scale = (float)SCREEN_W / sw;
     if ((float)SCREEN_H / sh < scale) scale = (float)SCREEN_H / sh;
-    float dw = sw * scale, dh = sh * scale;
-    float dx = (SCREEN_W - dw) * 0.5f, dy = (SCREEN_H - dh) * 0.5f;
+    int dw = (int)(sw * scale + 0.5f), dh = (int)(sh * scale + 0.5f);
+    int dx = (SCREEN_W - dw) / 2, dy = (SCREEN_H - dh) / 2;
 
-    // texcoords for the source sub-rectangle
-    float u0 = (float)sx / canvas_w, u1 = (float)(sx + sw) / canvas_w;
-    float v0 = (float)sy / canvas_h, v1 = (float)(sy + sh) / canvas_h;
-
-    // pixel-space orthographic projection, origin top-left (y down) to match the canvas's row order
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    glOrthof(0.0f, SCREEN_W, SCREEN_H, 0.0f, -1.0f, 1.0f);
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
-
+    // Clear the whole screen black (precompiled clear shader), then blit the canvas region onto it. The read
+    // source is our FBO (canvas texture); the draw target is the default framebuffer (the screen). vitaGL's blit
+    // samples the FBO's attachment and flips V so the top-of-canvas row lands at the top of the screen.
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-    glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
-    glBindTexture(GL_TEXTURE_2D, sTex);
-    glBegin(GL_TRIANGLE_FAN);
-    glTexCoord2f(u0, v0); glVertex2f(dx,      dy);
-    glTexCoord2f(u1, v0); glVertex2f(dx + dw, dy);
-    glTexCoord2f(u1, v1); glVertex2f(dx + dw, dy + dh);
-    glTexCoord2f(u0, v1); glVertex2f(dx,      dy + dh);
-    glEnd();
+    glClear(GL_COLOR_BUFFER_BIT);
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, sFbo);
+    glBlitFramebuffer(sx, sy, sx + sw, sy + sh,
+                      dx, dy, dx + dw, dy + dh,
+                      GL_COLOR_BUFFER_BIT, GL_LINEAR);
 
     vglSwapBuffers(GL_FALSE);
 }

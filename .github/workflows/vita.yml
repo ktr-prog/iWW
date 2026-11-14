@@ -109,25 +109,6 @@ jobs:
           path: ${{ env.VITASDK }}
           key: vitasdk-${{ runner.os }}-${{ env.SDL_TAG }}-vgl5shark-v2
 
-      # The user-mode taiHEN stub (libtaihen_stub.a) that SceShaccCgExt links against isn't part of the
-      # vdpm-bootstrapped core toolchain. Generate it the authoritative way: a tiny CMake project that calls the
-      # toolchain's own vita_create_stubs() on taiHEN's exports.yml (the same call taiHEN's own build uses).
-      # Cheap (~seconds), so it runs every build - including cache hits, where the cached SDK lacks it.
-      - name: Ensure taiHEN user stub
-        run: |
-          set -eux
-          export PATH="$VITASDK/bin:$PATH"
-          if [ ! -f "$VITASDK/arm-vita-eabi/lib/libtaihen_stub.a" ]; then
-            git clone --depth 1 https://github.com/yifanlu/taiHEN.git build/taihen-src
-            cmake -S modern/host/vita/taihen_stub -B build/taihen-stubbuild -G Ninja \
-              -DCMAKE_TOOLCHAIN_FILE="$VITASDK/share/vita.toolchain.cmake" \
-              -DTAIHEN_YML="$PWD/build/taihen-src/exports.yml"
-            cmake --build build/taihen-stubbuild
-            find build/taihen-stubbuild -name 'libtaihen_stub*.a' -exec cp -v {} "$VITASDK/arm-vita-eabi/lib/" \;
-          fi
-          ls -la "$VITASDK/arm-vita-eabi/lib/" | grep -i taihen || true
-          test -f "$VITASDK/arm-vita-eabi/lib/libtaihen_stub.a"
-
       - name: PATH
         run: echo "$VITASDK/bin" >> "$GITHUB_PATH"
 
