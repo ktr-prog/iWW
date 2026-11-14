@@ -536,10 +536,11 @@ static void render_band(int b) {
 static void *band_worker(void *arg) {
     int b = (int)(intptr_t)arg;
 #if HOST_VITA
-    // pin each worker to a distinct Vita core (1 and 2); core 0 stays for the main thread doing band 0. Without
-    // this, pthread-embedded tends to leave them on one core and the "parallel" rasterization serializes.
+    // let each worker run on ANY user core (mask 0x70000 = USER_0|1|2) so the scheduler spreads the bands across
+    // cores. Do NOT pin to one specific core: if that core isn't available to the app the worker never runs and
+    // the main thread waits on it forever (the hang the watchdog caught).
     extern int sceKernelChangeThreadCpuAffinityMask(int, int);
-    sceKernelChangeThreadCpuAffinityMask(0, 0x10000 << (1 + ((b - 1) % 2)));
+    sceKernelChangeThreadCpuAffinityMask(0, 0x70000);
 #endif
     unsigned seen = 0;
     for (;;) {
