@@ -239,7 +239,21 @@ AcwwShm *frontend_backend_open(const char *argv0) {
         }
         if (!sGpu) fprintf(stderr, "frontend: the GPU can't draw into the window: the screens are read back\n");
     }
-    if (sWin && !sGpu) {
+#if HOST_VITA
+    // ACWW_GL=1: bring up the vitaGL (GXM) GPU path instead of the SDL/GXM 2D renderer, and let it own the
+    // display. Both init GXM, so only one may exist - when GL is on we skip SDL's renderer entirely and use SDL
+    // for input and audio only. Default off: the game keeps using the proven SDL renderer below.
+    extern int vita_gl_enabled(void);
+    extern int vita_gl_init(void);
+    int useGl = vita_gl_enabled();
+    if (sWin && useGl) {
+        if (vita_gl_init()) fprintf(stderr, "frontend: vitaGL GPU path active (ACWW_GL=1)\n");
+        else { fprintf(stderr, "frontend: vitaGL init failed; using SDL renderer\n"); useGl = 0; }
+    }
+#else
+    const int useGl = 0;
+#endif
+    if (sWin && !sGpu && !useGl) {
         sRen = SDL_CreateRenderer(sWin, -1, vsync ? SDL_RENDERER_PRESENTVSYNC : 0);
         if (!sRen) sRen = SDL_CreateRenderer(sWin, -1, SDL_RENDERER_SOFTWARE);
     }
@@ -271,7 +285,7 @@ AcwwShm *frontend_backend_open(const char *argv0) {
         }
     }
 #endif
-    if (!sTex && !sGpu) {
+    if (!sTex && !sGpu && !useGl) {
         fprintf(stderr, "frontend: no window (%s): running headless\n", SDL_GetError());
         SDL_Quit();
         free(sShm);
@@ -913,6 +927,14 @@ static void show(void) {
         return;
     }
 #if HOST_VITA
+    {
+        // GPU path (ACWW_GL=1): vitaGL owns the display. Stage 1 just clears to a solid colour each frame so we
+        // can confirm on real hardware that GXM comes up and presents alongside our coroutine-stack/memory setup,
+        // before the DS geometry is moved onto it. Screenshots are skipped here (they read the SDL renderer).
+        extern int vita_gl_enabled(void);
+        extern void vita_gl_present(void);
+        if (vita_gl_enabled()) { vita_gl_present(); return; }
+    }
     // One screen. When the port's single-screen canvas is active sShm->rows holds its height (256 wide x rows);
     // otherwise fall back to the main (bottom) DS screen. Scale to FIT (letterbox), preserving the original 4:3
     // aspect with black bars at the sides - no stretch, no crop.

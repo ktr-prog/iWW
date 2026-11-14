@@ -38,10 +38,6 @@
 // tools/vita_package.py) so this plus the 128 MB newlib heap fits.
 unsigned int sceUserMainThreadStackSize = 32 * 1024 * 1024;
 
-// Keep the vitaGL GPU path linked in (stage 1 verifies the build/link; the frontend wires these into the
-// display in stage 2, where the SDL/GXM coexistence needs on-device testing). Not called by default.
-void (*const vita_gl_refs[])(void) = {(void (*)(void))vita_gl_init, vita_gl_present, vita_gl_shutdown};
-
 void vita_fatal_message(const char *text) {
     // the message box needs SDL's video subsystem; bring it up if the game never got that far
     SDL_InitSubSystem(SDL_INIT_VIDEO);
