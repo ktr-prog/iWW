@@ -506,7 +506,7 @@ def main():
                    deps="gcc", description="HOSTOBJC $in")
         libs = " -lws2_32" if WIN else f" {SDL_LIBS} -lc++ -lpthread -lm" if MAC else \
             (f" {SDL_LIBS} -lvitaGL -lSceShaccCg_stub"
-             f" -lstdc++ -lm -lpthread -lSceGxm_stub -lSceDisplay_stub"
+             f" -lstdc++ -lm -lpthread -lSceGxm_stub -lSceDisplay_stub -lSceDmacmgr_stub"
              f" -lSceCommonDialog_stub -lSceAppMgr_stub -lmathneon -lSceNet_stub -lSceNetCtl_stub") if VITA else \
             f" {SDL_LIBS} -lstdc++ -lpthread -lm -lc -lgcc"  # (ws2_32: wm7.c's sockets)
         # (Vita: SDL_LIBS carries the Sce stubs SDL needs from its pkg-config; newlib's libc/libgcc/pthread are
