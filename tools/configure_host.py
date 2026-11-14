@@ -505,8 +505,9 @@ def main():
             n.rule("hostobjc", f"{CC} {HOST_FLAGS} -fobjc-arc $flags -MMD -MF $out.d -c $in -o $out", depfile="$out.d",
                    deps="gcc", description="HOSTOBJC $in")
         libs = " -lws2_32" if WIN else f" {SDL_LIBS} -lc++ -lpthread -lm" if MAC else \
-            (f" {SDL_LIBS} -lvitaGL -lSceShaccCg_stub"
-             f" -lstdc++ -lm -lpthread -lSceGxm_stub -lSceDisplay_stub -lSceKernelDmacMgr_stub"
+            (f" {SDL_LIBS} -lvitaGL -lvitashark -lSceShaccCgExt -lSceShaccCg_stub -ltaihen_stub"
+             f" -lSceKernelModuleMgr_stub -lSceKernelDmacMgr_stub -lSceSysmodule_stub"
+             f" -lstdc++ -lm -lpthread -lSceGxm_stub -lSceDisplay_stub"
              f" -lSceCommonDialog_stub -lSceAppMgr_stub -lmathneon -lSceNet_stub -lSceNetCtl_stub") if VITA else \
             f" {SDL_LIBS} -lstdc++ -lpthread -lm -lc -lgcc"  # (ws2_32: wm7.c's sockets)
         # (Vita: SDL_LIBS carries the Sce stubs SDL needs from its pkg-config; newlib's libc/libgcc/pthread are

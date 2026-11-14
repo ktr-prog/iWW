@@ -10,6 +10,7 @@
 // win. The frontend uses SDL for input and audio only when this path is active (both vitaGL and SDL's renderer
 // would init GXM, and only one may).
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -34,9 +35,30 @@ int vita_gl_enabled(void) {
     return sOn;
 }
 
+// vitaGL compiles its pipeline shaders at runtime with the on-device Cg compiler libshacccg.suprx; without it
+// the first GPU draw dereferences a NULL shader and crashes. vitaGL looks for it at these two paths (vitaShaRK's
+// default, then the ScePiglet path), so check the same ones up front and fall back cleanly when it is missing.
+static int libshacccg_present(void) {
+    static const char *const paths[] = {
+        "ur0:/data/libshacccg.suprx",
+        "ur0:data/external/libshacccg.suprx",
+    };
+    for (unsigned i = 0; i < sizeof paths / sizeof *paths; i++) {
+        FILE *f = fopen(paths[i], "rb");
+        if (f) { fclose(f); return 1; }
+    }
+    return 0;
+}
+
 // Bring up the GPU context. Returns 1 on success (the frontend falls back to the SDL renderer on 0).
 int vita_gl_init(void) {
     if (!vita_gl_enabled()) return 0;
+    if (!libshacccg_present()) {
+        fprintf(stderr, "vita_gl: the shader compiler libshacccg.suprx is not installed (expected at "
+                        "ur0:/data/libshacccg.suprx). The GPU renderer needs it; using the software renderer "
+                        "instead. Install it (see the Vita shader-compiler guides) for GPU rendering.\n");
+        return 0;
+    }
     // legacy pool != 0 so immediate mode (glBegin/glVertex) works for the fullscreen quad; a generous GXM
     // command/vertex budget that is tuned once real geometry flows through in stage 2.
     vglInitExtended(0x100000, SCREEN_W, SCREEN_H, 8 * 1024 * 1024, SCE_GXM_MULTISAMPLE_NONE);

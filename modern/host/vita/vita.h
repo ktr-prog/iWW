@@ -12,9 +12,10 @@ int host_main(int argc, char **argv);
 // a simple on-screen error (used when there is no game to run); best-effort, needs SDL's video up
 void vita_fatal_message(const char *text);
 
-// GPU render path (modern/host/vita/vita_gl.c), via vitaGL. Default on the Vita; ACWW_GL=0 forces the SDL/GXM
-// software-blit renderer. Stage 1: vitaGL owns the display and presents the composited DS canvas as a textured,
-// letterboxed quad. Stage 2 moves the DS 3D geometry onto the GPU.
+// GPU render path (modern/host/vita/vita_gl.c), via vitaGL. Default on the Vita when the on-device shader
+// compiler libshacccg.suprx is installed; otherwise (or with ACWW_GL=0) it falls back to the SDL/GXM software
+// renderer. Stage 1: vitaGL owns the display and presents the composited DS canvas as a textured, letterboxed
+// quad. Stage 2 moves the DS 3D geometry onto the GPU.
 int vita_gl_enabled(void);
 int vita_gl_init(void);
 void vita_gl_present_canvas(const void *pixels, int canvas_w, int canvas_h, int sx, int sy, int sw, int sh);
