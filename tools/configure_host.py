@@ -540,10 +540,12 @@ def main():
                 n.build(wgsl_h, "embed", "modern/host/gpu2d.wgsl", implicit=["tools/host_embed.py"],
                         variables={"name": "kShader2d"})
                 implicit = [wgsl_h]
-            # the 2D and 3D renderers' per-pixel loops: optimised further than the rest of the runtime (-O1)
+            # the 2D and 3D renderers' per-pixel loops: optimised harder than the rest of the runtime (-O1). -O3
+            # (appended after HOST_FLAGS, so it overrides -O1 while keeping the arch/defines) lets the compiler
+            # auto-vectorize the hot software-raster loops - on the Vita that means NEON, which it needs.
             fl = SDL_CFLAGS if sdl else WGPU_CFLAGS + f" -I{build}/gen" if s.name == "wgpu_display.c" else \
                 WGPU_CFLAGS if s.name == "gpu3d_wgpu.c" else \
-                "-O2" if "gpu2d" in s.parts or "gpu3d" in s.parts else None
+                "-O3" if "gpu2d" in s.parts or "gpu3d" in s.parts else None
             n.build(o, rule, str(s), variables={"flags": fl} if fl else None, implicit=implicit)
             objs.append(o)
         # The data between the decomp's units (gap objects of the DS build's delinking): generated once from that

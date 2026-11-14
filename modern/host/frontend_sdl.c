@@ -913,9 +913,9 @@ static void show(void) {
         return;
     }
 #if HOST_VITA
-    // One screen, filling the Vita's 960x544. When the port's single-screen canvas is active sShm->rows holds its
-    // height (256 wide x rows); otherwise fall back to the main (bottom) DS screen. Scale to COVER the display,
-    // preserving aspect - no stretch, no black bars (overflow is cropped), so no RenderClear is needed.
+    // One screen. When the port's single-screen canvas is active sShm->rows holds its height (256 wide x rows);
+    // otherwise fall back to the main (bottom) DS screen. Scale to FIT (letterbox), preserving the original 4:3
+    // aspect with black bars at the sides - no stretch, no crop.
     {
         static int lastRows = -1;
         int rows = (sShm->rows >= 192 && sShm->rows <= 640) ? (int)sShm->rows : 0;
@@ -942,9 +942,11 @@ static void show(void) {
             srcR = (SDL_Rect){0, 192, 256, 192};  // the main (bottom) screen
         }
         float scale = 960.0f / srcR.w;
-        if (544.0f / srcR.h > scale) scale = 544.0f / srcR.h;  // cover: fill the larger dimension
+        if (544.0f / srcR.h < scale) scale = 544.0f / srcR.h;  // fit: letterbox, keep 4:3 (black bars at sides)
         int dw = (int)(srcR.w * scale + 0.5f), dh = (int)(srcR.h * scale + 0.5f);
         SDL_Rect dst = {(960 - dw) / 2, (544 - dh) / 2, dw, dh};
+        SDL_SetRenderDrawColor(sRen, 0, 0, 0, 255);
+        SDL_RenderClear(sRen);
         SDL_RenderCopy(sRen, src, &srcR, &dst);
         window_shot();
         if (sPendingShot[0]) shot(sPendingShot), sPendingShot[0] = 0;
