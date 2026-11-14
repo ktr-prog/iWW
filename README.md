@@ -9,5 +9,4 @@ A native PlayStation Vita port of *Animal Crossing: Wild World*, built from the 
 
 
 ``` 
-WIP
-
+Work in progress.
