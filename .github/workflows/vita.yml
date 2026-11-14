@@ -117,19 +117,12 @@ jobs:
         run: |
           set -eux
           export PATH="$VITASDK/bin:$PATH"
-          if [ ! -f "$VITASDK/arm-vita-eabi/lib/libtaihen_stub.a" ]; then
-            command -v vita-libs-gen-2 || echo "no vita-libs-gen-2"
-            command -v vita-libs-gen || echo "no vita-libs-gen"
-            git clone --depth 1 https://github.com/yifanlu/taiHEN.git build/taihen-stub-src
-            rm -rf build/taihen-stubgen
-            vita-libs-gen-2 build/taihen-stub-src/exports.yml build/taihen-stubgen
-            echo "=== vita-libs-gen-2 output tree ==="; ls -laR build/taihen-stubgen
-            # gen-2 may emit the .a directly or a Makefile that builds them
-            if ! ls build/taihen-stubgen/*.a >/dev/null 2>&1; then make -C build/taihen-stubgen; fi
-            find build/taihen-stubgen -name '*.a' -exec cp -v {} "$VITASDK/arm-vita-eabi/lib/" \;
-          fi
-          ls -la "$VITASDK/arm-vita-eabi/lib/" | grep -i taihen || true
-          test -f "$VITASDK/arm-vita-eabi/lib/libtaihen_stub.a"
+          git clone --depth 1 https://github.com/yifanlu/taiHEN.git build/taihen-stub-src
+          echo "=== vita-libs-gen-2 --help ==="; vita-libs-gen-2 --help 2>&1 | head -40 || true
+          echo "=== vita-libs-gen-2 (no args) ==="; vita-libs-gen-2 2>&1 | head -20 || true
+          mkdir -p build/taihen-stubgen
+          echo "=== run vita-libs-gen-2 ==="; vita-libs-gen-2 build/taihen-stub-src/exports.yml build/taihen-stubgen 2>&1 | head -60 || true
+          echo "=== output tree ==="; ls -laR build/taihen-stubgen 2>&1 | head -40 || true
 
       - name: PATH
         run: echo "$VITASDK/bin" >> "$GITHUB_PATH"
