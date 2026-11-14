@@ -33,7 +33,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ env.VITASDK }}
-          key: vitasdk-${{ runner.os }}-${{ env.SDL_TAG }}-vgl4stub-v1
+          key: vitasdk-${{ runner.os }}-${{ env.SDL_TAG }}-vgl4stub-v2
 
       # bootstrap-vitasdk.sh installs the toolchain (vitasdk-core: arm-vita-eabi-gcc, the Sce stubs, the CMake
       # toolchain file). We do NOT run install-all.sh - its pacman-based bulk install is brittle on the runner, and
@@ -76,6 +76,12 @@ jobs:
           # vendored vitaShaRK header (vitaGL includes it); only pulls in psp2/shacccg.h + psp2/gxm.h from base SDK
           cp modern/host/vita/vitashark.h "$VITASDK/arm-vita-eabi/include/vitashark.h"
           test -f "$VITASDK/arm-vita-eabi/include/vitashark.h"
+          # math-neon: NEON-accelerated libm (math_neon.h + libmathneon.a). vitaGL includes math_neon.h, and the
+          # app links -lmathneon; the core toolchain doesn't ship it, so build it from source into the prefix.
+          git clone --depth 1 https://github.com/Rinnegatamante/math-neon.git build/mathneon-src
+          make -C build/mathneon-src -j"$(nproc)" install
+          test -f "$VITASDK/arm-vita-eabi/include/math_neon.h"
+          test -f "$VITASDK/arm-vita-eabi/lib/libmathneon.a"
           # vitaGL itself (fixed-function; NO_DEBUG strips its logging)
           git clone --depth 1 https://github.com/Rinnegatamante/vitaGL.git build/vitaGL-src
           make -C build/vitaGL-src -j"$(nproc)" NO_DEBUG=1 install
