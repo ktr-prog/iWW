@@ -49,7 +49,7 @@ void vita_gl_present(void) {
 }
 
 void vita_gl_shutdown(void) {
-    if (!sReady) return;
-    vglEnd();
+    // vitaGL has no teardown entry point - GXM and its pools are reclaimed when the process exits, which on the
+    // Vita is the only way out of the game. Just mark the context down so present() becomes a no-op.
     sReady = 0;
 }
