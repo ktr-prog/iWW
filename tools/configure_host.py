@@ -55,7 +55,7 @@ parser.add_argument("--cross", default=os.path.expanduser(
 parser.add_argument("--qemu", default=os.path.expanduser("~/acww/toolchains/qemu/usr/bin/qemu-aarch64"),
                     help="--arch aarch64: qemu-aarch64 (user mode) for running the tests (the game: ACWW_RUNNER, "
                          "tools/host_oracle.sh)")
-parser.add_argument("--os", choices=["linux", "windows", "macos", "ios", "vita"], default="macos" if sys.platform == "darwin" else "linux",
+parser.add_argument("--os", choices=["linux", "windows", "macos", "vita"], default="macos" if sys.platform == "darwin" else "linux",
                     help="windows (with --arch x86_64): a cross build for x86-64 Windows with llvm-mingw (clang, UCRT, "
                          "libc++, lld; --mingw): build_host_win64.ninja, build/hostwin64_<v>/acww.exe, headless only "
                          "(no frontend yet), run with Wine here (ACWW_RUNNER; docs/host.md); macos (the default on a "

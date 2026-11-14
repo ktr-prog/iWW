@@ -1,42 +1,35 @@
-<img width="40" height="40" alt="image" src="https://github.com/user-attachments/assets/1ca8398f-cb7a-4fb6-ba98-5347d4bfa46d" />
+# vitaWW
 
+A native PlayStation Vita port of *Animal Crossing: Wild World*, built from the DS decompilation recompiled to native ARM (not an emulator).
 
-iWW
+**Work in progress.**
 
-Screenshots:
+## Goals
 
-<img width="148" height="226" alt="image" src="https://github.com/user-attachments/assets/c66216a9-41ed-4e24-81d5-d5ba9b29e6d0" />
-<img width="148" height="226" alt="image" src="https://github.com/user-attachments/assets/8fbf122f-96ae-457e-9c3f-002f8b3cfd42" />
-<img width="148" height="226" alt="image" src="https://github.com/user-attachments/assets/60b5d1b0-c757-4e62-9cc6-0961cf06fbaf" />
+- Single-screen view, 4:3, running on real Vita hardware
+- GPU (GXM) accelerated rendering, targeting 60 FPS
+- Accepts EU and US `.sav` files
 
-(WIP)
+## Installing
 
-Features:
+Install the `.vpk` (from the latest **Vita** CI run's artifacts) with VitaShell. Put your own copy of the game at:
 
-- 60 FPS (Experimental WIP)
-- Solo screen view (Experimental WIP)
-- No screen borders
-- Accepts EU and US .sav files
-- Seamless transition between touchscreen and button input
-- Improved touch input delay
-- Improved drawing distance
-- Local play - With other copies on the same Wi-Fi network
-- Online play - Nintendo Wi-Fi Connection through [Wiimmfi](https://wiimmfi.de/)
-- Various bug fixes
-- Circle Pad - Credit/Source: [https://gbatemp.net/threads/circle-pad-patches-for-super-mario-64-ds-and-other-games-in-twilightmenu-with-twpatcher-and-rtcom.623267/)](https://gbatemp.net/threads/circle-pad-patches-for-super-mario-64-ds-and-other-games-in-twilightmenu-with-twpatcher-and-rtcom.623267/)
-- Resetti Toggle
+```
+ux0:/data/vitaWW/<your game>.nds
+```
 
-Supported version (user needs to provide .nds file in Files app):
+See [`docs/vita.md`](docs/vita.md) for details and options (`ux0:/data/vitaWW/acww-options.txt`).
 
-| Version        | Game code | SHA-1                                      |
-| -------------- | --------- | ------------------------------------------ |
-| USA (Rev 1)    | `ADME`    | `77fde3e30e1e6068395d1f96ea63be569b61c351` |
+## Building
 
-Platforms:
+```
+python3 tools/configure_host.py --os vita
+ninja -f build_host_vita.ninja
+python3 tools/vita_package.py
+```
 
-- iOS (**iWW**) — an unsigned `.ipa` for sideloading (see `docs/ios.md`); CI: Actions > iOS.
-- PS Vita (**vitaWW**) — a homebrew `.vpk` (see `docs/vita.md`); CI: Actions > Vita. **Work in progress** — the
-  build and packaging are set up; it still needs validation on real hardware.
+Requires [VitaSDK](https://vitasdk.org/) (`$VITASDK` set) and SDL2 built for `arm-vita-eabi`.
 
-Both are built from the one shared game core in `src/`/`include/`/`modern/`, so a bug fix made once applies to
-every platform.
+## Legal
+
+This project contains no game assets. You must supply your own legally-obtained copy of the game.
