@@ -506,7 +506,7 @@ def main():
                    deps="gcc", description="HOSTOBJC $in")
         libs = " -lws2_32" if WIN else f" {SDL_LIBS} -lc++ -lpthread -lm" if MAC else \
             (f" {SDL_LIBS} -lvitaGL -lvitashark -lSceShaccCgExt -lSceShaccCg_stub -ltaihen_stub"
-             f" -lSceKernelModuleMgr_stub -lSceKernelDmacMgr_stub -lSceSysmodule_stub"
+             f" -lSceKernelDmacMgr_stub -lSceSysmodule_stub"
              f" -lstdc++ -lm -lpthread -lSceGxm_stub -lSceDisplay_stub"
              f" -lSceCommonDialog_stub -lSceAppMgr_stub -lmathneon -lSceNet_stub -lSceNetCtl_stub") if VITA else \
             f" {SDL_LIBS} -lstdc++ -lpthread -lm -lc -lgcc"  # (ws2_32: wm7.c's sockets)
