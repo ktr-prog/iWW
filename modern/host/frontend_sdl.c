@@ -240,15 +240,16 @@ AcwwShm *frontend_backend_open(const char *argv0) {
         if (!sGpu) fprintf(stderr, "frontend: the GPU can't draw into the window: the screens are read back\n");
     }
 #if HOST_VITA
-    // ACWW_GL=1: bring up the vitaGL (GXM) GPU path instead of the SDL/GXM 2D renderer, and let it own the
-    // display. Both init GXM, so only one may exist - when GL is on we skip SDL's renderer entirely and use SDL
-    // for input and audio only. Default off: the game keeps using the proven SDL renderer below.
+    // Bring up the vitaGL (GXM) GPU path instead of the SDL/GXM 2D renderer and let it own the display. Both init
+    // GXM, so only one may exist - with GL on we skip SDL's renderer entirely and use SDL for input and audio
+    // only. GL is the default; ACWW_GL=0 forces the SDL renderer below. If vitaGL fails to come up we fall back
+    // to it automatically, so a GXM problem can't leave a black screen.
     extern int vita_gl_enabled(void);
     extern int vita_gl_init(void);
     int useGl = vita_gl_enabled();
     if (sWin && useGl) {
-        if (vita_gl_init()) fprintf(stderr, "frontend: vitaGL GPU path active (ACWW_GL=1)\n");
-        else { fprintf(stderr, "frontend: vitaGL init failed; using SDL renderer\n"); useGl = 0; }
+        if (vita_gl_init()) fprintf(stderr, "frontend: vitaGL GPU path active (default; ACWW_GL=0 to disable)\n");
+        else { fprintf(stderr, "frontend: vitaGL init failed; falling back to SDL renderer\n"); useGl = 0; }
     }
 #else
     const int useGl = 0;
@@ -928,12 +929,18 @@ static void show(void) {
     }
 #if HOST_VITA
     {
-        // GPU path (ACWW_GL=1): vitaGL owns the display. Stage 1 just clears to a solid colour each frame so we
-        // can confirm on real hardware that GXM comes up and presents alongside our coroutine-stack/memory setup,
-        // before the DS geometry is moved onto it. Screenshots are skipped here (they read the SDL renderer).
+        // GPU path (default; ACWW_GL=0 to disable): vitaGL owns the display and draws the composited DS canvas as
+        // a textured, letterboxed quad. Same source selection as the SDL path below: the single-screen port
+        // canvas (256 x rows) when active, else the main (bottom) DS screen of the 256x384 stacked canvas.
+        // Screenshots are skipped here (they read the SDL renderer).
         extern int vita_gl_enabled(void);
-        extern void vita_gl_present(void);
-        if (vita_gl_enabled()) { vita_gl_present(); return; }
+        extern void vita_gl_present_canvas(const void *, int, int, int, int, int, int);
+        if (vita_gl_enabled()) {
+            int rows = (sShm->rows >= 192 && sShm->rows <= 640) ? (int)sShm->rows : 0;
+            if (rows) vita_gl_present_canvas(sShm->pixels, 256, rows, 0, 0, 256, rows);
+            else      vita_gl_present_canvas(sShm->pixels, 256, 384, 0, 192, 256, 192);
+            return;
+        }
     }
     // One screen. When the port's single-screen canvas is active sShm->rows holds its height (256 wide x rows);
     // otherwise fall back to the main (bottom) DS screen. Scale to FIT (letterbox), preserving the original 4:3

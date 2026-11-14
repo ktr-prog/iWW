@@ -94,6 +94,7 @@ static void read_options(void) {
         f = fopen(DATA_DIR "/acww-options.txt", "w");
         if (f) {
             fputs("# vitaWW options: one NAME=value per line; remove the # to enable, then restart vitaWW.\n"
+                  "#ACWW_GL=0              # disable GPU rendering, use the software renderer (GPU is the default)\n"
                   "#ACWW_MUTE=1            # run without sound\n"
                   "#ACWW_OVLOG=1           # log overlay/module loads to acww-log.txt (boot progress)\n"
                   "#ACWW_IOLOG=4000000     # log I/O register writes at/above this address\n"
