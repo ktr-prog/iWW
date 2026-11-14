@@ -1,6 +1,6 @@
 # The PS Vita homebrew: a .vpk for installation (docs/vita.md). Runs on every push, on pull requests and by hand
-# (Actions > Vita > Run workflow). The .vpk is in the run's artifacts as iWW-Vita. No game data is used or needed
-# here: the player adds their own copy of the game under ux0:/data/iWW on the device.
+# (Actions > Vita > Run workflow). The .vpk is in the run's artifacts as vitaWW. No game data is used or needed
+# here: the player adds their own copy of the game under ux0:/data/vitaWW on the device.
 name: Vita
 
 on:
@@ -33,7 +33,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ env.VITASDK }}
-          key: vitasdk-${{ runner.os }}-${{ env.SDL_TAG }}-vgl3-v3
+          key: vitasdk-${{ runner.os }}-${{ env.SDL_TAG }}-vgl4stub-v1
 
       # bootstrap-vitasdk.sh installs the toolchain (vitasdk-core: arm-vita-eabi-gcc, the Sce stubs, the CMake
       # toolchain file). We do NOT run install-all.sh - its pacman-based bulk install is brittle on the runner, and
@@ -63,24 +63,18 @@ jobs:
       # vitaGL: OpenGL(ES)-over-GXM, for GPU rendering of the DS 3D. Built without runtime-GLSL support (fixed
       # function + built-in shaders), so the device needs no libshacccg.suprx. Installs libvitaGL.a + GL headers
       # into the toolchain prefix.
-      # vitaGL (GPU rendering) and its build-time dependency chain. None need the proprietary Cg compiler (vitaGL
-      # ships precompiled fixed-function shaders) and none need an on-device shader module at runtime: vitaGL's
-      # shark_init() fails gracefully when libshacccg.suprx is absent and falls back to its precompiled shaders.
-      - name: Build vitaGL stack for Vita
+      #
+      # vitaGL hard-includes <vitashark.h> and links the shark_* runtime-GLSL-compiler API, which otherwise drags
+      # in vitaShaRK -> SceShaccCgExt -> taiHEN. We don't compile GLSL at runtime (we use vitaGL's precompiled
+      # fixed-function shaders), so instead of building that whole chain we vendor vitaShaRK's header
+      # (modern/host/vita/vitashark.h) and provide offline shark_* stubs (modern/host/vita/vita_shark_stub.c).
+      # shark_init() then returns failure, vitaGL sees shark is offline and uses its precompiled shaders.
+      - name: Build vitaGL for Vita
         if: steps.vitasdk.outputs.cache-hit != 'true'
         run: |
           export PATH="$VITASDK/bin:$PATH"
-          # SceShaccCgExt -> shacccg_ext.h (needed to compile vitaShaRK)
-          git clone --depth 1 https://github.com/bythos14/SceShaccCgExt.git build/shacccgext-src
-          cmake -S build/shacccgext-src -B build/shacccgext-build -G Ninja \
-            -DCMAKE_TOOLCHAIN_FILE="$VITASDK/share/vita.toolchain.cmake" \
-            -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$VITASDK/arm-vita-eabi"
-          cmake --build build/shacccgext-build
-          cmake --install build/shacccgext-build
-          test -f "$VITASDK/arm-vita-eabi/include/shacccg_ext.h"
-          # vitaShaRK -> vitashark.h (vitaGL hard-includes it)
-          git clone --depth 1 https://github.com/Rinnegatamante/vitaShaRK.git build/vitashark-src
-          make -C build/vitashark-src -j"$(nproc)" install
+          # vendored vitaShaRK header (vitaGL includes it); only pulls in psp2/shacccg.h + psp2/gxm.h from base SDK
+          cp modern/host/vita/vitashark.h "$VITASDK/arm-vita-eabi/include/vitashark.h"
           test -f "$VITASDK/arm-vita-eabi/include/vitashark.h"
           # vitaGL itself (fixed-function; NO_DEBUG strips its logging)
           git clone --depth 1 https://github.com/Rinnegatamante/vitaGL.git build/vitaGL-src
