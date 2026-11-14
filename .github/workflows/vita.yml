@@ -115,15 +115,16 @@ jobs:
       # not contain it - rather than being baked into the (heavy) cache.
       - name: Ensure taiHEN user stub
         run: |
+          set -eux
           export PATH="$VITASDK/bin:$PATH"
           if [ ! -f "$VITASDK/arm-vita-eabi/lib/libtaihen_stub.a" ]; then
-            git clone --depth 1 https://github.com/yifanlu/taiHEN.git build/taihen-stub-src
-            # taiHEN's exports.yml is the vita-libs-gen-2 schema (top-level module name); the old vita-libs-gen
-            # rejects it. vita-libs-gen-2 is what the toolchain's vita_create_stubs() uses.
-            vita-libs-gen-2 build/taihen-stub-src/exports.yml build/taihen-stubgen
-            make -C build/taihen-stubgen
-            find build/taihen-stubgen -name 'libtaihen_stub*.a' -exec cp {} "$VITASDK/arm-vita-eabi/lib/" \;
+            # Install the official prebuilt taiHEN package (header + libtaihen_stub.a) into the toolchain prefix.
+            # The vdpm-bootstrapped core doesn't include it; vdpm's per-package install is the intended way.
+            git clone --depth 1 https://github.com/vitasdk/vdpm.git build/vdpm-taihen
+            cd build/vdpm-taihen
+            ./vdpm taihen
           fi
+          ls -la "$VITASDK/arm-vita-eabi/lib/" | grep -i taihen || true
           test -f "$VITASDK/arm-vita-eabi/lib/libtaihen_stub.a"
 
       - name: PATH
