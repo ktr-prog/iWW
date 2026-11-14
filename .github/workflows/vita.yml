@@ -118,7 +118,9 @@ jobs:
           export PATH="$VITASDK/bin:$PATH"
           if [ ! -f "$VITASDK/arm-vita-eabi/lib/libtaihen_stub.a" ]; then
             git clone --depth 1 https://github.com/yifanlu/taiHEN.git build/taihen-stub-src
-            vita-libs-gen build/taihen-stub-src/exports.yml build/taihen-stubgen
+            # taiHEN's exports.yml is the vita-libs-gen-2 schema (top-level module name); the old vita-libs-gen
+            # rejects it. vita-libs-gen-2 is what the toolchain's vita_create_stubs() uses.
+            vita-libs-gen-2 build/taihen-stub-src/exports.yml build/taihen-stubgen
             make -C build/taihen-stubgen
             find build/taihen-stubgen -name 'libtaihen_stub*.a' -exec cp {} "$VITASDK/arm-vita-eabi/lib/" \;
           fi
