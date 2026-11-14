@@ -202,9 +202,13 @@ typedef struct {
     int down[10];
     s32 ya[10], yb[10];
 } PolyEdges;
-static _Thread_local PolyEdges sPE;
-static _Thread_local int tBand, tBands = 1;
-static void poly_edges(const G3Polygon *p) {
+// Per-band rasterizer scratch, indexed by band. NOT _Thread_local: the Vita's pthread TLS did not reliably give
+// each worker its own copy, so the bands raced on one sPE and corrupted the edge list (crash in draw_polygon).
+// The band index is threaded explicitly through the rasterizer instead. (sPE[4] matches MAX_BANDS below.)
+static PolyEdges sPE[4];
+static int tBands = 1;
+static void poly_edges(const G3Polygon *p, int band) {
+    PolyEdges *pe = &sPE[band];
     int n = p->nv, flatbottom = 0;
     s32 bx = -1;
     for (int i = 0; i < n; i++)
@@ -217,40 +221,41 @@ static void poly_edges(const G3Polygon *p) {
         const G3Vertex *a = p->v[i], *b = p->v[(i + 1) % n];
         area += (s64)a->x * b->y - (s64)b->x * a->y;
     }
-    sPE.p = p;
-    sPE.area = area;
-    sPE.n = 0;
+    pe->p = p;
+    pe->area = area;
+    pe->n = 0;
     for (int i = 0; i < n; i++) {
         int a = i, b = (i + 1) % n;
         s32 ya = p->v[a]->y, yb = p->v[b]->y;
         if (ya == yb) continue;
-        int k = sPE.n++;
-        sPE.down[k] = ya < yb;
+        int k = pe->n++;
+        pe->down[k] = ya < yb;
         if (ya > yb) { int t = a; a = b; b = t; s32 u = ya; ya = yb; yb = u; }
-        edge_setup(&sPE.e[k], p, a, b);
-        sPE.e[k].bottom = yb == p->ybottom && flatbottom;
-        sPE.ya[k] = ya;
-        sPE.yb[k] = yb;
+        edge_setup(&pe->e[k], p, a, b);
+        pe->e[k].bottom = yb == p->ybottom && flatbottom;
+        pe->ya[k] = ya;
+        pe->yb[k] = yb;
     }
 }
-static int edges_at(const G3Polygon *p, s32 y, Edge *l, Edge *r) {
-    if (sPE.p != p) poly_edges(p);
+static int edges_at(const G3Polygon *p, s32 y, Edge *l, Edge *r, int band) {
+    PolyEdges *pe = &sPE[band];
+    if (pe->p != p) poly_edges(p, band);
     int found = 0, idx[2];
     double mid[2];
     int down[2];
-    for (int k = 0; k < sPE.n && found < 2; k++) {
-        down[found] = sPE.down[k];
-        if (y < sPE.ya[k] || y >= sPE.yb[k]) continue;
-        const Edge *e = &sPE.e[k];
+    for (int k = 0; k < pe->n && found < 2; k++) {
+        down[found] = pe->down[k];
+        if (y < pe->ya[k] || y >= pe->yb[k]) continue;
+        const Edge *e = &pe->e[k];
         s32 dx = e->x1 - e->x0, dy = e->y1 - e->y0;
         mid[found] = e->x0 + (double)dx * (2.0 * (y - e->y0) + 1) / (2.0 * dy);
         idx[found] = k;
         found++;
     }
     if (found < 2) return 0;
-    int s = sPE.area == 0 || down[0] == down[1] ? mid[1] < mid[0] : (down[0] == (sPE.area > 0));
-    *l = sPE.e[idx[s]];
-    *r = sPE.e[idx[!s]];
+    int s = pe->area == 0 || down[0] == down[1] ? mid[1] < mid[0] : (down[0] == (pe->area > 0));
+    *l = pe->e[idx[s]];
+    *r = pe->e[idx[!s]];
     return 1;
 }
 
@@ -275,14 +280,14 @@ static int edge_coverage(const Edge *e, int side, s32 x, s32 y, s32 snum, s32 sd
     return v > 31 ? 31 : v < 0 ? 0 : (int)v;
 }
 
-static void draw_one_line(const G3Polygon *p, int idx) {
+static void draw_one_line(const G3Polygon *p, int idx, int band) {
     int l = 0, r = 0;
     for (int i = 1; i < p->nv; i++) {
         if (p->v[i]->x < p->v[l]->x) l = i;
         if (p->v[i]->x > p->v[r]->x) r = i;
     }
     s32 y = p->ytop, x0 = p->v[l]->x, x1 = p->v[r]->x;
-    if (y < 0 || y >= H || y % tBands != tBand) return;
+    if (y < 0 || y >= H || y % tBands != band) return;
     s32 xe = x1 > x0 ? x1 - 1 : x0;
     const G3Vertex *a = p->v[l], *b = p->v[r];
     const s32 va[5] = {a->color[0], a->color[1], a->color[2], a->tex[0], a->tex[1]};
@@ -296,12 +301,12 @@ static void draw_one_line(const G3Polygon *p, int idx) {
     }
 }
 
-static void draw_polygon(const G3Polygon *p, int idx) {
+static void draw_polygon(const G3Polygon *p, int idx, int band) {
     int n = p->nv;
     if (n < 3) return;
     s32 ytop = p->ytop, ybot = p->ybottom;
     if (ytop >= ybot) {
-        draw_one_line(p, idx);
+        draw_one_line(p, idx, band);
         return;
     }
     int full = p->translucent ? (sR->dispcnt & 8) != 0 : (sR->dispcnt & 0x30) != 0;
@@ -315,10 +320,10 @@ static void draw_polygon(const G3Polygon *p, int idx) {
     }
     int aa = (sR->dispcnt & 0x10) && !p->translucent && (p->attr >> 16 & 31) == 31;
     s32 y0 = ytop < 0 ? 0 : ytop;
-    y0 += ((tBand - y0 % tBands) + tBands) % tBands;
+    y0 += ((band - y0 % tBands) + tBands) % tBands;
     for (s32 y = y0; y < ybot && y < H; y += tBands) {
         Edge L, R;
-        if (!edges_at(p, y, &L, &R)) continue;
+        if (!edges_at(p, y, &L, &R, band)) continue;
         s32 a = edge_left(&L, y), b = edge_right(&R, y);
         if (full) {
             if (R.sign && !R.xmajor) b++;
@@ -432,13 +437,13 @@ static void draw_polygon(const G3Polygon *p, int idx) {
     }
 }
 
-static void clear_buffers(void) {
+static void clear_buffers(int band) {
     const G3RenderState *r = sR;
     u32 c = r->clearColor;
     u32 col = rgb5_to_6(c & 31) | rgb5_to_6(c >> 5 & 31) << 8 | rgb5_to_6(c >> 10 & 31) << 16 |
               (u32)(r->clearAttrHi & 31) << 24;
     u32 depth = (u32)(r->clearDepth & 0x7fff) * 0x200 + ((r->clearDepth & 0x7fff) == 0x7fff ? 0x1ff : 0);
-    for (int y = tBand; y < H; y += tBands)
+    for (int y = band; y < H; y += tBands)
     for (int i = y * W; i < y * W + W; i++) {
         sColor[i] = (i < W * sR->yofs ? col & 0xffffff : col) | 0x80000000u;
         sDepth[i] = depth;
@@ -452,21 +457,21 @@ static void clear_buffers(void) {
     }
 }
 
-static void aa_pass(void) {
+static void aa_pass(int band) {
     if (!(sR->dispcnt & 0x10)) return;
-    for (int y = tBand; y < H; y += tBands)
+    for (int y = band; y < H; y += tBands)
     for (int i = y * W; i < y * W + W; i++)
         if (sCov[i] < 31) sColor[i] = aa_resolve(sColor[i], sColor2[i], sCov[i]);
 }
 
-static void fog_pass(void) {
+static void fog_pass(int band) {
     const G3RenderState *r = sR;
     if (!(r->dispcnt & 0x80)) return;
     int shift = r->dispcnt >> 8 & 15;
     s32 step = shift <= 10 ? 0x400 >> shift : 0;
     u32 fc = r->fogColor;
     u32 fr = rgb5_to_6(fc & 31), fgc = rgb5_to_6(fc >> 5 & 31), fb = rgb5_to_6(fc >> 10 & 31), fa = fc >> 16 & 31;
-    for (int y = tBand; y < H; y += tBands)
+    for (int y = band; y < H; y += tBands)
     for (int i = y * W; i < y * W + W; i++) {
         if (!(sFlags[i] & 1)) continue;
         s32 z = (s32)(sDepth[i] >> 9);
@@ -525,13 +530,12 @@ static pthread_cond_t sPoolGo = PTHREAD_COND_INITIALIZER, sPoolDone = PTHREAD_CO
 static unsigned sPoolGen;
 static int sPoolPending;
 static void render_band(int b) {
-    tBand = b;
     tBands = sBands;
-    sPE.p = 0;
-    clear_buffers();
-    for (int i = 0; i < sR->npoly; i++) draw_polygon(sR->poly[i], i);
-    fog_pass();
-    aa_pass();
+    sPE[b].p = 0;
+    clear_buffers(b);
+    for (int i = 0; i < sR->npoly; i++) draw_polygon(sR->poly[i], i, b);
+    fog_pass(b);
+    aa_pass(b);
 }
 static void *band_worker(void *arg) {
     int b = (int)(intptr_t)arg;
